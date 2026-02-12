@@ -1,0 +1,27 @@
+{
+	"name": "clawpress/clawpress",
+	"description": "The AI for WordPress that actually does things",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.1",
+		"wordpress/php-ai-client": "^0.4.3",
+		"woocommerce/action-scheduler": "^3.9",
+		"automattic/jetpack-autoloader": "^3.0"
+	},
+	"require-dev": {
+		"wp-coding-standards/wpcs": "^3.0",
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true,
+			"php-http/discovery": true,
+			"automattic/jetpack-autoloader": true
+		}
+	},
+	"scripts": {
+		"lint": "phpcs",
+		"lint:fix": "phpcbf"
+	}
+}

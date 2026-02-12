@@ -1,0 +1,24 @@
+{
+  "name": "clawpress",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "npm run build:scripts && npm run build:blocks",
+    "build:scripts": "wp-scripts build --config webpack.scripts.config.js",
+    "build:blocks": "wp-scripts build --experimental-modules --blocks-manifest",
+    "start": "npm run start:scripts & npm run start:blocks",
+    "start:scripts": "wp-scripts start --config webpack.scripts.config.js",
+    "start:blocks": "wp-scripts start --experimental-modules --blocks-manifest",
+    "lint": "npm run lint:js && npm run lint:css && npm run lint:php",
+    "lint:js": "wp-scripts lint-js",
+    "lint:css": "wp-scripts lint-style",
+    "lint:php": "composer lint",
+    "lint:php:fix": "composer lint:fix"
+  },
+  "dependencies": {
+    "@wordpress/dataviews": "^11.3.0",
+    "@wordpress/icons": "^11.6.0"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^31.4.0"
+  }
+}

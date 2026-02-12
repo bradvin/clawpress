@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<ruleset name="ClawPress">
+	<description>WordPress Coding Standards for ClawPress</description>
+
+	<!-- What to scan -->
+	<file>.</file>
+	<exclude-pattern>/vendor/</exclude-pattern>
+	<exclude-pattern>/node_modules/</exclude-pattern>
+	<exclude-pattern>/build/</exclude-pattern>
+
+	<!-- How to scan -->
+	<arg value="sp"/>
+	<arg name="basepath" value="."/>
+	<arg name="colors"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+
+	<!-- Rules: WordPress Coding Standards -->
+	<rule ref="WordPress">
+		<!-- Allow short array syntax -->
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+	</rule>
+
+	<!-- Allow short array syntax -->
+	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
+	<!-- Set minimum supported WordPress version -->
+	<config name="minimum_wp_version" value="6.9"/>
+
+	<!-- Check for cross-version PHP compatibility -->
+	<config name="testVersion" value="8.1-"/>
+
+	<!-- Text domain for i18n -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="clawpress"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Prefixes for hooks, options, etc. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="clawpress"/>
+				<element value="ClawPress"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

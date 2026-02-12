@@ -1,0 +1,1 @@
+import{getContext as t,store as e}from"@wordpress/interactivity";const{state:n}=e("clawpress/toggle-content",{state:{get buttonText(){return t().isOpen?"Hide Content":"Show Content"}},actions:{toggle(){const e=t();e.isOpen=!e.isOpen}}});

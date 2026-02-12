@@ -1,0 +1,43 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "landingPage": "/wp-admin/admin.php?page=clawpress",
+  "preferredVersions": {
+    "php": "8.2",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://github-proxy.com/proxy/?repo=bradvin/clawpress"
+      }
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/rewrite.php",
+      "data": "<?php /* Use pretty permalinks */ add_action( 'after_setup_theme', function() { global $wp_rewrite; $wp_rewrite->set_permalink_structure('/%postname%/'); $wp_rewrite->flush_rules(); } );"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "ClawPress Demo"
+      }
+    },
+    {
+      "step": "updateUserMeta",
+      "meta": {
+        "admin_color": "modern",
+        "show_welcome_panel": 0
+      },
+      "userId": 1
+    },
+    {
+      "step": "login",
+      "username": "admin"
+    }
+  ]
+}
