@@ -15,7 +15,7 @@ The plugin includes:
 ### PHP Structure
 
 - **Main file** (`clawpress.php`): Only defines constants and requires modules
-- **Feature modules** (`inc/class-*.php`): Each feature isolated in its own namespaced class file
+- **Feature modules** (`includes/class-*.php`): Each feature isolated in its own namespaced class file
 - **Strict types**: All PHP files use `declare( strict_types=1 )`
 - **Namespace convention**: `ClawPress\FeatureName`
 - **Coding standards**: WordPress Coding Standards (WPCS) - use tabs, spaces inside parentheses
@@ -31,7 +31,7 @@ The plugin includes:
 
 ### REST API Pattern
 
-Located in `inc/class-rest-api.php`:
+Located in `includes/class-rest-api.php`:
 - Namespace: `clawpress/v1`
 - Always include `permission_callback`
 - Use `sanitize_callback` and `validate_callback` for args
@@ -54,11 +54,11 @@ When adding features:
 
 | Task | Files to Edit |
 |------|---------------|
-| Add custom post type | `inc/class-post-types.php` |
-| Add REST endpoint | `inc/class-rest-api.php` |
+| Add custom post type | `includes/class-post-types.php` |
+| Add REST endpoint | `includes/class-rest-api.php` |
 | Add admin component | `src/js/admin/components/`, import in `App.js` |
-| Update floating panel UI | `src/panel/` and `inc/class-panel.php` |
-| Add PHP heartbeat/scheduler hook | `inc/class-heartbeat.php` |
+| Update floating panel UI | `src/panel/` and `includes/class-panel.php` |
+| Add PHP heartbeat/scheduler hook | `includes/class-heartbeat.php` |
 
 ## Data Flow
 
@@ -74,7 +74,7 @@ DataViews component (src/js/admin/components/App.js)
 
 The Data Layer handles authentication, caching, and optimistic updates automatically. To use a custom post type, change `'page'` to your CPT slug in `useItems.js`.
 
-For custom endpoints (settings, business logic), use `inc/class-rest-api.php` with `wp_localize_script` in `inc/class-admin-page.php`. These endpoints can then be called from your React components using `apiFetch`.
+For custom endpoints (settings, business logic), use `includes/class-rest-api.php` with `wp_localize_script` in `includes/class-admin-page.php`. These endpoints can then be called from your React components using `apiFetch`.
 
 ## Common Tasks
 
@@ -102,7 +102,7 @@ useEntityRecords( 'postType', 'your_cpt_slug', { ... } );
 ### Adding a REST endpoint
 
 ```php
-// inc/class-rest-api.php
+// includes/class-rest-api.php
 register_rest_route(
 	'clawpress/v1',
 	'/new-endpoint',

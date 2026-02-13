@@ -27,13 +27,17 @@ final class Admin_Page {
 	 * Register the ClawPress admin page.
 	 */
 	public function register_admin_page(): void {
+		$menu_icon = 'data:image/svg+xml;utf8,' . rawurlencode(
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><text x="50%" y="30%" text-anchor="middle" dominant-baseline="middle" font-size="8">🦞</text></svg>'
+		);
+
 		add_menu_page(
 			__( 'ClawPress', 'clawpress' ),
 			__( 'ClawPress', 'clawpress' ),
 			'manage_options',
 			'clawpress',
 			[ $this, 'render_admin_page' ],
-			'🦞',
+			$menu_icon,
 			58
 		);
 	}

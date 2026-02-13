@@ -32,12 +32,4 @@ if ( file_exists( CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-sc
 	require_once CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 }
 
-// Feature modules.
-require_once CLAWPRESS_DIR . 'inc/class-post-types.php';
-require_once CLAWPRESS_DIR . 'inc/class-rest-api.php';
-require_once CLAWPRESS_DIR . 'inc/class-admin-page.php';
-require_once CLAWPRESS_DIR . 'inc/class-panel.php';
-require_once CLAWPRESS_DIR . 'inc/class-heartbeat.php';
-require_once CLAWPRESS_DIR . 'inc/class-plugin.php';
-
 Plugin::get_instance();

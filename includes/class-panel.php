@@ -105,7 +105,7 @@ final class Panel {
 			[
 				'id'     => 'clawpress-toggle',
 				'parent' => 'top-secondary',
-				'title'  => __( 'ClawPress', 'clawpress' ),
+				'title'  => '🦞',
 				'href'   => '#',
 				'meta'   => [
 					'class' => 'clawpress-adminbar-toggle',

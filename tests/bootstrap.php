@@ -49,10 +49,4 @@ if ( ! defined( 'CLAWPRESS_URL' ) ) {
 
 require_once __DIR__ . '/Support/WordPressStubs.php';
 require_once __DIR__ . '/Support/TestCase.php';
-
-require_once $plugin_root . '/inc/class-post-types.php';
-require_once $plugin_root . '/inc/class-rest-api.php';
-require_once $plugin_root . '/inc/class-admin-page.php';
-require_once $plugin_root . '/inc/class-panel.php';
-require_once $plugin_root . '/inc/class-heartbeat.php';
-require_once $plugin_root . '/inc/class-plugin.php';
+require_once $plugin_root . '/vendor/autoload.php';

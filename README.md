@@ -30,7 +30,7 @@ npm run build
 
 Registers a top-level WordPress admin page and mounts a React app.
 
-- Location: `inc/class-admin-page.php`
+- Location: `includes/class-admin-page.php`
 - Menu: **Dashboard → ClawPress**
 - Uses `add_menu_page()` and mounts React into `#clawpress-admin-root`
 - Scripts/styles auto-enqueued via asset file pattern
@@ -41,7 +41,7 @@ Template for custom endpoints with proper permission callbacks and parameter val
 
 - Namespace: `clawpress/v1`
 - Example endpoints: `/settings` (GET/POST)
-- Location: `inc/class-rest-api.php`
+- Location: `includes/class-rest-api.php`
 
 **Note**: The DataViews demo uses `@wordpress/core-data` which leverages the built-in WordPress REST API. Custom endpoints are only needed for operations not covered by core.
 
@@ -61,19 +61,19 @@ ClawPress includes a floating wp-admin panel UI for chat-style interactions.
 
 - Source: `src/panel/`
 - Build output: `build/panel/`
-- Runtime loader: `inc/class-panel.php`
+- Runtime loader: `includes/class-panel.php`
 
 ## Customization Guide
 
 ### Adding a Custom Post Type
 
-Register custom post types in `inc/class-post-types.php`. After registering, update `src/js/admin/hooks/useItems.js` to use your post type slug instead of `'page'`.
+Register custom post types in `includes/class-post-types.php`. After registering, update `src/js/admin/hooks/useItems.js` to use your post type slug instead of `'page'`.
 
 ### Adding a New Admin Feature
 
 1. Create `src/js/admin/components/NewFeature.js`
 2. Import and use in `App.js`
-3. Add any new REST endpoints in `inc/class-rest-api.php`
+3. Add any new REST endpoints in `includes/class-rest-api.php`
 
 ### Changing the Post Type
 
@@ -106,7 +106,7 @@ export const fields = [
 
 ### Adding a New PHP Feature
 
-1. Create `inc/class-your-feature.php` with namespace and class
+1. Create `includes/class-your-feature.php` with namespace and class
 2. Add `require_once` in main plugin file
 
 ## Dependencies
