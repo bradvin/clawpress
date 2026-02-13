@@ -26,6 +26,32 @@ npm run build
 
 ## Key Features
 
+### Foundation Chat MVP (Spec 1)
+
+Current `wp-admin` MVP features implemented in this plugin:
+
+- Floating panel available across admin screens for authorized users (`manage_options`).
+- Admin bar toggle (`🦞`) plus fallback floating toggle when admin bar link is unavailable.
+- Chat transport aligned to REST endpoints:
+  - `POST /wp-json/clawpress/v1/chat/message`
+  - `GET /wp-json/clawpress/v1/chat/history`
+- Status contract endpoint:
+  - `GET /wp-json/clawpress/v1/status`
+  - Envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `execution_user`
+- Panel state persistence endpoint (per-user):
+  - `GET /wp-json/clawpress/v1/panel/state`
+  - `POST /wp-json/clawpress/v1/panel/state`
+  - Stores `open`, `width`, `last_history_id`
+- Header status indicator with online/offline badge and provider/model label.
+- Keyboard shortcut standardized to `Cmd/Ctrl + K`.
+- Requests include WP REST nonce (`X-WP-Nonce`) for authenticated REST calls.
+
+Out of scope for Spec 1 and intentionally not complete yet:
+
+- Full tool runtime/execution policy for `/run-tool`.
+- Multi-channel adapters.
+- Background jobs and memory retention implementation.
+
 ### WordPress Admin Page
 
 Registers a top-level WordPress admin page and mounts a React app.
@@ -37,10 +63,15 @@ Registers a top-level WordPress admin page and mounts a React app.
 
 ### REST API
 
-Template for custom endpoints with proper permission callbacks and parameter validation.
+Custom endpoints with permission callbacks and parameter validation.
 
 - Namespace: `clawpress/v1`
-- Example endpoints: `/settings` (GET/POST)
+- Endpoints:
+  - `/settings` (GET/POST)
+  - `/status` (GET)
+  - `/panel/state` (GET/POST)
+  - `/chat/message` (POST)
+  - `/chat/history` (GET)
 - Location: `includes/class-rest-api.php`
 
 **Note**: The DataViews demo uses `@wordpress/core-data` which leverages the built-in WordPress REST API. Custom endpoints are only needed for operations not covered by core.
@@ -62,6 +93,9 @@ ClawPress includes a floating wp-admin panel UI for chat-style interactions.
 - Source: `src/panel/`
 - Build output: `build/panel/`
 - Runtime loader: `includes/class-panel.php`
+- Header status indicator reads from `GET /clawpress/v1/status`
+- Panel state sync reads/writes `GET/POST /clawpress/v1/panel/state`
+- Shortcut: `Cmd/Ctrl + K`
 
 ## Customization Guide
 
@@ -107,7 +141,7 @@ export const fields = [
 ### Adding a New PHP Feature
 
 1. Create `includes/class-your-feature.php` with namespace and class
-2. Add `require_once` in main plugin file
+2. Run `composer dump-autoload` after adding/renaming/removing PHP class files
 
 ## Dependencies
 
@@ -138,3 +172,9 @@ export const fields = [
 - PHP 8.1+
 - WordPress 6.9+
 - Node.js 18+
+
+## Current Status Summary
+
+- Spec 1 in-scope MVP work is implemented in code.
+- Unit-level coverage includes routes, status/controller permission checks, and panel-state round trip.
+- Remaining work is mostly from later specs (tool runtime depth, richer onboarding/memory workflows, and broader integration/manual verification).

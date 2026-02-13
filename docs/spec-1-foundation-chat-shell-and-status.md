@@ -1,59 +1,82 @@
-# Spec 1: Foundation Chat Shell and Status API
+# Spec 1: Foundation Chat Panel and Status API
 
 ## Goal
 
-Deliver the baseline in-admin ClawPress surface available on all allowed `wp-admin` screens, with a working status API and global chat launcher shell.
+Upgrade the existing floating chat panel implementation so it becomes the stable MVP entrypoint across `wp-admin`, with a first-class status API contract and consistent panel behavior.
 
 ## Source Requirements
 
 - Plugin spec: sections 4.1, 5.1, 6.1, 6.2, 7 (`GET /status`), 15.1-15.3
 - Agent spec: Level 0 preconditions and architecture section 3.1 steps 1-5
 
+## Current Implementation Snapshot
+
+- Floating panel is already registered globally via `includes/class-panel.php`.
+- Panel UI is already mounted from `src/panel/index.jsx` and implemented in `src/panel/Panel.jsx`.
+- Admin bar toggle exists (`#wp-admin-bar-clawpress-toggle`) with fallback floating toggle.
+- Chat REST controller currently exposes `/chat/message` and `/chat/history` in `includes/rest/class-chat-controller.php`.
+- Panel client currently expects `/stream` and `/run-tool` in `src/panel/services/realClient.js`, which are not yet registered in REST controllers.
+
 ## In Scope
 
-- Global launcher + drawer mount outside the current single-page ClawPress menu.
-- `GET /clawpress/v1/status` endpoint with deterministic site/provider/onboarding summary.
-- Per-user UI state persistence for launcher open/closed and last thread pointer.
-- Capability-gated chat visibility on all admin pages.
+- Changes to the existing panel shell and interaction model (not a new shell).
+- `GET /clawpress/v1/status` endpoint with deterministic mode/provider/onboarding summary.
+- API alignment between panel client and currently registered REST routes.
+- Persistent panel state for open/closed, width, and last-used thread/history pointer.
+- Capability-gated panel visibility on all admin pages.
 
 ## Out of Scope
 
-- Full message send pipeline.
-- Tool execution.
-- Provider calls.
+- Full tool runtime and execution policy implementation.
+- Multi-channel adapters.
+- Background jobs and memory retention work (handled by later specs).
 
 ## Implementation Tasks
 
 1. PHP bootstrap
-- Update `inc/admin-page.php` or add `inc/chat-ui.php` to enqueue global chat assets on admin pages for authorized users.
-- Keep existing admin menu page intact as settings/control center.
+- Keep `includes/class-panel.php` as the single panel bootstrap module.
+- Ensure panel assets are only enqueued for authorized users and all admin screens except explicit exclusions (if any).
+- Keep `includes/class-admin-page.php` as settings/control center without duplicating panel rendering logic.
 
 2. REST endpoint
-- Extend `inc/rest-api.php` with `GET /status`.
-- Add strict route arg schema and `permission_callback`.
-- Return a stable JSON envelope: `mode`, `provider`, `onboarding`, `memory`, `execution_user`.
+- Add `GET /status` through existing controller architecture (`includes/class-rest-api.php` + route controller class).
+- Add strict args and `permission_callback`.
+- Return stable envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `execution_user`.
 
-3. JS UI shell
-- Add components: `ChatLauncher`, `ChatWindow`, `StatusBadge` under `src/js/admin/components/`.
-- Add state store/hook for open/close and bootstrap status fetch.
-- Add keyboard shortcut (`Cmd/Ctrl + K`) and user setting fallback.
+3. Existing panel API alignment
+- Decide one MVP transport path and align both sides:
+- Option A: Panel uses `/chat/message` + `/chat/history` now.
+- Option B: Implement `/stream` + `/run-tool` now.
+- Remove dead-path assumptions so panel can always send and receive messages in MVP.
 
-4. Settings persistence
-- Add `user_meta` keys for chat UI state.
-- Create REST hooks for reading/writing minimal UI state if needed.
+4. Panel UX/state hardening (existing `src/panel/*`)
+- Add status badge and mode indicator in panel header (`online/offline`).
+- Load and render persisted history on open via `/chat/history`.
+- Keep local `localStorage` fallback but persist canonical panel state in `user_meta` through REST where appropriate.
+- Standardize keyboard shortcut to plugin spec default (`Cmd/Ctrl + K`) or expose configurable shortcut setting.
 
-5. Wiring
-- Ensure entrypoint (`src/js/admin/index.js`) supports both current admin page app and global launcher mount point.
+5. Security and request consistency
+- Ensure all panel-origin requests include WP REST nonce and receive consistent error envelope.
+- Ensure panel is hidden when capability check fails, and REST endpoints deny access with clear status.
+- Keep response rendering escaped/sanitized for system/error messages shown in panel.
 
 ## Acceptance Criteria
 
-- Authorized users see launcher across admin screens.
-- Launcher opens drawer without navigation.
-- Status badge reflects offline/online readiness from `/status`.
-- Unauthorized users never receive launcher markup or REST access.
+- Authorized users can open the existing floating panel from any eligible admin screen.
+- Panel can send at least one message/response cycle through aligned chat endpoint(s) without transport mismatch.
+- Header visibly reflects status from `/status` and updates when provider state changes.
+- User panel state persists across reloads (open/closed, width, last context).
+- Unauthorized users do not receive panel UI or successful REST responses.
 
 ## Test Plan
 
-- Unit: status response builder, capability gate helpers.
-- Integration: REST `GET /status` success and permission denial.
-- Manual: launcher behavior on Posts, Pages, Plugins, Settings screens.
+- Unit
+- Status payload builder and capability gate helpers.
+- Panel state serialization/deserialization (REST + local fallback).
+- Integration
+- REST `GET /status` success + permission denial.
+- Panel-client transport path test for selected MVP endpoint strategy.
+- Manual
+- Toggle panel from admin bar and fallback button.
+- Verify message send/reply and history restore after page reload.
+- Verify keyboard shortcut behavior and collision checks on common admin screens.

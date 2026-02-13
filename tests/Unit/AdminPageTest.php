@@ -55,7 +55,11 @@ final class AdminPageTest extends TestCase {
 
 		$this->assertCount( 1, WordPress_Stubs::$enqueued_scripts );
 		$this->assertCount( 1, WordPress_Stubs::$enqueued_styles );
+		$this->assertCount( 1, WordPress_Stubs::$localized_scripts );
 		$this->assertSame( 'clawpress', WordPress_Stubs::$enqueued_scripts[0]['handle'] );
 		$this->assertSame( 'clawpress', WordPress_Stubs::$enqueued_styles[0]['handle'] );
+		$this->assertSame( 'CLAWPRESS_ADMIN', WordPress_Stubs::$localized_scripts[0]['object_name'] );
+		$this->assertArrayHasKey( 'restBase', WordPress_Stubs::$localized_scripts[0]['data'] );
+		$this->assertArrayHasKey( 'nonce', WordPress_Stubs::$localized_scripts[0]['data'] );
 	}
 }

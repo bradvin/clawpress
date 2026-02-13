@@ -80,6 +80,15 @@ final class Admin_Page {
 			true
 		);
 
+		wp_localize_script(
+			'clawpress',
+			'CLAWPRESS_ADMIN',
+			[
+				'restBase' => esc_url_raw( rest_url( 'clawpress/v1' ) ),
+				'nonce'    => wp_create_nonce( 'wp_rest' ),
+			]
+		);
+
 		// Enqueue styles.
 		wp_enqueue_style(
 			'clawpress',

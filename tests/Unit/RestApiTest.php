@@ -11,7 +11,9 @@ namespace ClawPress\Tests\Unit;
 
 use ClawPress\RestAPI\Rest_API;
 use ClawPress\RestAPI\Controllers\Chat_Controller;
+use ClawPress\RestAPI\Controllers\Panel_State_Controller;
 use ClawPress\RestAPI\Controllers\Settings_Controller;
+use ClawPress\RestAPI\Controllers\Status_Controller;
 use ClawPress\Tests\Support\TestCase;
 use ClawPress\Tests\Support\WordPress_Stubs;
 
@@ -23,15 +25,25 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'rest_api_init', WordPress_Stubs::$actions[0]['hook'] );
 	}
 
-	public function test_register_routes_registers_get_and_post_routes(): void {
+	public function test_register_routes_registers_expected_mvp_routes(): void {
 		$rest_api = new Rest_API();
 		$rest_api->register_routes();
 
-		$this->assertCount( 4, WordPress_Stubs::$rest_routes );
-		$this->assertSame( 'GET', WordPress_Stubs::$rest_routes[0]['args']['methods'] );
-		$this->assertSame( 'POST', WordPress_Stubs::$rest_routes[1]['args']['methods'] );
-		$this->assertSame( 'POST', WordPress_Stubs::$rest_routes[2]['args']['methods'] );
-		$this->assertSame( 'GET', WordPress_Stubs::$rest_routes[3]['args']['methods'] );
+		$routes = array_map(
+			static function ( array $route ): string {
+				return $route['route'] . ':' . $route['args']['methods'];
+			},
+			WordPress_Stubs::$rest_routes
+		);
+
+		$this->assertCount( 7, WordPress_Stubs::$rest_routes );
+		$this->assertContains( '/settings:GET', $routes );
+		$this->assertContains( '/settings:POST', $routes );
+		$this->assertContains( '/status:GET', $routes );
+		$this->assertContains( '/panel/state:GET', $routes );
+		$this->assertContains( '/panel/state:POST', $routes );
+		$this->assertContains( '/chat/message:POST', $routes );
+		$this->assertContains( '/chat/history:GET', $routes );
 	}
 
 	public function test_settings_permissions_check_uses_manage_options_capability(): void {
@@ -48,13 +60,17 @@ final class RestApiTest extends TestCase {
 		WordPress_Stubs::$options['clawpress_settings'] = 'saved-value';
 
 		$response = $settings_controller->get_settings();
+		$data     = $response->get_data();
 
 		$this->assertInstanceOf( \WP_REST_Response::class, $response );
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame(
-			array( 'clawpress_settings' => 'saved-value' ),
-			$response->get_data()
-		);
+		$this->assertSame( 'saved-value', $data['clawpress_settings'] );
+		$this->assertArrayHasKey( 'status_settings', $data );
+		$this->assertArrayHasKey( 'provider', $data['status_settings'] );
+		$this->assertArrayHasKey( 'model', $data['status_settings'] );
+		$this->assertArrayHasKey( 'execution_user_id', $data['status_settings'] );
+		$this->assertArrayHasKey( 'memory_enabled', $data['status_settings'] );
+		$this->assertArrayHasKey( 'onboarding_completed', $data['status_settings'] );
 	}
 
 	public function test_update_settings_rejects_unknown_option(): void {
@@ -98,6 +114,41 @@ final class RestApiTest extends TestCase {
 		);
 	}
 
+	public function test_update_settings_updates_status_dependent_fields(): void {
+		$settings_controller = new Settings_Controller();
+		$response            = $settings_controller->update_settings(
+			new \WP_REST_Request(
+				array(
+					'provider'             => 'openai',
+					'model'                => 'gpt-4.1-mini',
+					'execution_user_id'    => 12,
+					'memory_enabled'       => true,
+					'onboarding_completed' => true,
+				)
+			)
+		);
+		$data = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( true, $data['success'] );
+		$this->assertSame( 'openai', $data['status_settings']['provider'] );
+		$this->assertSame( 'gpt-4.1-mini', $data['status_settings']['model'] );
+		$this->assertSame( 12, $data['status_settings']['execution_user_id'] );
+		$this->assertSame( true, $data['status_settings']['memory_enabled'] );
+		$this->assertSame( 'openai', WordPress_Stubs::$options['clawpress_settings']['provider'] );
+		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_execution_user_id'] );
+		$this->assertSame( true, WordPress_Stubs::$options['clawpress_memory_enabled'] );
+		$this->assertSame( '1', WordPress_Stubs::$user_meta[1]['clawpress_onboarding_completed'] );
+	}
+
+	public function test_update_settings_rejects_empty_payload(): void {
+		$settings_controller = new Settings_Controller();
+		$response            = $settings_controller->update_settings( new \WP_REST_Request( array() ) );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( 'error' => 'No settings provided' ), $response->get_data() );
+	}
+
 	public function test_chat_permissions_check_uses_manage_options_capability(): void {
 		$chat_controller                        = new Chat_Controller();
 		WordPress_Stubs::$can_manage_options = false;
@@ -108,7 +159,16 @@ final class RestApiTest extends TestCase {
 	}
 
 	public function test_chat_send_message_returns_message_and_reply(): void {
-		$chat_controller = new Chat_Controller();
+		$chat_controller = new Chat_Controller(
+			static function ( string $message ): array {
+				return array(
+					'reply'    => 'Stubbed reply: ' . $message,
+					'mode'     => 'online',
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				);
+			}
+		);
 
 		$response = $chat_controller->send_message(
 			new \WP_REST_Request(
@@ -122,7 +182,12 @@ final class RestApiTest extends TestCase {
 		$this->assertSame(
 			array(
 				'message' => 'Hello lobster',
-				'reply'   => 'Chat endpoint received your message.',
+				'reply'   => 'Stubbed reply: Hello lobster',
+				'meta'    => array(
+					'mode'     => 'online',
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				),
 			),
 			$response->get_data()
 		);
@@ -138,6 +203,96 @@ final class RestApiTest extends TestCase {
 				'items' => array(),
 			),
 			$response->get_data()
+		);
+	}
+
+	public function test_chat_send_message_persists_history_items(): void {
+		$chat_controller = new Chat_Controller(
+			static function ( string $message ): array {
+				return array(
+					'reply'    => 'Echo: ' . $message,
+					'mode'     => 'online',
+					'provider' => 'openai',
+					'model'    => null,
+				);
+			}
+		);
+
+		$chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => 'Persist me',
+				)
+			)
+		);
+
+		$history_response = $chat_controller->get_history();
+		$history_data     = $history_response->get_data();
+
+		$this->assertSame( 200, $history_response->get_status() );
+		$this->assertCount( 2, $history_data['items'] );
+		$this->assertSame( 'user', $history_data['items'][0]['role'] );
+		$this->assertSame( 'Persist me', $history_data['items'][0]['content'] );
+		$this->assertSame( 'assistant', $history_data['items'][1]['role'] );
+		$this->assertSame( 'Echo: Persist me', $history_data['items'][1]['content'] );
+	}
+
+	public function test_status_permissions_check_uses_manage_options_capability(): void {
+		$status_controller                    = new Status_Controller();
+		WordPress_Stubs::$can_manage_options = false;
+		$this->assertFalse( $status_controller->permissions_check() );
+
+		WordPress_Stubs::$can_manage_options = true;
+		$this->assertTrue( $status_controller->permissions_check() );
+	}
+
+	public function test_status_endpoint_returns_required_envelope_keys(): void {
+		$status_controller = new Status_Controller();
+		$response          = $status_controller->get_status();
+		$data              = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertArrayHasKey( 'mode', $data );
+		$this->assertArrayHasKey( 'provider', $data );
+		$this->assertArrayHasKey( 'model', $data );
+		$this->assertArrayHasKey( 'onboarding', $data );
+		$this->assertArrayHasKey( 'memory', $data );
+		$this->assertArrayHasKey( 'execution_user', $data );
+	}
+
+	public function test_panel_state_permissions_check_uses_manage_options_capability(): void {
+		$panel_state_controller               = new Panel_State_Controller();
+		WordPress_Stubs::$can_manage_options = false;
+		$this->assertFalse( $panel_state_controller->permissions_check() );
+
+		WordPress_Stubs::$can_manage_options = true;
+		$this->assertTrue( $panel_state_controller->permissions_check() );
+	}
+
+	public function test_panel_state_update_and_get_round_trip(): void {
+		WordPress_Stubs::$current_user_id = 77;
+		$panel_state_controller           = new Panel_State_Controller();
+
+		$update_response = $panel_state_controller->update_panel_state(
+			new \WP_REST_Request(
+				array(
+					'open'            => true,
+					'width'           => 512,
+					'last_history_id' => 'msg-abc',
+				)
+			)
+		);
+		$get_response = $panel_state_controller->get_panel_state();
+
+		$this->assertSame( 200, $update_response->get_status() );
+		$this->assertSame( 200, $get_response->get_status() );
+		$this->assertSame(
+			array(
+				'open'            => true,
+				'width'           => 512,
+				'last_history_id' => 'msg-abc',
+			),
+			$get_response->get_data()
 		);
 	}
 }

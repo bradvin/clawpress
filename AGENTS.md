@@ -133,6 +133,7 @@ Scripts rely on WordPress packages extracted at build time:
 - Asset files (`build/scripts/*.asset.php`) are auto-generated - never edit manually
 - The `build/`, `node_modules/`, and `vendor/` directories are gitignored
 - Always run `composer install && npm install && npm run build` after cloning
+- After adding, renaming, or removing PHP class files in the plugin, run `composer dump-autoload` before testing.
 - PHP must follow WordPress Coding Standards - run `npm run lint:php` before committing
 - PHP namespaces must match directory structure for autoloading compatibility
 - The Data Layer (`@wordpress/core-data`) handles REST auth automatically

@@ -16,8 +16,10 @@ declare( strict_types=1 );
 namespace ClawPress\RestAPI;
 
 use ClawPress\RestAPI\Controllers\Chat_Controller;
+use ClawPress\RestAPI\Controllers\Panel_State_Controller;
 use ClawPress\RestAPI\Controllers\Route_Controller;
 use ClawPress\RestAPI\Controllers\Settings_Controller;
+use ClawPress\RestAPI\Controllers\Status_Controller;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -38,6 +40,8 @@ final class Rest_API {
 	public function __construct() {
 		$this->controllers = [
 			new Settings_Controller(),
+			new Status_Controller(),
+			new Panel_State_Controller(),
 			new Chat_Controller(),
 		];
 

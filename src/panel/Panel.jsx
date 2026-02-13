@@ -32,6 +32,9 @@ const Panel = () => {
   const [toolPlan, setToolPlan] = useState(null);
   const [toolDialogs, setToolDialogs] = useState([]);
   const [toolPlanningShown, setToolPlanningShown] = useState(false);
+  const [statusSnapshot, setStatusSnapshot] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [panelStateReady, setPanelStateReady] = useState(false);
   const mockEnabled = Boolean(CLAWPRESS_PANEL.mockEnabled);
   const [themeMode, setThemeMode] = useState(
     localStorage.getItem('clawpress_theme') || 'light'
@@ -44,6 +47,7 @@ const Panel = () => {
   const eventQueueRef = useRef([]);
   const isTypingRef = useRef(false);
   const typingTimerRef = useRef(null);
+  const panelStateSyncTimerRef = useRef(null);
 
   const currentStreamTextRef = useRef(currentStreamText);
   const toolPlanRef = useRef(toolPlan);
@@ -74,6 +78,68 @@ const Panel = () => {
         createdAt: ++timelineRef.current,
       },
     ]);
+
+  const normalizeHistoryItems = (items) => {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    return items
+      .filter((item) => item && typeof item === 'object')
+      .map((item, index) => {
+        const role =
+          item.role === 'user' || item.role === 'assistant' || item.role === 'system'
+            ? item.role
+            : 'system';
+        const content = typeof item.content === 'string' ? item.content : '';
+        const createdAt = Number.isFinite(Number(item.createdAt))
+          ? Number(item.createdAt)
+          : index + 1;
+        const id =
+          typeof item.id === 'string' && item.id
+            ? item.id
+            : `history-${createdAt}-${index}`;
+
+        return { id, role, content, createdAt };
+      });
+  };
+
+  const normalizePanelState = (state) => {
+    if (!state || typeof state !== 'object') {
+      return {
+        open: null,
+        width: null,
+        lastHistoryId: '',
+      };
+    }
+
+    const nextOpen = typeof state.open === 'boolean' ? state.open : null;
+    const nextWidth = Number.isFinite(Number(state.width)) ? Number(state.width) : null;
+    const lastHistoryId =
+      typeof state.last_history_id === 'string' ? state.last_history_id : '';
+
+    return {
+      open: nextOpen,
+      width: nextWidth,
+      lastHistoryId,
+    };
+  };
+
+  const buildStatusLabel = (status) => {
+    if (!status || typeof status !== 'object') {
+      return '';
+    }
+
+    const providerId = status?.provider?.id;
+    const modelId = status?.model?.id;
+    if (providerId && modelId) {
+      return `${providerId} · ${modelId}`;
+    }
+    if (providerId) {
+      return providerId;
+    }
+    return '';
+  };
 
   const ephemeralStatusIdRef = useRef(null);
   const setEphemeralStatus = (content) => {
@@ -114,7 +180,20 @@ const Panel = () => {
   useEffect(() => {
     const kb = (e) => {
       const cmd = e.metaKey || e.ctrlKey;
-      if (cmd && e.shiftKey && e.key.toLowerCase() === 'a') setOpen((o) => !o);
+      if (!cmd || e.altKey || e.key.toLowerCase() !== 'k') return;
+
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      if (
+        activeTag === 'input' ||
+        activeTag === 'textarea' ||
+        activeTag === 'select' ||
+        document.activeElement?.isContentEditable
+      ) {
+        return;
+      }
+
+      e.preventDefault();
+      setOpen((o) => !o);
     };
     window.addEventListener('keydown', kb);
     return () => window.removeEventListener('keydown', kb);
@@ -202,6 +281,8 @@ const Panel = () => {
         ];
       });
     }
+
+    requestStatus(true);
   };
 
   const processStreamEvent = (eventType, parsed) => {
@@ -285,12 +366,8 @@ const Panel = () => {
     processEventQueue();
   };
 
-  const streamPrompt = async (prompt) => {
-    setStreaming(true);
-    setCurrentStreamText('');
-    setToolPlan(null);
-
-    const client = createAgentClient({
+  const buildClient = () =>
+    createAgentClient({
       mockEnabled,
       mockScenario,
       mockDelay,
@@ -302,6 +379,128 @@ const Panel = () => {
       onError: (payload) => handleStreamEvent('error', payload),
     });
 
+  const requestStatus = async (quiet = false) => {
+    if (!quiet) {
+      setStatusLoading(true);
+    }
+
+    try {
+      const status = await buildClient().getStatus?.();
+      if (status) {
+        setStatusSnapshot(status);
+      }
+    } catch {
+      setStatusSnapshot(null);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const initializePanelState = async () => {
+      const client = buildClient();
+
+      try {
+        const panelStateResponse = await client.getPanelState?.();
+        if (!mounted) return;
+
+        const panelState = normalizePanelState(panelStateResponse);
+        if (typeof panelState.open === 'boolean') {
+          setOpen(panelState.open);
+        }
+        if (Number.isFinite(panelState.width) && panelState.width > 0) {
+          setWidth(panelState.width);
+        }
+      } catch {
+        // Keep localStorage fallback.
+      }
+
+      try {
+        const statusResponse = await client.getStatus?.();
+        if (!mounted) return;
+
+        setStatusSnapshot(statusResponse || null);
+      } catch {
+        if (!mounted) return;
+        setStatusSnapshot(null);
+      } finally {
+        if (mounted) {
+          setStatusLoading(false);
+        }
+      }
+
+      try {
+        const historyResponse = await client.getHistory?.();
+        if (!mounted) return;
+
+        const historyMessages = normalizeHistoryItems(historyResponse?.items || []);
+        setMessages(historyMessages);
+        timelineRef.current = historyMessages.reduce(
+          (max, item) => Math.max(max, Number(item.createdAt) || 0),
+          0
+        );
+      } catch {
+        if (!mounted) return;
+        appendMessage('system', 'Unable to load chat history.');
+      }
+
+      if (mounted) {
+        setPanelStateReady(true);
+      }
+    };
+
+    initializePanelState();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    requestStatus(true);
+
+    const intervalId = setInterval(() => {
+      requestStatus(true);
+    }, 15000);
+
+    return () => clearInterval(intervalId);
+  }, [open]);
+
+  useEffect(() => {
+    if (!panelStateReady) return;
+
+    const lastMessage = messages[messages.length - 1];
+    const payload = {
+      open,
+      width,
+      last_history_id: typeof lastMessage?.id === 'string' ? lastMessage.id : '',
+    };
+
+    if (panelStateSyncTimerRef.current) {
+      clearTimeout(panelStateSyncTimerRef.current);
+    }
+
+    panelStateSyncTimerRef.current = setTimeout(() => {
+      buildClient().setPanelState?.(payload).catch(() => {});
+    }, 350);
+
+    return () => {
+      if (panelStateSyncTimerRef.current) {
+        clearTimeout(panelStateSyncTimerRef.current);
+      }
+    };
+  }, [panelStateReady, open, width, messages]);
+
+  const streamPrompt = async (prompt) => {
+    setStreaming(true);
+    setCurrentStreamText('');
+    setToolPlan(null);
+
+    const client = buildClient();
+
     streamHandleRef.current = client.stream(prompt);
   };
 
@@ -312,19 +511,7 @@ const Panel = () => {
 
   const runTool = async (tool, args) => {
     try {
-      const client = createAgentClient({
-        mockEnabled,
-        mockScenario,
-        mockDelay,
-        restBase: CLAWPRESS_PANEL.restBase,
-        streamNonce: CLAWPRESS_PANEL.streamNonce,
-        nonce: CLAWPRESS_PANEL.nonce,
-        onEvent: handleStreamEvent,
-        onDone: () => handleStreamEvent('done', {}),
-        onError: (payload) => handleStreamEvent('error', payload),
-      });
-
-      const res = await client.runTool(tool, args);
+      const res = await buildClient().runTool(tool, args);
 
       return res;
     } catch (e) {
@@ -472,8 +659,10 @@ const Panel = () => {
       <div className="clawpress-panel" data-theme={themeMode} style={{ width: `${width}px` }}>
         <PanelHeader
           onClose={() => setOpen(false)}
-          themeMode={themeMode}
           onToggleTheme={() => setThemeMode((m) => (m === 'light' ? 'dark' : 'light'))}
+          statusMode={statusSnapshot?.mode || 'offline'}
+          statusLabel={buildStatusLabel(statusSnapshot)}
+          statusLoading={statusLoading}
         />
         <div className="clawpress-drag-handle" onMouseDown={startDrag} />
         <PanelMessages

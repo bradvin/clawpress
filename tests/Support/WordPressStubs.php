@@ -40,6 +40,9 @@ final class WordPress_Stubs {
 	/** @var array<string,mixed> */
 	public static array $options = array();
 
+	/** @var array<int,array<string,mixed>> */
+	public static array $user_meta = array();
+
 	public static bool $can_manage_options = true;
 
 	public static bool $is_rtl = false;
@@ -59,6 +62,7 @@ final class WordPress_Stubs {
 		self::$scheduled_actions    = array();
 		self::$triggered_actions    = array();
 		self::$options              = array();
+		self::$user_meta            = array();
 		self::$can_manage_options   = true;
 		self::$is_rtl               = false;
 		self::$has_scheduled_action = false;
@@ -206,6 +210,29 @@ namespace {
 		function update_option( string $option, $value, ?bool $autoload = null ): bool {
 			unset( $autoload );
 			WordPress_Stubs::$options[ $option ] = $value;
+			return true;
+		}
+	}
+
+	if ( ! function_exists( 'get_user_meta' ) ) {
+		function get_user_meta( int $user_id, string $key, bool $single = false ) {
+			$meta_value = WordPress_Stubs::$user_meta[ $user_id ][ $key ] ?? null;
+
+			if ( $single ) {
+				return $meta_value ?? '';
+			}
+
+			return null === $meta_value ? array() : array( $meta_value );
+		}
+	}
+
+	if ( ! function_exists( 'update_user_meta' ) ) {
+		function update_user_meta( int $user_id, string $key, $value, $prev_value = '' ): bool {
+			unset( $prev_value );
+			if ( ! isset( WordPress_Stubs::$user_meta[ $user_id ] ) ) {
+				WordPress_Stubs::$user_meta[ $user_id ] = array();
+			}
+			WordPress_Stubs::$user_meta[ $user_id ][ $key ] = $value;
 			return true;
 		}
 	}

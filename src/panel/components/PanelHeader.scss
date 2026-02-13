@@ -3,14 +3,49 @@
   padding: 10px;
   background: var(--fp-surface);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 8px;
+}
+
+.clawpress-header-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .clawpress-title {
   font-weight: 400;
   font-size: 13px;
   color: var(--fp-text);
+}
+
+.clawpress-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fp-muted);
+}
+
+.clawpress-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #d63638;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.clawpress-status-online .clawpress-status-dot {
+  background: #1a7f37;
+}
+
+.clawpress-status-offline .clawpress-status-dot {
+  background: #d63638;
+}
+
+.clawpress-status-label {
+  opacity: 0.9;
 }
 
 .clawpress-theme-toggle {
