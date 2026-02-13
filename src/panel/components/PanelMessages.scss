@@ -1,0 +1,69 @@
+/* Messages */
+.clawpress-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px;
+  background: var(--fp-surface-contrast);
+  border: 1px solid var(--fp-border);
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu,
+    Cantarell, 'Helvetica Neue', sans-serif;
+}
+
+.clawpress-msg-content {
+  background: var(--fp-bg);
+  padding: 8px 10px;
+  border-radius: 3px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--fp-text);
+  border: 1px solid var(--fp-border);
+}
+
+.clawpress-msg.clawpress-user .clawpress-msg-content {
+  background: var(--fp-user-bg);
+}
+
+.clawpress-msg.clawpress-user {
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+.clawpress-msg.clawpress-assistant .clawpress-msg-content {
+  background: transparent;
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.clawpress-msg.clawpress-system .clawpress-msg-content,
+.clawpress-msg.clawpress-tool_planning .clawpress-msg-content {
+  background: transparent;
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.clawpress-msg-content.clawpress-thinking::after {
+  content: '...';
+  display: inline-block;
+  margin-left: 2px;
+  width: 1.2em;
+  white-space: nowrap;
+  overflow: hidden;
+  vertical-align: baseline;
+  line-height: 1;
+  clip-path: inset(0 100% 0 0);
+  animation: clawpress-thinking-dots 1.2s steps(3, end) infinite;
+}
+
+@keyframes clawpress-thinking-dots {
+  0% { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}

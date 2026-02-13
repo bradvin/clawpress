@@ -1,0 +1,68 @@
+/* Header */
+.clawpress-header {
+  padding: 10px;
+  background: var(--fp-surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clawpress-title {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--fp-text);
+}
+
+.clawpress-theme-toggle {
+  margin-left: auto;
+  margin-right: 6px;
+  background: transparent;
+  border: none;
+  color: var(--fp-text);
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.clawpress-theme-toggle svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+.clawpress-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--fp-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.clawpress-theme-toggle:hover,
+.clawpress-close:hover {
+  color: #72aee6;
+}
+
+.clawpress-close svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}

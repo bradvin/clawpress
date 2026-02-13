@@ -1,0 +1,12 @@
+/* ClawPress Toggle Button */
+.clawpress-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  transition: opacity 0.2s ease;
+}
+
+body.clawpress-panel-open .clawpress-toggle {
+  display: none;
+}

@@ -55,6 +55,14 @@ Pre-built table/grid interface using `@wordpress/dataviews` with WordPress Data 
 
 The demo displays WordPress pages. Replace `'page'` with your custom post type slug to work with your own data.
 
+### Floating AI Panel
+
+ClawPress includes a floating wp-admin panel UI for chat-style interactions.
+
+- Source: `src/panel/`
+- Build output: `build/panel/`
+- Runtime loader: `inc/panel.php`
+
 ## Customization Guide
 
 ### Adding a Custom Post Type

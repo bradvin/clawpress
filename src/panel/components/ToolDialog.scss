@@ -1,0 +1,219 @@
+/* Tool Dialog */
+.clawpress-tool-dialog {
+  border: 1px solid var(--fp-border);
+  background: var(--fp-surface);
+  margin: 0;
+  border-radius: 4px;
+  color: var(--fp-text);
+  position: relative;
+}
+
+.clawpress-tool-dialog-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+}
+
+.clawpress-tool-dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.clawpress-tool-dialog-title {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clawpress-tool-dialog-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 10px;
+  border: 1px solid var(--fp-border);
+  background: var(--fp-muted);
+}
+
+.clawpress-tool-dialog-status-idle {
+  background: var(--fp-muted);
+}
+
+.clawpress-tool-dialog-status-running {
+  background: var(--fp-accent);
+}
+
+.clawpress-tool-dialog-status-blocked {
+  background: light-dark(#dba617, #f0c33c);
+}
+
+.clawpress-tool-dialog-status-error {
+  background: var(--fp-danger);
+}
+
+.clawpress-tool-dialog-status-done {
+  background: light-dark(#00a32a, #00d084);
+}
+
+.clawpress-tool-dialog-status-cancelled {
+  background: light-dark(#8c8f94, #9ea3a8);
+}
+
+.clawpress-tool-dialog-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.clawpress-tool-dialog-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--fp-danger);
+}
+
+.clawpress-tool-dialog-error-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.clawpress-tool-dialog-body {
+  padding: 10px;
+  background: var(--fp-surface-contrast);
+  border-top: 1px solid var(--fp-border);
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.clawpress-tool-dialog-body p {
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.clawpress-tool-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clawpress-tool-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clawpress-tool-dialog-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.clawpress-tool-dialog-input {
+  font-size: 13px;
+}
+
+.clawpress-tool-dialog-help {
+  font-size: 12px;
+  color: var(--fp-muted);
+}
+
+.clawpress-tool-dialog-form-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.clawpress-tool-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clawpress-tool-result-summary {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--fp-muted);
+  flex-wrap: wrap;
+}
+
+.clawpress-tool-result-list {
+  border: 1px solid var(--fp-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: var(--fp-bg);
+}
+
+.clawpress-tool-result-list summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.clawpress-tool-result-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clawpress-tool-result-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.clawpress-tool-result-title {
+  font-weight: 600;
+}
+
+.clawpress-tool-result-meta {
+  color: var(--fp-muted);
+}
+
+.clawpress-tool-result-note {
+  font-style: italic;
+  color: var(--fp-muted);
+  margin: 0;
+}
+
+.clawpress-tool-result-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.clawpress-tool-dialog syntax-highlight {
+  display: block;
+  background: transparent;
+  padding: 8px;
+  border: 1px solid var(--fp-border);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.clawpress-tool-dialog-code {
+  background: var(--fp-bg);
+  padding: 8px;
+  border: 1px solid var(--fp-border);
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  white-space: pre-wrap;
+}
+
+.clawpress-tool-dialog-diff {
+  margin-top: 8px;
+}

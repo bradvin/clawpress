@@ -1,0 +1,179 @@
+/* Shared theme tokens */
+.clawpress-panel,
+.clawpress-mock-panel {
+  --fp-bg: light-dark(#ffffff, #1d2327);
+  --fp-surface: light-dark(#f6f7f7, #1d2327);
+  --fp-surface-contrast: light-dark(#ffffff, #2c3338);
+  --fp-border: light-dark(#dcdcde, #1d2327);
+  --fp-text: light-dark(#1d2327, #f0f0f1);
+  --fp-muted: light-dark(#646970, #a7aaad);
+  --fp-accent: light-dark(#2271b1, #72aee6);
+  --fp-user-bg: light-dark(#e8f4ff, #22384f);
+  --fp-assistant-bg: light-dark(#f4f4f4, #263743);
+  --fp-system-bg: light-dark(#fff6e5, #3a2f1c);
+  --fp-tool-bg: light-dark(#e5eaff, #1f2f3d);
+  --fp-tool-border: light-dark(#6c63ff, #9bb0ff);
+  --fp-input-bg: light-dark(#ffffff, #2b3238);
+  --fp-danger: light-dark(#d63638, #ff8a8a);
+}
+
+/* ClawPress Panel (pushes content) */
+.clawpress-panel {
+  position: fixed;
+  top: var(--wp-admin--admin-bar--height, 0px);
+  right: 0;
+  height: calc(100vh - var(--wp-admin--admin-bar--height, 0px));
+  width: 400px; /* default width; JS updates --clawpress-panel-width */
+
+  background: var(--fp-bg);
+  color: var(--fp-text);
+  border-left: 1px solid var(--fp-border);
+  border-right: 1px solid var(--fp-border);
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding-left: 6px;
+  padding-right: 6px;
+  box-sizing: border-box;
+
+  /* Animation bits */
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity   0.18s ease,
+    width     0.2s ease; /* for resize drag */
+}
+
+.clawpress-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--fp-surface);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.clawpress-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.clawpress-panel[data-theme='light'] {
+  color-scheme: light;
+}
+
+.clawpress-panel[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+.clawpress-panel[data-theme='light'] syntax-highlight {
+  color-scheme: light;
+}
+
+.clawpress-panel[data-theme='dark'] syntax-highlight {
+  color-scheme: dark;
+}
+
+/* When panel is open */
+body.clawpress-panel-open .clawpress-panel {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Push the admin content when open */
+body.clawpress-panel-open #wpcontent {
+  margin-right: var(--clawpress-panel-width, 400px);
+  transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mock controls (dev only) */
+.clawpress-mock-panel {
+  position: fixed;
+  top: calc(var(--wp-admin--admin-bar--height, 0px) + 10px);
+  right: calc(var(--clawpress-panel-width, 400px) + 12px);
+  z-index: 1001;
+  background: var(--fp-surface, #fff);
+  color: var(--fp-text, #1d2327);
+  border: 1px solid var(--fp-border, #ddd);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.clawpress-mock-panel[data-theme='light'] {
+  color-scheme: light;
+}
+
+.clawpress-mock-panel[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+.clawpress-mock-panel[data-theme='light'] syntax-highlight {
+  color-scheme: light;
+}
+
+.clawpress-mock-panel[data-theme='dark'] syntax-highlight {
+  color-scheme: dark;
+}
+
+.clawpress-mock-badge {
+  align-self: flex-start;
+  background: var(--fp-text, #1d2327);
+  color: var(--fp-bg, #fff);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.clawpress-mock-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.clawpress-mock-fieldset {
+  border: 1px solid var(--fp-border, #ddd);
+  border-radius: 6px;
+  padding: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.clawpress-mock-fieldset legend {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+/* Drag Handle */
+.clawpress-drag-handle {
+  width: 6px;
+  cursor: ew-resize;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--fp-surface);
+  z-index: 0;
+}
+
+/* Reduce motion if user prefers */
+@media (prefers-reduced-motion: reduce) {
+  .clawpress-panel,
+  body.clawpress-panel-open #wpcontent {
+    transition: none !important;
+  }
+}

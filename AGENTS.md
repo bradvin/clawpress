@@ -7,6 +7,7 @@ This is a WordPress plugin ClawPress. When working with this codebase, follow th
 The plugin includes:
 - React-based admin UI using DataViews
 - REST API with namespaced endpoints
+- Floating wp-admin panel UI (`src/panel`)
 - wp-scripts build system
 
 ## Architecture Patterns
@@ -23,6 +24,7 @@ The plugin includes:
 ### JavaScript Structure
 
 - **Entry point**: `src/js/admin/index.js` - mounts React app on plugin admin page
+- **Panel entry point**: `src/panel/index.jsx` - mounts floating admin panel
 - **Components**: `src/js/admin/components/` - React components
 - **Hooks**: `src/js/admin/hooks/` - Custom hooks (data fetching, state)
 - **Config**: `src/js/admin/config/` - Field definitions, actions, settings
@@ -55,6 +57,7 @@ When adding features:
 | Add custom post type | `inc/post-types.php` |
 | Add REST endpoint | `inc/rest-api.php` |
 | Add admin component | `src/js/admin/components/`, import in `App.js` |
+| Update floating panel UI | `src/panel/` and `inc/panel.php` |
 | Add PHP heartbeat/scheduler hook | `inc/heartbeat.php` |
 
 ## Data Flow
