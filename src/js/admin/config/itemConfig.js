@@ -1,14 +1,15 @@
 /**
  * DataViews field and action configuration.
  *
- * This example uses WordPress pages as demo data.
- * Replace with your custom post type fields when customizing.
+ * This configuration targets the ClawPress Agent File custom post type.
  */
 import { trash, pencil, external } from '@wordpress/icons';
 import { Button, Flex } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
+
+const POST_TYPE = 'clawpress_agent_file';
 
 export const fields = [
 	{
@@ -111,7 +112,7 @@ export const actions = () => [
 
 			const handleTrash = async () => {
 				for ( const item of items ) {
-					await deleteEntityRecord( 'postType', 'page', item.id );
+					await deleteEntityRecord( 'postType', POST_TYPE, item.id );
 				}
 				closeModal();
 			};
@@ -121,13 +122,13 @@ export const actions = () => [
 					<p>
 						{ items.length === 1
 							? __(
-									'Move this page to trash?',
+									'Move this agent file to trash?',
 									'clawpress'
 							  )
 							: sprintf(
-									/* translators: %d: number of pages */
+									/* translators: %d: number of agent files */
 									__(
-										'Move %d pages to trash?',
+										'Move %d agent files to trash?',
 										'clawpress'
 									),
 									items.length
