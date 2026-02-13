@@ -29,9 +29,15 @@ final class Plugin {
 	private static ?self $instance = null;
 
 	/**
-	 * Prevent direct instantiation.
+	 * Initialize plugin modules.
 	 */
-	private function __construct() {}
+	private function __construct() {
+		new Post_Types();
+		new Rest_API();
+		new Admin_Page();
+		new Panel();
+		new Heartbeat();
+	}
 
 	/**
 	 * Get singleton instance.
@@ -42,16 +48,5 @@ final class Plugin {
 		}
 
 		return self::$instance;
-	}
-
-	/**
-	 * Register all plugin module hooks.
-	 */
-	public function init(): void {
-		Post_Types::init();
-		Rest_API::init();
-		Admin_Page::init();
-		Panel::init();
-		Heartbeat::init();
 	}
 }

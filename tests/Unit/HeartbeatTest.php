@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class HeartbeatTest extends TestCase {
 	public function test_register_adds_scheduler_and_tick_hooks(): void {
-		Heartbeat::init();
+		new Heartbeat();
 
 		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
 
@@ -27,8 +27,9 @@ final class HeartbeatTest extends TestCase {
 
 	public function test_schedule_recurring_actions_schedules_when_missing(): void {
 		WordPress_Stubs::$has_scheduled_action = false;
+		$heartbeat                             = new Heartbeat();
 
-		Heartbeat::schedule_recurring_actions();
+		$heartbeat->schedule_recurring_actions();
 
 		$this->assertCount( 1, WordPress_Stubs::$scheduled_actions );
 		$this->assertSame(
@@ -47,14 +48,16 @@ final class HeartbeatTest extends TestCase {
 
 	public function test_schedule_recurring_actions_bails_when_already_scheduled(): void {
 		WordPress_Stubs::$has_scheduled_action = true;
+		$heartbeat                             = new Heartbeat();
 
-		Heartbeat::schedule_recurring_actions();
+		$heartbeat->schedule_recurring_actions();
 
 		$this->assertCount( 0, WordPress_Stubs::$scheduled_actions );
 	}
 
 	public function test_run_heartbeat_tick_triggers_task_action(): void {
-		Heartbeat::run_heartbeat_tick();
+		$heartbeat = new Heartbeat();
+		$heartbeat->run_heartbeat_tick();
 
 		$this->assertCount( 1, WordPress_Stubs::$triggered_actions );
 		$this->assertSame(

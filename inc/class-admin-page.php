@@ -18,22 +18,22 @@ final class Admin_Page {
 	/**
 	 * Register all hooks for the admin page.
 	 */
-	public static function init(): void {
-		add_action( 'admin_menu', [ self::class, 'register_admin_page' ] );
-		add_action( 'admin_enqueue_scripts', [ self::class, 'enqueue_admin_assets' ] );
+	public function __construct() {
+		add_action( 'admin_menu', [ $this, 'register_admin_page' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
 	}
 
 	/**
 	 * Register the ClawPress admin page.
 	 */
-	public static function register_admin_page(): void {
+	public function register_admin_page(): void {
 		add_menu_page(
 			__( 'ClawPress', 'clawpress' ),
 			__( 'ClawPress', 'clawpress' ),
 			'manage_options',
 			'clawpress',
-			[ self::class, 'render_admin_page' ],
-			'dashicons-admin-generic',
+			[ $this, 'render_admin_page' ],
+			'🦞',
 			58
 		);
 	}
@@ -41,7 +41,7 @@ final class Admin_Page {
 	/**
 	 * Render the admin page container.
 	 */
-	public static function render_admin_page(): void {
+	public function render_admin_page(): void {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'ClawPress', 'clawpress' ); ?></h1>
@@ -55,7 +55,7 @@ final class Admin_Page {
 	 *
 	 * @param string $hook_suffix Current admin page hook.
 	 */
-	public static function enqueue_admin_assets( string $hook_suffix ): void {
+	public function enqueue_admin_assets( string $hook_suffix ): void {
 		if ( 'toplevel_page_clawpress' !== $hook_suffix ) {
 			return;
 		}

@@ -23,16 +23,16 @@ final class Heartbeat {
 	/**
 	 * Register all hooks for heartbeat orchestration.
 	 */
-	public static function init(): void {
-		add_action( 'action_scheduler_init', [ self::class, 'schedule_recurring_actions' ] );
-		add_action( 'action_scheduler_ensure_recurring_actions', [ self::class, 'schedule_recurring_actions' ] );
-		add_action( self::HEARTBEAT_ACTION_HOOK, [ self::class, 'run_heartbeat_tick' ] );
+	public function __construct() {
+		add_action( 'action_scheduler_init', [ $this, 'schedule_recurring_actions' ] );
+		add_action( 'action_scheduler_ensure_recurring_actions', [ $this, 'schedule_recurring_actions' ] );
+		add_action( self::HEARTBEAT_ACTION_HOOK, [ $this, 'run_heartbeat_tick' ] );
 	}
 
 	/**
 	 * Ensure required recurring actions exist.
 	 */
-	public static function schedule_recurring_actions(): void {
+	public function schedule_recurring_actions(): void {
 		if ( ! function_exists( 'as_has_scheduled_action' ) || ! function_exists( 'as_schedule_recurring_action' ) ) {
 			return;
 		}
@@ -53,7 +53,7 @@ final class Heartbeat {
 	/**
 	 * Heartbeat entry point for recurring background work.
 	 */
-	public static function run_heartbeat_tick(): void {
+	public function run_heartbeat_tick(): void {
 		do_action( 'clawpress_run_scheduled_tasks' );
 	}
 }

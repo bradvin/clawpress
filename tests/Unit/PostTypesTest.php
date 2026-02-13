@@ -15,14 +15,15 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class PostTypesTest extends TestCase {
 	public function test_register_adds_init_hook(): void {
-		Post_Types::init();
+		new Post_Types();
 
 		$this->assertCount( 1, WordPress_Stubs::$actions );
 		$this->assertSame( 'init', WordPress_Stubs::$actions[0]['hook'] );
 	}
 
 	public function test_register_agent_file_post_type_uses_expected_args(): void {
-		Post_Types::register_agent_file_post_type();
+		$post_types = new Post_Types();
+		$post_types->register_agent_file_post_type();
 
 		$this->assertCount( 1, WordPress_Stubs::$registered_post_types );
 		$this->assertSame(

@@ -20,8 +20,8 @@ final class Post_Types {
 	/**
 	 * Register all hooks for post types.
 	 */
-	public static function init(): void {
-		add_action( 'init', [ self::class, 'register_post_types' ] );
+	public function __construct() {
+		add_action( 'init', [ $this, 'register_post_types' ] );
 	}
 
 	/**
@@ -29,14 +29,14 @@ final class Post_Types {
 	 *
 	 * @see https://developer.wordpress.org/reference/functions/register_post_type/
 	 */
-	public static function register_post_types(): void {
-		self::register_agent_file_post_type();
+	public function register_post_types(): void {
+		$this->register_agent_file_post_type();
 	}
 
 	/**
 	 * Register the Agent File custom post type.
 	 */
-	public static function register_agent_file_post_type(): void {
+	public function register_agent_file_post_type(): void {
 		$labels = [
 			'name'               => __( 'Agent Files', 'clawpress' ),
 			'singular_name'      => __( 'Agent File', 'clawpress' ),

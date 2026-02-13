@@ -18,9 +18,9 @@ final class Panel {
 	/**
 	 * Register all hooks for the panel.
 	 */
-	public static function init(): void {
-		add_action( 'admin_enqueue_scripts', [ self::class, 'enqueue_assets' ] );
-		add_action( 'admin_bar_menu', [ self::class, 'register_admin_bar_toggle' ], 100 );
+	public function __construct() {
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'admin_bar_menu', [ $this, 'register_admin_bar_toggle' ], 100 );
 	}
 
 	/**
@@ -28,7 +28,7 @@ final class Panel {
 	 *
 	 * @param string $hook_suffix Current admin screen hook suffix.
 	 */
-	public static function enqueue_assets( string $hook_suffix ): void {
+	public function enqueue_assets( string $hook_suffix ): void {
 		unset( $hook_suffix );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -96,7 +96,7 @@ final class Panel {
 	 *
 	 * @param \WP_Admin_Bar $wp_admin_bar Admin bar object.
 	 */
-	public static function register_admin_bar_toggle( \WP_Admin_Bar $wp_admin_bar ): void {
+	public function register_admin_bar_toggle( \WP_Admin_Bar $wp_admin_bar ): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}

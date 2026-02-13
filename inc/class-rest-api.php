@@ -24,21 +24,21 @@ final class Rest_API {
 	/**
 	 * Register all REST API hooks.
 	 */
-	public static function init(): void {
-		add_action( 'rest_api_init', [ self::class, 'register_routes' ] );
+	public function __construct() {
+		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
 	}
 
 	/**
 	 * Register custom REST API endpoints.
 	 */
-	public static function register_routes(): void {
+	public function register_routes(): void {
 		register_rest_route(
 			'clawpress/v1',
 			'/settings',
 			[
 				'methods'             => 'GET',
-				'callback'            => [ self::class, 'get_settings' ],
-				'permission_callback' => [ self::class, 'permissions_check' ],
+				'callback'            => [ $this, 'get_settings' ],
+				'permission_callback' => [ $this, 'permissions_check' ],
 			]
 		);
 
@@ -47,8 +47,8 @@ final class Rest_API {
 			'/settings',
 			[
 				'methods'             => 'POST',
-				'callback'            => [ self::class, 'update_settings' ],
-				'permission_callback' => [ self::class, 'permissions_check' ],
+				'callback'            => [ $this, 'update_settings' ],
+				'permission_callback' => [ $this, 'permissions_check' ],
 				'args'                => [
 					'option_name'  => [
 						'required'          => true,
@@ -66,14 +66,14 @@ final class Rest_API {
 	/**
 	 * Validate endpoint permissions.
 	 */
-	public static function permissions_check(): bool {
+	public function permissions_check(): bool {
 		return current_user_can( 'manage_options' );
 	}
 
 	/**
 	 * Get plugin settings.
 	 */
-	public static function get_settings(): \WP_REST_Response {
+	public function get_settings(): \WP_REST_Response {
 		$settings = [
 			'clawpress_settings' => get_option( 'clawpress_settings', '' ),
 		];
@@ -86,7 +86,7 @@ final class Rest_API {
 	 *
 	 * @param \WP_REST_Request $request The request object.
 	 */
-	public static function update_settings( \WP_REST_Request $request ): \WP_REST_Response {
+	public function update_settings( \WP_REST_Request $request ): \WP_REST_Response {
 		$option_name  = $request->get_param( 'option_name' );
 		$option_value = $request->get_param( 'option_value' );
 

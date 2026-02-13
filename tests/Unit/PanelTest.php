@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class PanelTest extends TestCase {
 	public function test_register_adds_expected_hooks(): void {
-		Panel::init();
+		new Panel();
 
 		$this->assertCount( 2, WordPress_Stubs::$actions );
 		$this->assertSame( 'admin_enqueue_scripts', WordPress_Stubs::$actions[0]['hook'] );
@@ -25,8 +25,9 @@ final class PanelTest extends TestCase {
 
 	public function test_enqueue_assets_bails_when_user_lacks_capability(): void {
 		WordPress_Stubs::$can_manage_options = false;
+		$panel                               = new Panel();
 
-		Panel::enqueue_assets( 'plugins.php' );
+		$panel->enqueue_assets( 'plugins.php' );
 
 		$this->assertCount( 0, WordPress_Stubs::$enqueued_styles );
 		$this->assertCount( 0, WordPress_Stubs::$enqueued_scripts );
@@ -36,8 +37,9 @@ final class PanelTest extends TestCase {
 		WordPress_Stubs::$can_manage_options = true;
 		WordPress_Stubs::$is_rtl             = true;
 		WordPress_Stubs::$current_user_id    = 52;
+		$panel                               = new Panel();
 
-		Panel::enqueue_assets( 'plugins.php' );
+		$panel->enqueue_assets( 'plugins.php' );
 
 		$this->assertCount( 2, WordPress_Stubs::$enqueued_styles );
 		$this->assertCount( 1, WordPress_Stubs::$enqueued_scripts );
@@ -48,9 +50,10 @@ final class PanelTest extends TestCase {
 	}
 
 	public function test_register_admin_bar_toggle_adds_button_for_authorized_users(): void {
+		$panel     = new Panel();
 		$admin_bar = new \WP_Admin_Bar();
 
-		Panel::register_admin_bar_toggle( $admin_bar );
+		$panel->register_admin_bar_toggle( $admin_bar );
 
 		$this->assertCount( 1, $admin_bar->nodes );
 		$this->assertSame( 'clawpress-toggle', $admin_bar->nodes[0]['id'] );
@@ -58,9 +61,10 @@ final class PanelTest extends TestCase {
 
 	public function test_register_admin_bar_toggle_bails_for_unauthorized_users(): void {
 		WordPress_Stubs::$can_manage_options = false;
+		$panel                               = new Panel();
 		$admin_bar                           = new \WP_Admin_Bar();
 
-		Panel::register_admin_bar_toggle( $admin_bar );
+		$panel->register_admin_bar_toggle( $admin_bar );
 
 		$this->assertCount( 0, $admin_bar->nodes );
 	}
