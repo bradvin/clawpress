@@ -24,7 +24,7 @@ final class Rest_API {
 	/**
 	 * Register all REST API hooks.
 	 */
-	public static function register(): void {
+	public static function init(): void {
 		add_action( 'rest_api_init', [ self::class, 'register_routes' ] );
 	}
 

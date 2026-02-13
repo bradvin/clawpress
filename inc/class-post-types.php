@@ -20,7 +20,7 @@ final class Post_Types {
 	/**
 	 * Register all hooks for post types.
 	 */
-	public static function register(): void {
+	public static function init(): void {
 		add_action( 'init', [ self::class, 'register_post_types' ] );
 	}
 

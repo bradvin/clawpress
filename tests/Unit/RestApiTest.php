@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class RestApiTest extends TestCase {
 	public function test_register_adds_rest_api_init_hook(): void {
-		Rest_API::register();
+		Rest_API::init();
 
 		$this->assertCount( 1, WordPress_Stubs::$actions );
 		$this->assertSame( 'rest_api_init', WordPress_Stubs::$actions[0]['hook'] );

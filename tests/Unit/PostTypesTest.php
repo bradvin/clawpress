@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class PostTypesTest extends TestCase {
 	public function test_register_adds_init_hook(): void {
-		Post_Types::register();
+		Post_Types::init();
 
 		$this->assertCount( 1, WordPress_Stubs::$actions );
 		$this->assertSame( 'init', WordPress_Stubs::$actions[0]['hook'] );

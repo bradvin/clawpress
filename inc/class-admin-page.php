@@ -18,7 +18,7 @@ final class Admin_Page {
 	/**
 	 * Register all hooks for the admin page.
 	 */
-	public static function register(): void {
+	public static function init(): void {
 		add_action( 'admin_menu', [ self::class, 'register_admin_page' ] );
 		add_action( 'admin_enqueue_scripts', [ self::class, 'enqueue_admin_assets' ] );
 	}

@@ -22,13 +22,36 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Plugin {
 	/**
+	 * Singleton instance.
+	 *
+	 * @var ?self
+	 */
+	private static ?self $instance = null;
+
+	/**
+	 * Prevent direct instantiation.
+	 */
+	private function __construct() {}
+
+	/**
+	 * Get singleton instance.
+	 */
+	public static function get_instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
+
+	/**
 	 * Register all plugin module hooks.
 	 */
-	public static function register(): void {
-		Post_Types::register();
-		Rest_API::register();
-		Admin_Page::register();
-		Panel::register();
-		Heartbeat::register();
+	public function init(): void {
+		Post_Types::init();
+		Rest_API::init();
+		Admin_Page::init();
+		Panel::init();
+		Heartbeat::init();
 	}
 }

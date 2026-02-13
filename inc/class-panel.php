@@ -18,7 +18,7 @@ final class Panel {
 	/**
 	 * Register all hooks for the panel.
 	 */
-	public static function register(): void {
+	public static function init(): void {
 		add_action( 'admin_enqueue_scripts', [ self::class, 'enqueue_assets' ] );
 		add_action( 'admin_bar_menu', [ self::class, 'register_admin_bar_toggle' ], 100 );
 	}

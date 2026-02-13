@@ -40,4 +40,4 @@ require_once CLAWPRESS_DIR . 'inc/class-panel.php';
 require_once CLAWPRESS_DIR . 'inc/class-heartbeat.php';
 require_once CLAWPRESS_DIR . 'inc/class-plugin.php';
 
-Plugin::register();
+Plugin::get_instance()->init();

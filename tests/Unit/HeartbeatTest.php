@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class HeartbeatTest extends TestCase {
 	public function test_register_adds_scheduler_and_tick_hooks(): void {
-		Heartbeat::register();
+		Heartbeat::init();
 
 		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
 

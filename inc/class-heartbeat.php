@@ -23,7 +23,7 @@ final class Heartbeat {
 	/**
 	 * Register all hooks for heartbeat orchestration.
 	 */
-	public static function register(): void {
+	public static function init(): void {
 		add_action( 'action_scheduler_init', [ self::class, 'schedule_recurring_actions' ] );
 		add_action( 'action_scheduler_ensure_recurring_actions', [ self::class, 'schedule_recurring_actions' ] );
 		add_action( self::HEARTBEAT_ACTION_HOOK, [ self::class, 'run_heartbeat_tick' ] );

@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class PanelTest extends TestCase {
 	public function test_register_adds_expected_hooks(): void {
-		Panel::register();
+		Panel::init();
 
 		$this->assertCount( 2, WordPress_Stubs::$actions );
 		$this->assertSame( 'admin_enqueue_scripts', WordPress_Stubs::$actions[0]['hook'] );

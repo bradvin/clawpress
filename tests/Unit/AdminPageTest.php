@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class AdminPageTest extends TestCase {
 	public function test_register_adds_expected_hooks(): void {
-		Admin_Page::register();
+		Admin_Page::init();
 
 		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
 

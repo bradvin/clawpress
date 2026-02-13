@@ -14,8 +14,11 @@ use ClawPress\Tests\Support\TestCase;
 use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class PluginTest extends TestCase {
-	public function test_register_wires_all_module_hooks(): void {
-		Plugin::register();
+	public function test_get_instance_and_init_wire_all_module_hooks(): void {
+		$instance = Plugin::get_instance();
+		$this->assertSame( $instance, Plugin::get_instance() );
+
+		$instance->init();
 
 		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
 
