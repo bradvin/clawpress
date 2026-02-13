@@ -53,5 +53,11 @@ The PHP file now includes:
 ## Files
 
 - `local-classifier.ts` — original TS source (as requested)
-- `local-classifier.php` — extracted + ported logic/config
+- `local-classifier.php` — extracted + ported logic (now loads config files)
 - `local-classifier.md` — this document
+- `config/default-routing.php` — composed default routing config
+- `config/scoring.php` — scoring thresholds, weights, boundaries, and keyword links
+- `config/keywords.php` — multilingual keyword arrays (one item per line, with English comments for non-English items)
+- `config/tiers.php` — normal tier model config
+- `config/agentic-tiers.php` — agentic tier model config
+- `config/overrides.php` — routing overrides
