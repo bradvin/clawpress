@@ -1,49 +1,57 @@
 # local-classifier (TS → PHP) logic notes
 
-This folder captures a direct idea-port of `local-classifier.ts` into PHP.
+Updated port: this is no longer a thin wrapper.
 
-## What the original TypeScript does
+## What was extracted from ClawRouter source
 
-The TS file exposes two helpers and intentionally avoids LLM/API calls.
+From these files:
+- `src/router/config.ts`
+- `src/router/rules.ts`
+- `src/router/index.ts`
+- `src/router/selector.ts`
 
-1. `classifyLocally(prompt, systemPrompt?)`
-   - Builds `fullText = systemPrompt + prompt`
-   - Estimates token count with `ceil(fullText.length / 4)`
-   - Calls `classifyByRules(...)` with:
-     - prompt
-     - system prompt
-     - estimated token count
-     - `DEFAULT_ROUTING_CONFIG.scoring`
-   - Returns a `ScoringResult`
+The PHP file now includes:
 
-2. `routeLocallyNoLLM(prompt, options)`
-   - Merges `DEFAULT_ROUTING_CONFIG` with optional `configOverrides`
-   - Calls `route(...)` with:
-     - prompt
-     - optional system prompt
-     - `maxOutputTokens` defaulting to `4096`
-     - context containing merged config + `modelPricing`
-   - Returns a `RoutingDecision`
+1. **Default routing config array**
+   - scoring thresholds
+   - keyword lists
+   - dimension weights
+   - tier boundaries
+   - confidence params
+   - normal tiers + agentic tiers
+   - override settings
 
-## PHP translation design choices
+2. **Rule scoring functions (ported)**
+   - token count scoring
+   - keyword scoring helper
+   - multi-step pattern scoring
+   - question complexity scoring
+   - agentic task scoring
+   - confidence sigmoid calibration
 
-Because the original TS depends on imported functions/types from ClawRouter, the PHP version uses **dependency injection**:
+3. **Classifier logic (ported)**
+   - 14 dimensions + agentic dimension
+   - weighted score aggregation
+   - reasoning-keyword override to REASONING tier
+   - boundary mapping to SIMPLE/MEDIUM/COMPLEX/REASONING
+   - ambiguity fallback when confidence is below threshold
 
-- `classify_locally(...)` accepts a `$classifyByRules` callable
-- `route_locally_no_llm(...)` accepts a `$route` callable
-- `DEFAULT_ROUTING_CONFIG` is represented by `$defaultRoutingConfig` array input
+4. **Router logic (ported)**
+   - token estimation
+   - classify-by-rules call
+   - auto/explicit agentic mode switching
+   - large-context force-COMPLEX override
+   - structured-output minimum-tier upgrade
+   - default tier for ambiguous scores
 
-This keeps behavior faithful while making the PHP file portable inside this repo.
+5. **Model selection + cost estimation (ported)**
+   - tier primary model selection
+   - estimated input/output cost
+   - baseline cost vs `anthropic/claude-opus-4`
+   - savings percentage
 
-## Behavioral parity details
+## Files
 
-- Same token estimate heuristic: `ceil(strlen(fullText) / 4)`
-- Same default max output tokens: `4096`
-- Same requirement that model pricing is provided
-- Same "local-only" intent (no API call path in these helpers)
-
-## Files in this folder
-
-- `local-classifier.ts` — original TS source copied as requested
-- `local-classifier.php` — PHP port of the same logic
-- `local-classifier.md` — this explanation
+- `local-classifier.ts` — original TS source (as requested)
+- `local-classifier.php` — extracted + ported logic/config
+- `local-classifier.md` — this document
