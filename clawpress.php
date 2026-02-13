@@ -33,8 +33,11 @@ if ( file_exists( CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-sc
 }
 
 // Feature modules.
-require_once CLAWPRESS_DIR . 'inc/post-types.php';
-require_once CLAWPRESS_DIR . 'inc/rest-api.php';
-require_once CLAWPRESS_DIR . 'inc/admin-page.php';
-require_once CLAWPRESS_DIR . 'inc/panel.php';
-require_once CLAWPRESS_DIR . 'inc/heartbeat.php';
+require_once CLAWPRESS_DIR . 'inc/class-post-types.php';
+require_once CLAWPRESS_DIR . 'inc/class-rest-api.php';
+require_once CLAWPRESS_DIR . 'inc/class-admin-page.php';
+require_once CLAWPRESS_DIR . 'inc/class-panel.php';
+require_once CLAWPRESS_DIR . 'inc/class-heartbeat.php';
+require_once CLAWPRESS_DIR . 'inc/class-plugin.php';
+
+Plugin::register();

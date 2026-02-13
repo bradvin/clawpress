@@ -11,7 +11,8 @@
 	},
 	"require-dev": {
 		"wp-coding-standards/wpcs": "^3.0",
-		"dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"phpunit/phpunit": "^9.6"
 	},
 	"config": {
 		"allow-plugins": {
@@ -22,6 +23,8 @@
 	},
 	"scripts": {
 		"lint": "phpcs",
-		"lint:fix": "phpcbf"
+		"lint:fix": "phpcbf",
+		"test": "vendor/bin/phpunit --configuration phpunit.xml.dist",
+		"test:coverage": "vendor/bin/phpunit --configuration phpunit.xml.dist --coverage-text"
 	}
 }
