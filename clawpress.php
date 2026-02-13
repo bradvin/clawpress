@@ -36,5 +36,4 @@ if ( file_exists( CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-sc
 require_once CLAWPRESS_DIR . 'inc/post-types.php';
 require_once CLAWPRESS_DIR . 'inc/rest-api.php';
 require_once CLAWPRESS_DIR . 'inc/admin-page.php';
-require_once CLAWPRESS_DIR . 'inc/blocks.php';
 require_once CLAWPRESS_DIR . 'inc/heartbeat.php';

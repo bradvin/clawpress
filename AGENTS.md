@@ -7,7 +7,6 @@ This is a WordPress plugin ClawPress. When working with this codebase, follow th
 The plugin includes:
 - React-based admin UI using DataViews
 - REST API with namespaced endpoints
-- Gutenberg blocks with Interactivity API
 - wp-scripts build system
 
 ## Architecture Patterns
@@ -57,7 +56,6 @@ When adding features:
 | Add REST endpoint | `inc/rest-api.php` |
 | Add admin component | `src/js/admin/components/`, import in `App.js` |
 | Add PHP heartbeat/scheduler hook | `inc/heartbeat.php` |
-| Add new block | Create `src/blocks/block-name/` directory |
 
 ## Data Flow
 
@@ -124,7 +122,6 @@ Scripts rely on WordPress packages extracted at build time:
 - `@wordpress/core-data` - Data layer (REST API abstraction)
 - `@wordpress/dataviews` - Table/grid views
 - `@wordpress/icons` - Icon library
-- `@wordpress/interactivity` - Frontend interactivity
 - `@wordpress/dom-ready` - Admin app bootstrap
 - `@wordpress/element` - React root rendering
 

@@ -55,14 +55,6 @@ Pre-built table/grid interface using `@wordpress/dataviews` with WordPress Data 
 
 The demo displays WordPress pages. Replace `'page'` with your custom post type slug to work with your own data.
 
-### WordPress Block with Interactivity API
-
-A Gutenberg block demonstrating show/hide functionality using the Interactivity API.
-
-- Block name: `clawpress/toggle-content`
-- Features: `data-wp-interactive`, `data-wp-context`, `data-wp-on--click`, `data-wp-bind--hidden`
-- Server-side rendered with `render.php`
-
 ## Customization Guide
 
 ### Adding a Custom Post Type
@@ -104,17 +96,6 @@ export const fields = [
 ];
 ```
 
-### Adding a New Block
-
-1. Create `src/blocks/your-block/` with:
-   - `block.json` - Block metadata
-   - `index.js` - Registration
-   - `edit.js` - Editor component
-   - `view.js` - Interactivity store (optional)
-   - `render.php` - Server render template
-
-2. The block will be auto-discovered by wp-scripts
-
 ### Adding a New PHP Feature
 
 1. Create `inc/your-feature.php` with namespace
@@ -143,7 +124,6 @@ export const fields = [
 | Asset file pattern | Auto-managed dependencies |
 | wp-scripts build tooling | Zero-config builds |
 | WordPress admin menu page | Proper admin page integration |
-| Interactivity API | Lightweight frontend interactions |
 
 ## Requirements
 
