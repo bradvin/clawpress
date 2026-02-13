@@ -1,14 +1,15 @@
 /**
  * Custom hook for fetching items using WordPress Data Layer.
  *
- * Uses @wordpress/core-data to fetch WordPress pages as demo data.
- * Replace 'page' with your custom post type slug when customizing.
+ * Uses @wordpress/core-data to fetch ClawPress Agent Files.
  */
 import { useEntityRecords } from '@wordpress/core-data';
 
+const POST_TYPE = 'clawpress_agent_file';
+
 export function useItems( view ) {
 	const { records, totalItems, totalPages, isResolving, hasResolved } =
-		useEntityRecords( 'postType', 'page', {
+		useEntityRecords( 'postType', POST_TYPE, {
 			per_page: view.perPage,
 			page: view.page,
 			orderby: view.sort?.field === 'title' ? 'title' : 'date',

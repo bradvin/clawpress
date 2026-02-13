@@ -1,8 +1,7 @@
 /**
  * Pages view component with DataViews table.
  *
- * Displays WordPress pages using the DataViews component.
- * Replace with your custom post type when customizing.
+ * Displays ClawPress Agent Files using the DataViews component.
  */
 import { DataViews } from '@wordpress/dataviews/wp';
 import { useState } from '@wordpress/element';
@@ -27,7 +26,7 @@ export default function PagesView() {
 		<div className="clawpress-dataviews">
 			<p>
 				{ __(
-					'This is a demo using WordPress pages. Replace with your custom post type.',
+					'Showing ClawPress Agent Files.',
 					'clawpress'
 				) }
 			</p>

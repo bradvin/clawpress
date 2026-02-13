@@ -15,7 +15,7 @@ export default function App() {
 	const tabs = [
 		{
 			name: VIEWS.PAGES,
-			title: __( 'Pages', 'clawpress' ),
+			title: __( 'Agent Files', 'clawpress' ),
 			content: <PagesView />,
 		},
 		{
