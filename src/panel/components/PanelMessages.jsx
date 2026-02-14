@@ -33,16 +33,13 @@ const PanelMessages = ({
   const openId =
     serialCandidates[0]?.id || toolDialogs[toolDialogs.length - 1]?.id || null;
 
-  const latestCardMessageId =
-    [...messages]
-      .reverse()
-      .find((message) => message?.card && typeof message.card === 'object')?.id ||
-    null;
+  const latestMessageIndex = messages.length - 1;
 
   const items = [
-    ...messages.map((message) => ({
+    ...messages.map((message, index) => ({
       type: 'message',
       createdAt: message.createdAt ?? 0,
+      messageIndex: index,
       data: message,
     })),
     ...toolDialogs.map((dialog) => ({
@@ -57,7 +54,10 @@ const PanelMessages = ({
       {items.map((item) =>
         item.type === 'message' ? (() => {
           const isSystem = item.data.role === 'system';
+          const isAssistant = item.data.role === 'assistant';
           const hasCard = item.data.card && typeof item.data.card === 'object';
+          const isLatestMessageCard =
+            hasCard && item.messageIndex === latestMessageIndex;
           const content = item.data.content || '';
           const hasEllipsis = /(\.\.\.|…)\s*$/.test(content);
           const showThinking = isSystem && hasEllipsis;
@@ -70,8 +70,10 @@ const PanelMessages = ({
               key={item.data.id || item.data.content}
               className={`clawpress-msg clawpress-${item.data.role}`}
             >
-              {isSystem ? (
-                <div className="clawpress-msg-label">{__('System', 'clawpress')}</div>
+              {isSystem || isAssistant ? (
+                <div className="clawpress-msg-label">
+                  {isSystem ? __('System', 'clawpress') : __('AGENT', 'clawpress')}
+                </div>
               ) : null}
               {hasCard ? (
                 <PanelCard
@@ -81,7 +83,7 @@ const PanelMessages = ({
                   isBusy={
                     streaming ||
                     waitingForResponse ||
-                    item.data.id !== latestCardMessageId
+                    !isLatestMessageCard
                   }
                 />
               ) : (
@@ -112,6 +114,7 @@ const PanelMessages = ({
       ) : null}
       {streaming && currentStreamText ? (
         <div className="clawpress-msg clawpress-assistant">
+          <div className="clawpress-msg-label">{__('AGENT', 'clawpress')}</div>
           <div className="clawpress-msg-content">{currentStreamText || '...'}</div>
         </div>
       ) : null}

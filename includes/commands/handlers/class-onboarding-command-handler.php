@@ -848,7 +848,9 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				$data['actions'] = [
 					[
 						'id'     => 'create-workspace',
-						'label'  => __( 'Create Workspace', 'clawpress' ),
+						'label'  => $workspace_ready
+							? __( 'Use Workspace', 'clawpress' )
+							: __( 'Create Workspace', 'clawpress' ),
 						'type'   => 'send_prompt',
 						'prompt' => '/onboarding create-workspace',
 					],
@@ -856,7 +858,17 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				break;
 
 			case 'agent_files':
-				$data['message'] = __( 'Bootstrap the required agent files from templates.', 'clawpress' );
+				$data['message'] = implode(
+					"\n",
+					[
+						__( 'Clawpress uses a couple of agent files which you can edit to customize how your ClawPress agent behaves:', 'clawpress' ),
+						'',
+						__( 'AGENTS.md - core agent operating guide for how your agent behaves.', 'clawpress' ),
+						__( 'SOUL.md - core behavior and boundaries for your agent', 'clawpress' ),
+						__( 'USER.md - user profile, working relationship, so your agent knows who it is interacting with', 'clawpress' ),
+						__( 'HEARTBEAT.md - list of tasks for your agent to perform proactively on a regular basis', 'clawpress' ),
+					]
+				);
 				$data['actions'] = [
 					[
 						'id'     => 'create-agent-files',

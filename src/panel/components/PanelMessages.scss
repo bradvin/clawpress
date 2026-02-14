@@ -74,6 +74,7 @@
 .clawpress-card-text {
   color: var(--fp-text);
   margin: 0;
+  white-space: pre-line;
 }
 
 .clawpress-card-welcome-title-line {
@@ -107,10 +108,13 @@
 }
 
 .clawpress-msg.clawpress-assistant .clawpress-msg-content {
-  background: transparent;
-  border: none;
-  padding-left: 0;
-  padding-right: 0;
+  background: var(--fp-assistant-bg);
+  border: 1px solid var(--fp-border);
+}
+
+.clawpress-msg.clawpress-assistant {
+  align-self: flex-start;
+  max-width: 85%;
 }
 
 .clawpress-msg.clawpress-system {

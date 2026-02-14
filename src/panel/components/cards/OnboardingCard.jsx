@@ -34,6 +34,14 @@ const getRelativeWorkspacePath = (value) => {
   return normalized.slice(index);
 };
 
+const formatMultilineText = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.replace(/\r\n/g, '\n').replace(/<br\s*\/?>/gi, '\n');
+};
+
 const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
   const data =
     card?.data && typeof card.data === 'object' && !Array.isArray(card.data)
@@ -47,12 +55,14 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
     typeof data.emoji === 'string' && data.emoji.trim() ? data.emoji : '🧙';
   const message =
     typeof data.message === 'string' && data.message.trim()
-      ? data.message
+      ? formatMultilineText(data.message)
       : __('Follow these steps to finish setup.', 'clawpress');
   const detail =
     typeof data.detail === 'string' && data.detail.trim() ? data.detail : '';
   const error =
     typeof data.error === 'string' && data.error.trim() ? data.error : '';
+  const detailText = formatMultilineText(detail);
+  const errorText = formatMultilineText(error);
   const step = typeof data.step === 'string' ? data.step.trim() : '';
   const stepLabel =
     typeof data.step_label === 'string' && data.step_label.trim()
@@ -283,8 +293,8 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
               ) : null}
             </div>
           ) : null}
-          {detail ? (
-            <div className="clawpress-card-onboarding-detail">{detail}</div>
+          {detailText ? (
+            <div className="clawpress-card-onboarding-detail">{detailText}</div>
           ) : null}
           {onProviderSettingsPage && step === 'provider' ? (
             <div className="clawpress-card-onboarding-detail">
@@ -294,8 +304,8 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
               )}
             </div>
           ) : null}
-          {error ? (
-            <div className="clawpress-card-onboarding-error">{error}</div>
+          {errorText ? (
+            <div className="clawpress-card-onboarding-error">{errorText}</div>
           ) : null}
         </div>
 
