@@ -124,6 +124,32 @@ final class Agent_File_Helper {
 	}
 
 	/**
+	 * Check whether all default template-backed agent files exist.
+	 */
+	public function has_default_agent_files_from_templates(): bool {
+		if ( ! function_exists( 'get_posts' ) ) {
+			return false;
+		}
+
+		$template_files = $this->get_template_files();
+		if ( [] === $template_files ) {
+			return false;
+		}
+
+		foreach ( $template_files as $relative_path => $absolute_path ) {
+			unset( $absolute_path );
+			$slug             = $this->build_slug_from_template_path( $relative_path );
+			$existing_post_id = $this->find_existing_agent_file_post_id( $relative_path, $slug );
+
+			if ( $existing_post_id <= 0 ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Resolve all template files in templates directory.
 	 *
 	 * @return array<string,string> Relative path => absolute path.

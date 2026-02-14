@@ -24,6 +24,7 @@ use ClawPress\Commands\Handlers\Test_Command_Handler;
 use ClawPress\Commands\Handlers\Tools_Command_Handler;
 use ClawPress\Helpers\Chat_History_Helper;
 use ClawPress\Helpers\Agent_File_Helper;
+use ClawPress\Helpers\Model_Helper;
 use ClawPress\Helpers\Provider_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use ClawPress\Helpers\Status_Helper;
@@ -51,6 +52,7 @@ final class Commands {
 
 		$settings_helper    = Settings_Helper::get_instance();
 		$agent_file_helper  = Agent_File_Helper::get_instance();
+		$model_helper       = Model_Helper::get_instance();
 		$provider_helper    = Provider_Helper::get_instance();
 		$status_helper      = Status_Helper::get_instance();
 		$history_helper     = Chat_History_Helper::get_instance();
@@ -60,7 +62,7 @@ final class Commands {
 
 		$this->registry->register( new Help_Command_Handler( $this->registry ), false );
 		$this->registry->register( new Status_Command_Handler( $status_helper ), false );
-		$this->registry->register( new Onboarding_Command_Handler( $settings_helper ), false );
+		$this->registry->register( new Onboarding_Command_Handler( $settings_helper, $provider_helper, $model_helper, $user_helper, $workspace_helper, $agent_file_helper ), false );
 		$this->registry->register( new Memory_Command_Handler( $settings_helper, $confirmation_store ), true );
 		$this->registry->register( new Clear_Command_Handler( $history_helper ), true );
 		$this->registry->register( new Site_Command_Handler(), false );
@@ -141,7 +143,8 @@ final class Commands {
 			$response->get_effects(),
 			[] !== $response->get_suggestions()
 				? $response->get_suggestions()
-				: $this->get_help_suggestions()
+				: $this->get_help_suggestions(),
+			$response->get_card()
 		);
 	}
 

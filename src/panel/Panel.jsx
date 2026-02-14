@@ -741,6 +741,23 @@ const Panel = () => {
       return;
     }
 
+    if (action.type === 'open_url') {
+      const url = typeof action.url === 'string' ? action.url.trim() : '';
+      if (!url) {
+        appendMessage('system', __('Invalid card action.', 'clawpress'));
+        return;
+      }
+
+      try {
+        const resolved = new URL(url, window.location.origin);
+        window.location.assign(resolved.toString());
+      } catch {
+        appendMessage('system', __('Invalid card URL.', 'clawpress'));
+      }
+
+      return;
+    }
+
     if (action.type === 'run_tool') {
       const toolName = typeof action.tool === 'string' ? action.tool.trim() : '';
       if (!toolName) {

@@ -79,11 +79,7 @@ final class Provider_Helper {
 		}
 
 		$provider = clawpress_sanitize_provider( $settings['provider'] );
-		if ( '' === $provider || ! isset( self::PROVIDER_CREDENTIALS[ $provider ] ) ) {
-			return '';
-		}
-
-		if ( ! $this->has_provider_credentials( $provider ) ) {
+		if ( '' === $provider ) {
 			return '';
 		}
 
@@ -102,16 +98,31 @@ final class Provider_Helper {
 		}
 
 		foreach ( $this->get_registered_provider_ids() as $candidate_provider ) {
-			if ( ! $this->has_provider_credentials( $candidate_provider ) ) {
-				continue;
-			}
-
 			if ( $this->is_provider_configured( $candidate_provider ) ) {
 				return $candidate_provider;
 			}
 		}
 
 		return '';
+	}
+
+	/**
+	 * Get configured provider IDs with valid credentials.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_configured_provider_ids(): array {
+		$configured = [];
+
+		foreach ( $this->get_registered_provider_ids() as $provider_id ) {
+			if ( ! $this->is_provider_configured( $provider_id ) ) {
+				continue;
+			}
+
+			$configured[] = $provider_id;
+		}
+
+		return array_values( array_unique( $configured ) );
 	}
 
 	/**
@@ -180,18 +191,13 @@ final class Provider_Helper {
 	 * @param string $provider Provider ID.
 	 */
 	private function is_provider_configured( string $provider ): bool {
+		$provider = clawpress_sanitize_provider( $provider );
+		if ( '' === $provider ) {
+			return false;
+		}
+
 		if ( isset( $this->provider_configuration_cache[ $provider ] ) ) {
 			return $this->provider_configuration_cache[ $provider ];
-		}
-
-		if ( ! isset( self::PROVIDER_CREDENTIALS[ $provider ] ) ) {
-			$this->provider_configuration_cache[ $provider ] = false;
-			return false;
-		}
-
-		if ( ! $this->has_provider_credentials( $provider ) ) {
-			$this->provider_configuration_cache[ $provider ] = false;
-			return false;
 		}
 
 		$is_configured = false;

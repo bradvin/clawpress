@@ -16,6 +16,27 @@ export const normalizeCardActions = (card) => {
         return null;
       }
 
+      if ('open_url' === type) {
+        const urlCandidates = [action.url, action.href];
+        const url = urlCandidates
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .find((item) => item.length > 0);
+
+        if (!url) {
+          return null;
+        }
+
+        return {
+          id:
+            typeof action.id === 'string' && action.id.trim()
+              ? action.id.trim()
+              : `action-${index}`,
+          label,
+          type: 'open_url',
+          url,
+        };
+      }
+
       if ('run_tool' === type) {
         const toolCandidates = [action.tool, action.tool_name, action.name];
         const tool = toolCandidates

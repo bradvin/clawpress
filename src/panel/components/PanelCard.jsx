@@ -1,5 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import WelcomeCard from './cards/WelcomeCard';
+import OnboardingCard from './cards/OnboardingCard';
 import { normalizeCardActions } from '../utils/cardActions';
 
 const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
@@ -10,6 +11,8 @@ const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
   switch (card.type) {
     case 'welcome':
       return <WelcomeCard card={card} onSendAction={onSendAction} isBusy={isBusy} />;
+    case 'onboarding':
+      return <OnboardingCard card={card} onSendAction={onSendAction} isBusy={isBusy} />;
     default:
       break;
   }

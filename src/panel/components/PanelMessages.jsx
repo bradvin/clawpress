@@ -72,7 +72,7 @@ const PanelMessages = ({
                   card={item.data.card}
                   fallbackText={displayContent}
                   onSendAction={onSendCardAction}
-                  isBusy={streaming}
+                  isBusy={streaming || waitingForResponse}
                 />
               ) : (
                 <div
