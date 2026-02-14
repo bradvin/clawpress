@@ -1,0 +1,815 @@
+# Copyright (C) 2026 
+# This file is distributed under the same license as the ClawPress plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: ClawPress 0.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/clawpress\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-02-14T12:51:35+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: clawpress\n"
+
+#. Plugin Name of the plugin
+#: clawpress.php
+#: includes/class-admin-page.php:35
+#: includes/class-admin-page.php:36
+#: includes/class-admin-page.php:51
+#: src/panel/components/PanelToggle.jsx:9
+msgid "ClawPress"
+msgstr ""
+
+#: includes/class-panel.php:116
+msgid "Toggle ClawPress panel"
+msgstr ""
+
+#: includes/class-post-types.php:41
+#: includes/class-post-types.php:51
+#: includes/class-post-types.php:52
+#: src/js/admin/components/App.js:18
+msgid "Agent Files"
+msgstr ""
+
+#: includes/class-post-types.php:42
+msgid "Agent File"
+msgstr ""
+
+#: includes/class-post-types.php:43
+msgid "Add New"
+msgstr ""
+
+#: includes/class-post-types.php:44
+msgid "Add New Agent File"
+msgstr ""
+
+#: includes/class-post-types.php:45
+msgid "Edit Agent File"
+msgstr ""
+
+#: includes/class-post-types.php:46
+msgid "New Agent File"
+msgstr ""
+
+#: includes/class-post-types.php:47
+msgid "View Agent File"
+msgstr ""
+
+#: includes/class-post-types.php:48
+msgid "Search Agent Files"
+msgstr ""
+
+#: includes/class-post-types.php:49
+msgid "No agent files found."
+msgstr ""
+
+#: includes/class-post-types.php:50
+msgid "No agent files found in Trash."
+msgstr ""
+
+#. translators: 1: command name, 2: help text
+#: includes/commands/class-commands.php:98
+#, php-format
+msgid ""
+"Unknown command: `%1$s`.\n"
+"\n"
+"%2$s"
+msgstr ""
+
+#: includes/commands/class-commands.php:131
+msgid "Use `/help` to view available commands."
+msgstr ""
+
+#: includes/commands/handlers/class-clear-command-handler.php:50
+msgid "Clear your current chat history."
+msgstr ""
+
+#. translators: %s: expected command usage
+#: includes/commands/handlers/class-clear-command-handler.php:82
+#: includes/commands/handlers/class-memory-command-handler.php:103
+#: includes/commands/handlers/class-site-command-handler.php:66
+#: includes/commands/handlers/class-tools-command-handler.php:83
+#, php-format
+msgid "Invalid usage. Expected: `%s`"
+msgstr ""
+
+#: includes/commands/handlers/class-clear-command-handler.php:100
+msgid "Chat history cleared."
+msgstr ""
+
+#: includes/commands/handlers/class-help-command-handler.php:50
+msgid "List available offline commands."
+msgstr ""
+
+#: includes/commands/handlers/class-help-command-handler.php:79
+msgid "Available commands:"
+msgstr ""
+
+#. translators: 1: command usage, 2: command description
+#: includes/commands/handlers/class-help-command-handler.php:85
+#, php-format
+msgid "- %1$s: %2$s"
+msgstr ""
+
+#: includes/commands/handlers/class-help-command-handler.php:91
+msgid "Tip: `/memory clear` requires confirmation and will return a tokenized re-run command."
+msgstr ""
+
+#: includes/commands/handlers/class-memory-command-handler.php:70
+msgid "List memory entries or clear memory with confirmation."
+msgstr ""
+
+#. translators: %s: expected command usage
+#: includes/commands/handlers/class-memory-command-handler.php:123
+#, php-format
+msgid "Invalid memory action. Expected: `%s`"
+msgstr ""
+
+#: includes/commands/handlers/class-memory-command-handler.php:142
+msgid "Memory is disabled. Enable memory in settings to store and list entries."
+msgstr ""
+
+#: includes/commands/handlers/class-memory-command-handler.php:159
+msgid "No memory entries found."
+msgstr ""
+
+#. translators: %d: number of memory entries
+#: includes/commands/handlers/class-memory-command-handler.php:171
+#, php-format
+msgid "Memory entries (%d):"
+msgstr ""
+
+#: includes/commands/handlers/class-memory-command-handler.php:199
+msgid "Memory is disabled, so there is nothing to clear."
+msgstr ""
+
+#: includes/commands/handlers/class-memory-command-handler.php:210
+msgid "Setup required: configure an execution user before running `/memory clear`."
+msgstr ""
+
+#. translators: %s: confirmation command to rerun
+#: includes/commands/handlers/class-memory-command-handler.php:226
+#, php-format
+msgid "Confirmation required. Re-run `%s` within 5 minutes to clear memory."
+msgstr ""
+
+#: includes/commands/handlers/class-memory-command-handler.php:244
+msgid "Memory cleared."
+msgstr ""
+
+#: includes/commands/handlers/class-onboarding-command-handler.php:60
+msgid "Manage onboarding state: start, resume, or reset."
+msgstr ""
+
+#. translators: %s: expected command usage
+#: includes/commands/handlers/class-onboarding-command-handler.php:104
+#, php-format
+msgid "Invalid onboarding action. Expected: `%s`"
+msgstr ""
+
+#. translators: %s: onboarding step slug
+#: includes/commands/handlers/class-onboarding-command-handler.php:126
+#, php-format
+msgid "Onboarding started. Current step: `%s`."
+msgstr ""
+
+#. translators: %s: onboarding step slug
+#: includes/commands/handlers/class-onboarding-command-handler.php:147
+#, php-format
+msgid "Onboarding resume point: `%s`."
+msgstr ""
+
+#. translators: %s: onboarding step slug
+#: includes/commands/handlers/class-onboarding-command-handler.php:168
+#, php-format
+msgid "Onboarding reset. Current step: `%s`."
+msgstr ""
+
+#: includes/commands/handlers/class-site-command-handler.php:33
+msgid "Show site name, URL, WordPress version, and plugin version."
+msgstr ""
+
+#: includes/commands/handlers/class-site-command-handler.php:77
+msgid "WordPress Site"
+msgstr ""
+
+#: includes/commands/handlers/class-site-command-handler.php:79
+#: includes/commands/handlers/class-site-command-handler.php:80
+#: includes/commands/handlers/class-site-command-handler.php:81
+msgid "unknown"
+msgstr ""
+
+#: includes/commands/handlers/class-site-command-handler.php:84
+msgid "Site info:"
+msgstr ""
+
+#. translators: %s: site name
+#: includes/commands/handlers/class-site-command-handler.php:87
+#, php-format
+msgid "- Name: %s"
+msgstr ""
+
+#. translators: %s: site URL
+#: includes/commands/handlers/class-site-command-handler.php:92
+#, php-format
+msgid "- URL: %s"
+msgstr ""
+
+#. translators: %s: WordPress version
+#: includes/commands/handlers/class-site-command-handler.php:97
+#, php-format
+msgid "- WordPress: %s"
+msgstr ""
+
+#. translators: %s: ClawPress plugin version
+#: includes/commands/handlers/class-site-command-handler.php:102
+#, php-format
+msgid "- ClawPress: %s"
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:50
+msgid "Show plugin, provider, memory, and permissions status."
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:80
+msgid "Invalid usage. No arguments expected."
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:91
+#: src/panel/components/PanelHeader.jsx:5
+msgid "Online"
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:91
+#: src/panel/components/PanelHeader.jsx:8
+msgid "Offline"
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:92
+msgid "yes"
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:93
+msgid "no"
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:94
+msgid "not configured"
+msgstr ""
+
+#: includes/commands/handlers/class-status-command-handler.php:96
+msgid "ClawPress status:"
+msgstr ""
+
+#. translators: %s: mode label
+#: includes/commands/handlers/class-status-command-handler.php:99
+#, php-format
+msgid "- Mode: %s"
+msgstr ""
+
+#. translators: %s: provider identifier
+#: includes/commands/handlers/class-status-command-handler.php:104
+#, php-format
+msgid "- Provider: %s"
+msgstr ""
+
+#. translators: %s: model identifier
+#: includes/commands/handlers/class-status-command-handler.php:109
+#, php-format
+msgid "- Model: %s"
+msgstr ""
+
+#. translators: %s: yes/no memory state
+#: includes/commands/handlers/class-status-command-handler.php:114
+#, php-format
+msgid "- Memory enabled: %s"
+msgstr ""
+
+#. translators: %s: yes/no execution user state
+#: includes/commands/handlers/class-status-command-handler.php:119
+#, php-format
+msgid "- Execution user configured: %s"
+msgstr ""
+
+#. translators: %s: yes/no onboarding completion state
+#: includes/commands/handlers/class-status-command-handler.php:124
+#, php-format
+msgid "- Onboarding completed: %s"
+msgstr ""
+
+#: includes/commands/handlers/class-tools-command-handler.php:50
+msgid "List available tools/actions and whether they are enabled."
+msgstr ""
+
+#: includes/commands/handlers/class-tools-command-handler.php:97
+msgid "enabled"
+msgstr ""
+
+#: includes/commands/handlers/class-tools-command-handler.php:98
+msgid "disabled (provider/model not configured)"
+msgstr ""
+
+#: includes/commands/handlers/class-tools-command-handler.php:101
+msgid "Available tools/actions:"
+msgstr ""
+
+#: includes/commands/handlers/class-tools-command-handler.php:102
+msgid "- offline_commands: enabled"
+msgstr ""
+
+#. translators: %s: online chat status
+#: includes/commands/handlers/class-tools-command-handler.php:105
+#, php-format
+msgid "- online_chat: %s"
+msgstr ""
+
+#: includes/commands/handlers/class-tools-command-handler.php:108
+msgid "- tool_execution: disabled (planned in a later level)"
+msgstr ""
+
+#. translators: %s: the original user message
+#: includes/helpers/class-chat-helper.php:128
+#, php-format
+msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
+msgstr ""
+
+#: includes/helpers/class-settings-helper.php:109
+msgid "No settings provided"
+msgstr ""
+
+#: includes/rest/class-chat-controller.php:103
+msgid "Message is required."
+msgstr ""
+
+#: src/js/admin/components/App.js:23
+#: src/js/admin/components/views/SettingsView.js:163
+msgid "Settings"
+msgstr ""
+
+#: src/js/admin/components/views/PagesView.js:28
+msgid "Showing ClawPress Agent Files."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:55
+msgid "Request failed."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:111
+msgid "Unable to load settings."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:148
+msgid "Settings saved."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:152
+msgid "Unable to save settings."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:181
+msgid "Provider"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:185
+msgid "Select a provider"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:192
+msgid "OpenAI"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:199
+msgid "Anthropic"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:206
+msgid "Google"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:217
+msgid "Model"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:220
+msgid "Example: gpt-4.1-mini"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:227
+msgid "Execution User ID"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:241
+msgid "Use 0 to mark as not configured."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:248
+msgid "Enable Memory"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:257
+msgid "Onboarding Completed"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:272
+msgid "Saving…"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:276
+msgid "Save Settings"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:17
+msgid "Title"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:26
+msgid "(no title)"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:32
+msgid "Status"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:39
+#: src/panel/utils/tools/updatePostsFindReplace.js:60
+msgid "Published"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:40
+#: src/panel/utils/tools/updatePostsFindReplace.js:61
+msgid "Draft"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:41
+msgid "Pending"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:42
+msgid "Private"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:43
+msgid "Trash"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:54
+msgid "Date"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:70
+msgid "Modified"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:89
+msgid "View"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:97
+msgid "Edit"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:106
+#: src/js/admin/config/itemConfig.js:146
+msgid "Move to Trash"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:124
+msgid "Move this agent file to trash?"
+msgstr ""
+
+#. translators: %d: number of agent files
+#: src/js/admin/config/itemConfig.js:130
+#, js-format
+msgid "Move %d agent files to trash?"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:139
+#: src/panel/components/ToolDialogForm.jsx:108
+#: src/panel/utils/toolDialogHelpers.js:72
+#: src/panel/utils/tools/updatePostsFindReplace.js:115
+#: src/panel/utils/tools/updatePostsFindReplace.js:204
+msgid "Cancel"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:15
+#: src/panel/components/MockPanel.jsx:23
+msgid "Normal"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:16
+msgid "Long"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:17
+msgid "Tool"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:18
+msgid "Tool Error"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:19
+msgid "Error"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:24
+msgid "Slow (3s)"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:25
+msgid "Infinite"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:30
+msgid "Mock"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:32
+msgid "Scenario"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:47
+msgid "Response delay"
+msgstr ""
+
+#: src/panel/components/MockPanel.jsx:62
+#: src/panel/components/ToolDialogForm.jsx:103
+#: src/panel/utils/toolDialogHelpers.js:8
+#: src/panel/utils/tools/updatePostsFindReplace.js:201
+msgid "Run"
+msgstr ""
+
+#: src/panel/components/PanelHeader.jsx:19
+msgid "ClawPress Agent"
+msgstr ""
+
+#: src/panel/components/PanelHeader.jsx:24
+msgid "Checking…"
+msgstr ""
+
+#: src/panel/components/PanelHeader.jsx:34
+msgid "Toggle theme"
+msgstr ""
+
+#: src/panel/components/PanelHeader.jsx:44
+msgid "Close panel"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:69
+#: src/panel/components/PanelInput.jsx:72
+msgid "Suggestions"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:94
+msgid "Ask me anything…"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:99
+msgid "Stop"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:103
+msgid "Send"
+msgstr ""
+
+#: src/panel/components/PanelMessages.jsx:65
+msgid "System"
+msgstr ""
+
+#: src/panel/components/PanelMessages.jsx:87
+msgid "Thinking"
+msgstr ""
+
+#: src/panel/components/ToolDialogForm.jsx:99
+msgid "Preview"
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:41
+msgid "Mock error: something went wrong."
+msgstr ""
+
+#. translators: %s: mock text prefixed with ERROR to trigger an error path
+#: src/panel/mocks/mockStream.js:66
+#: src/panel/mocks/mockStream.js:73
+#, js-format
+msgid "ERROR: %s"
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:67
+#: src/panel/mocks/mockStream.js:69
+msgid "Old Phrase"
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:74
+#: src/panel/mocks/mockStream.js:76
+msgid "New Phrase"
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:87
+msgid "Here is a longer mock response to help you test streaming behavior. "
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:88
+msgid "It should keep streaming long enough for you to press Stop and see the UI react. "
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:89
+msgid ""
+"We can include multiple sentences, line breaks, and a bit of variety.\n"
+"\n"
+""
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:90
+msgid "Chunk one: The quick brown fox jumps over the lazy dog. "
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:91
+msgid "Chunk two: Sphinx of black quartz, judge my vow. "
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:92
+msgid ""
+"Chunk three: Pack my box with five dozen liquor jugs.\n"
+"\n"
+""
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:93
+msgid "Final chunk: This should be enough to test canceling a long stream."
+msgstr ""
+
+#: src/panel/mocks/mockStream.js:97
+msgid "I found a tool that can update posts. Here is the proposed change."
+msgstr ""
+
+#. translators: %s: user prompt
+#: src/panel/mocks/mockStream.js:102
+#, js-format
+msgid "Here is a mock response for: \"%s\""
+msgstr ""
+
+#: src/panel/mocks/mockTools.js:13
+msgid "Mock tool error: execution failed."
+msgstr ""
+
+#: src/panel/mocks/mockTools.js:23
+msgid "Hello World"
+msgstr ""
+
+#: src/panel/mocks/mockTools.js:24
+msgid "Sample Post"
+msgstr ""
+
+#: src/panel/Panel.jsx:344
+msgid "Preparing tool plan..."
+msgstr ""
+
+#: src/panel/Panel.jsx:353
+msgid "Stream error."
+msgstr ""
+
+#: src/panel/Panel.jsx:500
+msgid "Unable to load chat history."
+msgstr ""
+
+#: src/panel/Panel.jsx:564
+msgid "Stream stopped."
+msgstr ""
+
+#: src/panel/Panel.jsx:604
+msgid "Tool execution failed."
+msgstr ""
+
+#. translators: %s: selected mock scenario
+#: src/panel/Panel.jsx:655
+#, js-format
+msgid "Mock: %s"
+msgstr ""
+
+#. translators: %d: HTTP status code
+#: src/panel/services/realClient.js:32
+#, js-format
+msgid "Request failed (%d)"
+msgstr ""
+
+#: src/panel/services/realClient.js:117
+msgid "Chat request failed."
+msgstr ""
+
+#: src/panel/services/realClient.js:126
+msgid "Tool execution is not available in chat mode."
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:4
+#: src/panel/utils/toolDialogHelpers.js:12
+msgid "Running…"
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:5
+msgid "Blocked"
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:6
+msgid "Re-run"
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:7
+#: src/panel/utils/tools/updatePostsFindReplace.js:112
+msgid "Retry"
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:15
+msgid "Blocked (waiting for earlier tool)."
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:16
+msgid "Blocked."
+msgstr ""
+
+#: src/panel/utils/toolDialogHelpers.js:78
+msgid "Cancelled."
+msgstr ""
+
+#: src/panel/utils/toolDialogRenderers.js:18
+msgid "Unknown tool"
+msgstr ""
+
+#: src/panel/utils/toolDialogRenderers.js:41
+msgid "Changes:"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:44
+msgid "Find"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:46
+msgid "The text to search for."
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:50
+msgid "Replace"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:52
+msgid "The text to replace with."
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:56
+msgid "Post status"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:59
+msgid "Any"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:66
+msgid "Dry run"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:72
+msgid "Update Posts - Find and Replace (Cancelled)"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:73
+msgid "Update Posts - Find and Replace"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:147
+msgid "Preview Results"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:148
+msgid "Results"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:152
+msgid "No matches found."
+msgstr ""
+
+#. translators: %d: number of changed posts
+#: src/panel/utils/tools/updatePostsFindReplace.js:158
+#, js-format
+msgid "Changed posts (%d)"
+msgstr ""
+
+#: src/panel/utils/tools/updatePostsFindReplace.js:166
+msgid "Untitled"
+msgstr ""
+
+#. translators: %d: post ID
+#: src/panel/utils/tools/updatePostsFindReplace.js:171
+#, js-format
+msgid "ID %d"
+msgstr ""
+
+#. translators: %d: number of replacements in a post
+#: src/panel/utils/tools/updatePostsFindReplace.js:178
+#, js-format
+msgid "%d change"
+msgid_plural "%d changes"
+msgstr[0] ""
+msgstr[1] ""

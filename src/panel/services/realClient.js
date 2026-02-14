@@ -1,3 +1,5 @@
+import { __, sprintf } from '@wordpress/i18n';
+
 const requestJson = async ({ url, method = 'GET', nonce, body, signal }) => {
   const res = await fetch(url, {
     method,
@@ -23,7 +25,13 @@ const requestJson = async ({ url, method = 'GET', nonce, body, signal }) => {
 
   if (!res.ok) {
     const message =
-      payload?.message || payload?.error || `Request failed (${res.status})`;
+      payload?.message ||
+      payload?.error ||
+      sprintf(
+        /* translators: %d: HTTP status code */
+        __('Request failed (%d)', 'clawpress'),
+        res.status
+      );
     throw new Error(message);
   }
 
@@ -106,7 +114,7 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
           onDone?.({ aborted: true });
           return;
         }
-        onError?.({ error: err?.message || 'Chat request failed.' });
+        onError?.({ error: err?.message || __('Chat request failed.', 'clawpress') });
         onDone?.({ aborted: false });
       }
     })();
@@ -115,7 +123,7 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
   };
 
   const runTool = async () => {
-    throw new Error('Tool execution is not available in chat mode.');
+    throw new Error(__('Tool execution is not available in chat mode.', 'clawpress'));
   };
 
   return { stream, runTool, getHistory, getStatus, getPanelState, setPanelState };

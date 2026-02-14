@@ -1,4 +1,5 @@
 import { useRef } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 const PanelInput = ({
   input,
@@ -63,8 +64,13 @@ const PanelInput = ({
   return (
     <div className="clawpress-input">
       {Array.isArray(suggestions) && suggestions.length > 0 ? (
-        <div className="clawpress-suggestions" aria-label="Suggestions">
-          <div className="clawpress-suggestions-label">Suggestions</div>
+        <div
+          className="clawpress-suggestions"
+          aria-label={__('Suggestions', 'clawpress')}
+        >
+          <div className="clawpress-suggestions-label">
+            {__('Suggestions', 'clawpress')}
+          </div>
           <div className="clawpress-suggestions-list">
             {suggestions.map((command) => (
               <button
@@ -85,16 +91,16 @@ const PanelInput = ({
         value={input}
         onChange={onInputChange}
         onKeyDown={handleKeyDown}
-        placeholder="Ask me anything…"
+        placeholder={__('Ask me anything…', 'clawpress')}
         disabled={streaming}
       />
       {streaming ? (
         <button className="button" onClick={onStop} type="button">
-          Stop
+          {__('Stop', 'clawpress')}
         </button>
       ) : (
         <button className="button button-primary" onClick={onSend} type="button">
-          Send
+          {__('Send', 'clawpress')}
         </button>
       )}
     </div>

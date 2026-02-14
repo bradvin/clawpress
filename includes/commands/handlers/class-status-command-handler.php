@@ -47,7 +47,7 @@ final class Status_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'Show plugin, provider, memory, and permissions status.';
+		return __( 'Show plugin, provider, memory, and permissions status.', 'clawpress' );
 	}
 
 	/**
@@ -77,7 +77,7 @@ final class Status_Command_Handler implements Command_Handler {
 	public function handle( Command_Request $request ): Command_Response {
 		if ( '' !== $request->get_argument( 0 ) ) {
 			return Command_Response::error(
-				'Invalid usage. No arguments expected.',
+				__( 'Invalid usage. No arguments expected.', 'clawpress' ),
 				$this->get_command(),
 				false,
 				false,
@@ -86,15 +86,44 @@ final class Status_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$status = $this->status_helper->get_current_status();
-		$lines  = [
-			'ClawPress status:',
-			sprintf( '- Mode: %s', ucfirst( (string) ( $status['mode'] ?? 'offline' ) ) ),
-			sprintf( '- Provider: %s', (string) ( $status['provider']['id'] ?? 'not configured' ) ),
-			sprintf( '- Model: %s', (string) ( $status['model']['id'] ?? 'not configured' ) ),
-			sprintf( '- Memory enabled: %s', ! empty( $status['memory']['enabled'] ) ? 'yes' : 'no' ),
-			sprintf( '- Execution user configured: %s', ! empty( $status['execution_user']['configured'] ) ? 'yes' : 'no' ),
-			sprintf( '- Onboarding completed: %s', ! empty( $status['onboarding']['completed'] ) ? 'yes' : 'no' )
+		$status      = $this->status_helper->get_current_status();
+		$mode        = (string) ( $status['mode'] ?? 'offline' );
+		$mode        = 'online' === $mode ? __( 'Online', 'clawpress' ) : __( 'Offline', 'clawpress' );
+		$yes         = __( 'yes', 'clawpress' );
+		$no          = __( 'no', 'clawpress' );
+		$empty       = __( 'not configured', 'clawpress' );
+		$lines       = [
+			__( 'ClawPress status:', 'clawpress' ),
+			sprintf(
+				/* translators: %s: mode label */
+				__( '- Mode: %s', 'clawpress' ),
+				$mode
+			),
+			sprintf(
+				/* translators: %s: provider identifier */
+				__( '- Provider: %s', 'clawpress' ),
+				(string) ( $status['provider']['id'] ?? $empty )
+			),
+			sprintf(
+				/* translators: %s: model identifier */
+				__( '- Model: %s', 'clawpress' ),
+				(string) ( $status['model']['id'] ?? $empty )
+			),
+			sprintf(
+				/* translators: %s: yes/no memory state */
+				__( '- Memory enabled: %s', 'clawpress' ),
+				! empty( $status['memory']['enabled'] ) ? $yes : $no
+			),
+			sprintf(
+				/* translators: %s: yes/no execution user state */
+				__( '- Execution user configured: %s', 'clawpress' ),
+				! empty( $status['execution_user']['configured'] ) ? $yes : $no
+			),
+			sprintf(
+				/* translators: %s: yes/no onboarding completion state */
+				__( '- Onboarding completed: %s', 'clawpress' ),
+				! empty( $status['onboarding']['completed'] ) ? $yes : $no
+			),
 		];
 		$suggestions = 'offline' === (string) ( $status['mode'] ?? 'offline' )
 			? [ '/help', '/onboarding resume', '/site info', '/tools list', '/clear' ]

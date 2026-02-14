@@ -1,3 +1,5 @@
+import { __, sprintf } from '@wordpress/i18n';
+
 const tokenize = (text) => text.split('');
 
 export const startMockStream = ({
@@ -35,7 +37,10 @@ export const startMockStream = ({
   }
 
   if (mode === 'error') {
-    schedule(() => onError?.({ error: 'Mock error: something went wrong.' }), 300);
+    schedule(
+      () => onError?.({ error: __('Mock error: something went wrong.', 'clawpress') }),
+      300
+    );
     schedule(() => onDone?.({ aborted: false }), 600);
     return { stop };
   }
@@ -55,8 +60,20 @@ export const startMockStream = ({
           function: {
             name: 'update_posts_find_replace',
             arguments: {
-              search: mode === 'tool_error' ? 'ERROR: Old Phrase' : 'Old Phrase',
-              replace: mode === 'tool_error' ? 'ERROR: New Phrase' : 'New Phrase',
+              search: mode === 'tool_error'
+                ? sprintf(
+                    /* translators: %s: mock text prefixed with ERROR to trigger an error path */
+                    __('ERROR: %s', 'clawpress'),
+                    __('Old Phrase', 'clawpress')
+                  )
+                : __('Old Phrase', 'clawpress'),
+              replace: mode === 'tool_error'
+                ? sprintf(
+                    /* translators: %s: mock text prefixed with ERROR to trigger an error path */
+                    __('ERROR: %s', 'clawpress'),
+                    __('New Phrase', 'clawpress')
+                  )
+                : __('New Phrase', 'clawpress'),
               post_status: mode === 'tool_error' ? 'draft' : 'publish',
               dry_run: true,
             },
@@ -67,20 +84,24 @@ export const startMockStream = ({
   }
 
   const longText =
-    'Here is a longer mock response to help you test streaming behavior. ' +
-    'It should keep streaming long enough for you to press Stop and see the UI react. ' +
-    'We can include multiple sentences, line breaks, and a bit of variety.\n\n' +
-    'Chunk one: The quick brown fox jumps over the lazy dog. ' +
-    'Chunk two: Sphinx of black quartz, judge my vow. ' +
-    'Chunk three: Pack my box with five dozen liquor jugs.\n\n' +
-    'Final chunk: This should be enough to test canceling a long stream.';
+    __('Here is a longer mock response to help you test streaming behavior. ', 'clawpress') +
+    __('It should keep streaming long enough for you to press Stop and see the UI react. ', 'clawpress') +
+    __('We can include multiple sentences, line breaks, and a bit of variety.\n\n', 'clawpress') +
+    __('Chunk one: The quick brown fox jumps over the lazy dog. ', 'clawpress') +
+    __('Chunk two: Sphinx of black quartz, judge my vow. ', 'clawpress') +
+    __('Chunk three: Pack my box with five dozen liquor jugs.\n\n', 'clawpress') +
+    __('Final chunk: This should be enough to test canceling a long stream.', 'clawpress');
 
   const responseText =
     mode === 'tool' || mode === 'tool_error'
-      ? 'I found a tool that can update posts. Here is the proposed change.'
+      ? __('I found a tool that can update posts. Here is the proposed change.', 'clawpress')
       : mode === 'long'
         ? longText
-        : `Here is a mock response for: "${prompt}"`;
+        : sprintf(
+            /* translators: %s: user prompt */
+            __('Here is a mock response for: "%s"', 'clawpress'),
+            prompt
+          );
 
   const tokens = tokenize(responseText);
   let time = 150;

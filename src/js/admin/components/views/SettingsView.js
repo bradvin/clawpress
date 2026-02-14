@@ -188,13 +188,28 @@ export default function SettingsView() {
 										),
 										value: '',
 									},
-									{ label: 'OpenAI', value: 'openai' },
-									{
-										label: 'Anthropic',
-										value: 'anthropic',
-									},
-									{ label: 'Google', value: 'google' },
-								] }
+										{
+											label: __(
+												'OpenAI',
+												'clawpress'
+											),
+											value: 'openai',
+										},
+										{
+											label: __(
+												'Anthropic',
+												'clawpress'
+											),
+											value: 'anthropic',
+										},
+										{
+											label: __(
+												'Google',
+												'clawpress'
+											),
+											value: 'google',
+										},
+									] }
 								onChange={ setProvider }
 								__nextHasNoMarginBottom
 							/>

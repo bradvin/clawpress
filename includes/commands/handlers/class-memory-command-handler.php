@@ -67,7 +67,7 @@ final class Memory_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'List memory entries or clear memory with confirmation.';
+		return __( 'List memory entries or clear memory with confirmation.', 'clawpress' );
 	}
 
 	/**
@@ -98,7 +98,11 @@ final class Memory_Command_Handler implements Command_Handler {
 		$action = strtolower( $request->get_argument( 0 ) );
 		if ( '' === $action ) {
 			return Command_Response::error(
-				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
+				sprintf(
+					/* translators: %s: expected command usage */
+					__( 'Invalid usage. Expected: `%s`', 'clawpress' ),
+					$this->get_usage()
+				),
 				$this->get_command(),
 				$this->is_destructive(),
 				false,
@@ -114,7 +118,11 @@ final class Memory_Command_Handler implements Command_Handler {
 				return $this->clear_memory( $request );
 			default:
 				return Command_Response::error(
-					sprintf( 'Invalid memory action. Expected: `%s`', $this->get_usage() ),
+					sprintf(
+							/* translators: %s: expected command usage */
+						__( 'Invalid memory action. Expected: `%s`', 'clawpress' ),
+						$this->get_usage()
+					),
 					$this->get_command(),
 					$this->is_destructive(),
 					false,
@@ -131,7 +139,7 @@ final class Memory_Command_Handler implements Command_Handler {
 		$settings = $this->settings_helper->get_settings();
 		if ( ! $this->settings_helper->get_memory_enabled( $settings ) ) {
 			return Command_Response::success(
-				'Memory is disabled. Enable memory in settings to store and list entries.',
+				__( 'Memory is disabled. Enable memory in settings to store and list entries.', 'clawpress' ),
 				$this->get_command(),
 				false,
 				false,
@@ -148,7 +156,7 @@ final class Memory_Command_Handler implements Command_Handler {
 		$normalized_entries = $this->normalize_entries( $entries );
 		if ( [] === $normalized_entries ) {
 			return Command_Response::success(
-				'No memory entries found.',
+				__( 'No memory entries found.', 'clawpress' ),
 				$this->get_command(),
 				false,
 				false,
@@ -158,7 +166,11 @@ final class Memory_Command_Handler implements Command_Handler {
 		}
 
 		$lines = [
-			sprintf( 'Memory entries (%d):', count( $normalized_entries ) ),
+			sprintf(
+				/* translators: %d: number of memory entries */
+				__( 'Memory entries (%d):', 'clawpress' ),
+				count( $normalized_entries )
+			),
 		];
 
 		foreach ( array_slice( $normalized_entries, 0, self::MEMORY_LIST_LIMIT ) as $index => $entry ) {
@@ -184,7 +196,7 @@ final class Memory_Command_Handler implements Command_Handler {
 		$settings = $this->settings_helper->get_settings();
 		if ( ! $this->settings_helper->get_memory_enabled( $settings ) ) {
 			return Command_Response::success(
-				'Memory is disabled, so there is nothing to clear.',
+				__( 'Memory is disabled, so there is nothing to clear.', 'clawpress' ),
 				$this->get_command(),
 				$this->is_destructive(),
 				false,
@@ -195,7 +207,7 @@ final class Memory_Command_Handler implements Command_Handler {
 
 		if ( $this->settings_helper->resolve_execution_user_id( $settings ) <= 0 ) {
 			return Command_Response::error(
-				'Setup required: configure an execution user before running `/memory clear`.',
+				__( 'Setup required: configure an execution user before running `/memory clear`.', 'clawpress' ),
 				$this->get_command(),
 				$this->is_destructive(),
 				false,
@@ -208,27 +220,28 @@ final class Memory_Command_Handler implements Command_Handler {
 		if ( ! $this->confirmation_store->consume_confirmation( 'memory.clear', $confirmation_token ) ) {
 			$issued_confirmation = $this->confirmation_store->issue_confirmation( 'memory.clear' );
 
-			return Command_Response::success(
-				sprintf(
-					'Confirmation required. Re-run `%s` within 5 minutes to clear memory.',
-					'/memory clear --confirm=' . $issued_confirmation['token']
-				),
-				$this->get_command(),
-				$this->is_destructive(),
-				true,
-				[],
-				[
-					'/memory clear --confirm=' . $issued_confirmation['token'],
-					'/memory list',
-					'/help',
-				]
-			);
+				return Command_Response::success(
+					sprintf(
+						/* translators: %s: confirmation command to rerun */
+						__( 'Confirmation required. Re-run `%s` within 5 minutes to clear memory.', 'clawpress' ),
+						'/memory clear --confirm=' . $issued_confirmation['token']
+					),
+					$this->get_command(),
+					$this->is_destructive(),
+					true,
+					[],
+					[
+						'/memory clear --confirm=' . $issued_confirmation['token'],
+						'/memory list',
+						'/help',
+					]
+				);
 		}
 
 		update_option( self::MEMORY_OPTION, [] );
 
 		return Command_Response::success(
-			'Memory cleared.',
+			__( 'Memory cleared.', 'clawpress' ),
 			$this->get_command(),
 			$this->is_destructive(),
 			false,

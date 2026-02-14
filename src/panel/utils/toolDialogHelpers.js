@@ -1,17 +1,19 @@
+import { __ } from '@wordpress/i18n';
+
 const getRunLabel = (status, canRerun) => {
-  if (status === 'running') return 'Running…';
-  if (status === 'blocked') return 'Blocked';
-  if (status === 'done' && canRerun) return 'Re-run';
-  if (status === 'error') return 'Retry';
-  return 'Run';
+  if (status === 'running') return __('Running…', 'clawpress');
+  if (status === 'blocked') return __('Blocked', 'clawpress');
+  if (status === 'done' && canRerun) return __('Re-run', 'clawpress');
+  if (status === 'error') return __('Retry', 'clawpress');
+  return __('Run', 'clawpress');
 };
 
 const getStatusMessage = (status, policy) => {
-  if (status === 'running') return 'Running…';
+  if (status === 'running') return __('Running…', 'clawpress');
   if (status === 'blocked') {
     return policy?.concurrency === 'serial'
-      ? 'Blocked (waiting for earlier tool).'
-      : 'Blocked.';
+      ? __('Blocked (waiting for earlier tool).', 'clawpress')
+      : __('Blocked.', 'clawpress');
   }
   return null;
 };
@@ -67,13 +69,13 @@ export const ToolDialogShell = ({
               {runLabel}
             </button>
             <button className="button" type="button" onClick={onCancel}>
-              Cancel
+              {__('Cancel', 'clawpress')}
             </button>
           </span>
         ) : null}
       </summary>
       <div className="clawpress-tool-dialog-body">
-        {isCancelled ? <p>Cancelled.</p> : null}
+        {isCancelled ? <p>{__('Cancelled.', 'clawpress')}</p> : null}
         {statusMessage ? <p>{statusMessage}</p> : null}
         {status === 'error' ? <p>{error}</p> : null}
         {children}

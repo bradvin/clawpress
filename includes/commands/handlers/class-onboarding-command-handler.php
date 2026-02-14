@@ -57,7 +57,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'Manage onboarding state: start, resume, or reset.';
+		return __( 'Manage onboarding state: start, resume, or reset.', 'clawpress' );
 	}
 
 	/**
@@ -99,7 +99,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				return $this->reset_onboarding();
 			default:
 				return Command_Response::error(
-					sprintf( 'Invalid onboarding action. Expected: `%s`', $this->get_usage() ),
+					sprintf(
+							/* translators: %s: expected command usage */
+						__( 'Invalid onboarding action. Expected: `%s`', 'clawpress' ),
+						$this->get_usage()
+					),
 					$this->get_command(),
 					false,
 					false,
@@ -117,7 +121,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
 
 		return Command_Response::success(
-			sprintf( 'Onboarding started. Current step: `%s`.', self::DEFAULT_STEP ),
+			sprintf(
+				/* translators: %s: onboarding step slug */
+				__( 'Onboarding started. Current step: `%s`.', 'clawpress' ),
+				self::DEFAULT_STEP
+			),
 			$this->get_command(),
 			false,
 			false,
@@ -134,7 +142,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$step     = $this->resolve_onboarding_step( $settings );
 
 		return Command_Response::success(
-			sprintf( 'Onboarding resume point: `%s`.', $step ),
+			sprintf(
+				/* translators: %s: onboarding step slug */
+				__( 'Onboarding resume point: `%s`.', 'clawpress' ),
+				$step
+			),
 			$this->get_command(),
 			false,
 			false,
@@ -151,7 +163,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
 
 		return Command_Response::success(
-			sprintf( 'Onboarding reset. Current step: `%s`.', self::DEFAULT_STEP ),
+			sprintf(
+				/* translators: %s: onboarding step slug */
+				__( 'Onboarding reset. Current step: `%s`.', 'clawpress' ),
+				self::DEFAULT_STEP
+			),
 			$this->get_command(),
 			false,
 			false,

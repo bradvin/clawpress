@@ -1,3 +1,5 @@
+import { __ } from '@wordpress/i18n';
+
 export const runMockTool = async (tool, args, { mockDelay = 'normal' } = {}) => {
   if (mockDelay === 'infinite') {
     await new Promise(() => {});
@@ -8,7 +10,7 @@ export const runMockTool = async (tool, args, { mockDelay = 'normal' } = {}) => 
 
   const searchText = typeof args?.search === 'string' ? args.search : '';
   if (searchText.includes('ERROR')) {
-    throw new Error('Mock tool error: execution failed.');
+    throw new Error(__('Mock tool error: execution failed.', 'clawpress'));
   }
 
   return {
@@ -18,8 +20,8 @@ export const runMockTool = async (tool, args, { mockDelay = 'normal' } = {}) => 
           dry_run: true,
           total: 2,
           changed: [
-            { id: 123, title: 'Hello World', count: 1 },
-            { id: 456, title: 'Sample Post', count: 2 },
+            { id: 123, title: __('Hello World', 'clawpress'), count: 1 },
+            { id: 456, title: __('Sample Post', 'clawpress'), count: 2 },
           ],
           tool,
           args,

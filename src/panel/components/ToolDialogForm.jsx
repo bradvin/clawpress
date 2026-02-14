@@ -1,4 +1,5 @@
 import { useEffect, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 const ToolDialogForm = ({
   fields,
@@ -95,16 +96,16 @@ const ToolDialogForm = ({
       })}
       <div className="clawpress-tool-dialog-form-actions">
         <button className="button button-primary" type="submit" disabled={disabled}>
-          Preview
+          {__('Preview', 'clawpress')}
         </button>
         {onRun ? (
           <button className="button" type="button" onClick={handleRun} disabled={disabled}>
-            Run
+            {__('Run', 'clawpress')}
           </button>
         ) : null}
         {onCancel ? (
           <button className="button" type="button" onClick={onCancel} disabled={disabled}>
-            Cancel
+            {__('Cancel', 'clawpress')}
           </button>
         ) : null}
       </div>

@@ -47,7 +47,7 @@ final class Clear_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'Clear your current chat history.';
+		return __( 'Clear your current chat history.', 'clawpress' );
 	}
 
 	/**
@@ -77,7 +77,11 @@ final class Clear_Command_Handler implements Command_Handler {
 	public function handle( Command_Request $request ): Command_Response {
 		if ( '' !== $request->get_argument( 0 ) ) {
 			return Command_Response::error(
-				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
+				sprintf(
+					/* translators: %s: expected command usage */
+					__( 'Invalid usage. Expected: `%s`', 'clawpress' ),
+					$this->get_usage()
+				),
 				$this->get_command(),
 				$this->is_destructive(),
 				false,
@@ -93,7 +97,7 @@ final class Clear_Command_Handler implements Command_Handler {
 		$this->history_helper->clear_history_items();
 
 		return Command_Response::success(
-			'Chat history cleared.',
+			__( 'Chat history cleared.', 'clawpress' ),
 			$this->get_command(),
 			$this->is_destructive(),
 			false,

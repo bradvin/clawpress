@@ -100,7 +100,7 @@ final class Chat_Controller implements Route_Controller {
 		if ( '' === $message ) {
 			return new \WP_REST_Response(
 				[
-					'error' => 'Message is required.',
+					'error' => __( 'Message is required.', 'clawpress' ),
 				],
 				400
 			);
@@ -111,12 +111,12 @@ final class Chat_Controller implements Route_Controller {
 			? $command_payload
 			: call_user_func( $this->reply_generator, $message );
 
-		$reply         = isset( $reply_payload['reply'] ) ? trim( (string) $reply_payload['reply'] ) : '';
+		$reply = isset( $reply_payload['reply'] ) ? trim( (string) $reply_payload['reply'] ) : '';
 		if ( '' === $reply ) {
 			$reply = $this->chat_helper->build_offline_reply( $message );
 		}
 
-		$command_meta          = isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
+		$command_meta         = isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 			? $reply_payload['command']
 			: [];
 		$clear_history_effect = isset( $command_meta['effects']['clear_history'] ) && true === $command_meta['effects']['clear_history'];
@@ -132,17 +132,17 @@ final class Chat_Controller implements Route_Controller {
 				'message' => $message,
 				'reply'   => $reply,
 				'meta'    => [
-					'mode'     => isset( $reply_payload['mode'] ) ? (string) $reply_payload['mode'] : 'offline',
-					'provider' => isset( $reply_payload['provider'] ) && '' !== (string) $reply_payload['provider']
+					'mode'        => isset( $reply_payload['mode'] ) ? (string) $reply_payload['mode'] : 'offline',
+					'provider'    => isset( $reply_payload['provider'] ) && '' !== (string) $reply_payload['provider']
 						? (string) $reply_payload['provider']
 						: null,
-					'model'    => isset( $reply_payload['model'] ) && '' !== (string) $reply_payload['model']
+					'model'       => isset( $reply_payload['model'] ) && '' !== (string) $reply_payload['model']
 						? (string) $reply_payload['model']
 						: null,
 					'suggestions' => isset( $reply_payload['suggestions'] ) && is_array( $reply_payload['suggestions'] )
 						? array_values( $reply_payload['suggestions'] )
 						: null,
-					'command'  => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
+					'command'     => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 						? $reply_payload['command']
 						: null,
 				],

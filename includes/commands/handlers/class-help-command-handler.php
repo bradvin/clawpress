@@ -47,7 +47,7 @@ final class Help_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'List available offline commands.';
+		return __( 'List available offline commands.', 'clawpress' );
 	}
 
 	/**
@@ -76,14 +76,19 @@ final class Help_Command_Handler implements Command_Handler {
 	 */
 	public function build_help_text(): string {
 		$lines = [
-			'Available commands:',
+			__( 'Available commands:', 'clawpress' ),
 		];
 
 		foreach ( $this->registry->get_registered_handlers() as $handler ) {
-			$lines[] = sprintf( '- %s: %s', $handler->get_usage(), $handler->get_description() );
+			$lines[] = sprintf(
+				/* translators: 1: command usage, 2: command description */
+				__( '- %1$s: %2$s', 'clawpress' ),
+				$handler->get_usage(),
+				$handler->get_description()
+			);
 		}
 
-		$lines[] = 'Tip: `/memory clear` requires confirmation and will return a tokenized re-run command.';
+		$lines[] = __( 'Tip: `/memory clear` requires confirmation and will return a tokenized re-run command.', 'clawpress' );
 
 		return implode( "\n", $lines );
 	}

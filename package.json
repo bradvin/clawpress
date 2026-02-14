@@ -2,9 +2,10 @@
   "name": "clawpress",
   "version": "0.0.1",
   "scripts": {
-    "build": "npm run build:scripts && npm run build:panel",
+    "build": "npm run build:scripts && npm run build:panel && npm run build:pot",
     "build:scripts": "wp-scripts build --config webpack.scripts.config.js",
     "build:panel": "wp-scripts build --config webpack.panel.config.js",
+    "build:pot": "mkdir -p languages && wp i18n make-pot . languages/clawpress.pot --domain=clawpress --exclude=build,node_modules,vendor,tests,ideas,docs",
     "start": "npm run start:scripts & npm run start:panel",
     "start:scripts": "wp-scripts start --config webpack.scripts.config.js",
     "start:panel": "wp-scripts start --config webpack.panel.config.js",

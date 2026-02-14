@@ -1,4 +1,5 @@
 import { useEffect, useRef } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import ToolDialog from './ToolDialog';
 import { getToolPolicy } from '../utils/toolDialogRenderers';
 const PanelMessages = ({
@@ -60,7 +61,9 @@ const PanelMessages = ({
               key={item.data.id || item.data.content}
               className={`clawpress-msg clawpress-${item.data.role}`}
             >
-              {isSystem ? <div className="clawpress-msg-label">System</div> : null}
+              {isSystem ? (
+                <div className="clawpress-msg-label">{__('System', 'clawpress')}</div>
+              ) : null}
               <div
                 className={`clawpress-msg-content${showThinking ? ' clawpress-thinking' : ''}`}
               >
@@ -80,7 +83,9 @@ const PanelMessages = ({
       )}
       {waitingForResponse && !currentStreamText ? (
         <div className="clawpress-msg clawpress-system">
-          <div className="clawpress-msg-content clawpress-thinking">Thinking</div>
+          <div className="clawpress-msg-content clawpress-thinking">
+            {__('Thinking', 'clawpress')}
+          </div>
         </div>
       ) : null}
       {streaming && currentStreamText ? (

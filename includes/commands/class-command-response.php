@@ -140,6 +140,13 @@ final class Command_Response {
 		array $effects = [],
 		array $suggestions = []
 	): self {
+		$text = trim( $text );
+		if ( '' === $text ) {
+			$text = __( 'An unknown error occurred.', 'clawpress' );
+		}
+		if ( false === strpos( $text, '🚨' ) ) {
+			$text = '🚨 ' . $text;
+		}
 		return new self( $text, true, $command, $is_destructive, $requires_confirmation, $effects, $suggestions );
 	}
 

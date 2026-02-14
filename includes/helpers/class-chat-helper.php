@@ -124,7 +124,8 @@ final class Chat_Helper {
 	 */
 	public function build_offline_reply( string $message ): string {
 		return sprintf(
-			'Offline mode: no configured AI provider was available. You said: "%s"',
+			/* translators: %s: the original user message */
+			__( 'Offline mode: no configured AI provider was available. You said: "%s"', 'clawpress' ),
 			$message
 		);
 	}

@@ -47,7 +47,7 @@ final class Tools_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'List available tools/actions and whether they are enabled.';
+		return __( 'List available tools/actions and whether they are enabled.', 'clawpress' );
 	}
 
 	/**
@@ -78,7 +78,11 @@ final class Tools_Command_Handler implements Command_Handler {
 		$subcommand = strtolower( $request->get_argument( 0 ) );
 		if ( 'list' !== $subcommand ) {
 			return Command_Response::error(
-				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
+				sprintf(
+					/* translators: %s: expected command usage */
+					__( 'Invalid usage. Expected: `%s`', 'clawpress' ),
+					$this->get_usage()
+				),
 				$this->get_command(),
 				false,
 				false,
@@ -87,14 +91,21 @@ final class Tools_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$status = $this->status_helper->get_current_status();
-		$online = 'online' === (string) ( $status['mode'] ?? 'offline' );
+		$status             = $this->status_helper->get_current_status();
+		$online             = 'online' === (string) ( $status['mode'] ?? 'offline' );
+		$online_chat_status = $online
+			? __( 'enabled', 'clawpress' )
+			: __( 'disabled (provider/model not configured)', 'clawpress' );
 
 		$lines = [
-			'Available tools/actions:',
-			'- offline_commands: enabled',
-			sprintf( '- online_chat: %s', $online ? 'enabled' : 'disabled (provider/model not configured)' ),
-			'- tool_execution: disabled (planned in a later level)',
+			__( 'Available tools/actions:', 'clawpress' ),
+			__( '- offline_commands: enabled', 'clawpress' ),
+			sprintf(
+				/* translators: %s: online chat status */
+				__( '- online_chat: %s', 'clawpress' ),
+				$online_chat_status
+			),
+			__( '- tool_execution: disabled (planned in a later level)', 'clawpress' ),
 		];
 
 		return Command_Response::success(

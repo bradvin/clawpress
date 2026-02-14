@@ -30,7 +30,7 @@ final class Site_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return 'Show site name, URL, WordPress version, and plugin version.';
+		return __( 'Show site name, URL, WordPress version, and plugin version.', 'clawpress' );
 	}
 
 	/**
@@ -61,7 +61,11 @@ final class Site_Command_Handler implements Command_Handler {
 		$subcommand = strtolower( $request->get_argument( 0 ) );
 		if ( 'info' !== $subcommand ) {
 			return Command_Response::error(
-				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
+				sprintf(
+					/* translators: %s: expected command usage */
+					__( 'Invalid usage. Expected: `%s`', 'clawpress' ),
+					$this->get_usage()
+				),
 				$this->get_command(),
 				false,
 				false,
@@ -70,17 +74,34 @@ final class Site_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$site_name      = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : 'WordPress Site';
+		$site_name      = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : __( 'WordPress Site', 'clawpress' );
 		$site_url       = function_exists( 'home_url' ) ? (string) home_url( '/' ) : '';
-		$wp_version     = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'version' ) : 'unknown';
-		$plugin_version = defined( 'CLAWPRESS_VERSION' ) ? (string) CLAWPRESS_VERSION : 'unknown';
+		$wp_version     = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'version' ) : __( 'unknown', 'clawpress' );
+		$plugin_version = defined( 'CLAWPRESS_VERSION' ) ? (string) CLAWPRESS_VERSION : __( 'unknown', 'clawpress' );
+		$unknown_value  = __( 'unknown', 'clawpress' );
 
 		$lines = [
-			'Site info:',
-			sprintf( '- Name: %s', '' !== $site_name ? $site_name : 'unknown' ),
-			sprintf( '- URL: %s', '' !== $site_url ? $site_url : 'unknown' ),
-			sprintf( '- WordPress: %s', '' !== $wp_version ? $wp_version : 'unknown' ),
-			sprintf( '- ClawPress: %s', '' !== $plugin_version ? $plugin_version : 'unknown' ),
+			__( 'Site info:', 'clawpress' ),
+			sprintf(
+				/* translators: %s: site name */
+				__( '- Name: %s', 'clawpress' ),
+				'' !== $site_name ? $site_name : $unknown_value
+			),
+			sprintf(
+				/* translators: %s: site URL */
+				__( '- URL: %s', 'clawpress' ),
+				'' !== $site_url ? $site_url : $unknown_value
+			),
+			sprintf(
+				/* translators: %s: WordPress version */
+				__( '- WordPress: %s', 'clawpress' ),
+				'' !== $wp_version ? $wp_version : $unknown_value
+			),
+			sprintf(
+				/* translators: %s: ClawPress plugin version */
+				__( '- ClawPress: %s', 'clawpress' ),
+				'' !== $plugin_version ? $plugin_version : $unknown_value
+			),
 		];
 
 		return Command_Response::success(

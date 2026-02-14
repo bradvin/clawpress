@@ -106,7 +106,7 @@ final class Settings_Helper {
 
 		if ( ! $has_update ) {
 			return [
-				'error' => 'No settings provided',
+				'error' => __( 'No settings provided', 'clawpress' ),
 			];
 		}
 

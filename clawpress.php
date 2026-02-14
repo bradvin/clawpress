@@ -4,6 +4,8 @@
  * Version: 0.0.1
  * Requires PHP: 8.1
  * Requires at least: 6.9
+ * Text Domain: clawpress
+ * Domain Path: /languages
  *
  * @package ClawPress
  */

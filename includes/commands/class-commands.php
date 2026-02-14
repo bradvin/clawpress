@@ -69,12 +69,12 @@ final class Commands {
 		$reply    = clawpress_sanitize_multiline_text( $response->get_text() );
 
 		return [
-			'reply'    => $reply,
-			'mode'     => 'offline',
-			'provider' => null,
-			'model'    => null,
+			'reply'       => $reply,
+			'mode'        => 'offline',
+			'provider'    => null,
+			'model'       => null,
 			'suggestions' => $response->get_suggestions(),
-			'command'  => [
+			'command'     => [
 				'name'                  => $response->get_command(),
 				'error'                 => $response->is_error(),
 				'destructive'           => $response->is_destructive(),
@@ -93,7 +93,12 @@ final class Commands {
 		$handler = $this->registry->get_handler( $request->get_command() );
 		if ( null === $handler ) {
 			return Command_Response::error(
-				sprintf( "Unknown command: `%s`.\n\n%s", $request->get_command(), $this->get_help_text() ),
+				sprintf(
+					/* translators: 1: command name, 2: help text */
+					__( "Unknown command: `%1\$s`.\n\n%2\$s", 'clawpress' ),
+					$request->get_command(),
+					$this->get_help_text()
+				),
 				'/help',
 				false,
 				false,
@@ -108,7 +113,7 @@ final class Commands {
 		}
 
 		return Command_Response::error(
-			'🚨 ' . trim( $response->get_text() ),
+			$response->get_text(),
 			$response->get_command(),
 			$response->is_destructive(),
 			$response->requires_confirmation(),
@@ -123,7 +128,7 @@ final class Commands {
 	 * Build help text fallback.
 	 */
 	private function get_help_text(): string {
-		return 'Use `/help` to view available commands.';
+		return __( 'Use `/help` to view available commands.', 'clawpress' );
 	}
 
 	/**
@@ -152,7 +157,7 @@ final class Commands {
 			$suggestions = array_merge( $suggestions, $handler->get_default_suggestions() );
 		}
 
-		$seen = [];
+		$seen               = [];
 		$unique_suggestions = [];
 
 		foreach ( $suggestions as $suggestion ) {
@@ -161,7 +166,7 @@ final class Commands {
 				continue;
 			}
 
-			$seen[ $normalized ]   = true;
+			$seen[ $normalized ]  = true;
 			$unique_suggestions[] = $normalized;
 		}
 

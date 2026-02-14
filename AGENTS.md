@@ -128,6 +128,17 @@ Scripts rely on WordPress packages extracted at build time:
 - `@wordpress/dom-ready` - Admin app bootstrap
 - `@wordpress/element` - React root rendering
 
+## Internationalization (Required)
+
+All user-facing strings must be translatable.
+
+- **Never ship hardcoded UI text** in PHP or JS.
+- **Always use text domain**: `clawpress`.
+- **PHP strings**: use `__()`, `_x()`, `esc_html__()`, `esc_attr__()`, `sprintf()` with translator comments when placeholders are used.
+- **JS strings**: import from `@wordpress/i18n` and use `__`, `_x`, `_n`, `sprintf` as needed.
+- **Keep command identifiers/keys untranslated** (e.g., `/help`, option keys, slugs), but translate labels/messages/descriptions shown to users.
+- **When adding new script entry points/handles**, ensure script translations are loaded via `wp_set_script_translations( $handle, 'clawpress', CLAWPRESS_DIR . 'languages' )`.
+
 ## Important Notes
 
 - Asset files (`build/scripts/*.asset.php`) are auto-generated - never edit manually

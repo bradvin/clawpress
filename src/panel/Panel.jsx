@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from '@wordpress/element';
+import { __, sprintf } from '@wordpress/i18n';
 import PanelHeader from './components/PanelHeader';
 import PanelInput from './components/PanelInput';
 import PanelMessages from './components/PanelMessages';
@@ -340,7 +341,7 @@ const Panel = () => {
       }
       case 'tool_call':
         if (!toolPlanningShown) {
-          setEphemeralStatus('Preparing tool plan...');
+          setEphemeralStatus(__('Preparing tool plan...', 'clawpress'));
           setToolPlanningShown(true);
         }
         break;
@@ -349,7 +350,7 @@ const Panel = () => {
         setToolPlanningShown(false);
         break;
       case 'error':
-        appendMessage('system', parsed.error || 'Stream error.');
+        appendMessage('system', parsed.error || __('Stream error.', 'clawpress'));
         break;
       case 'done':
         finishStream();
@@ -496,7 +497,7 @@ const Panel = () => {
         );
       } catch {
         if (!mounted) return;
-        appendMessage('system', 'Unable to load chat history.');
+        appendMessage('system', __('Unable to load chat history.', 'clawpress'));
       }
 
       if (mounted) {
@@ -560,7 +561,7 @@ const Panel = () => {
 
   const stopStream = () => {
     streamHandleRef.current?.stop?.();
-    appendMessage('system', 'Stream stopped.');
+    appendMessage('system', __('Stream stopped.', 'clawpress'));
   };
 
   const runTool = async (tool, args) => {
@@ -600,7 +601,7 @@ const Panel = () => {
     } catch (err) {
       updateToolDialog(dialog.id, {
         status: 'error',
-        error: err?.message || 'Tool execution failed.',
+        error: err?.message || __('Tool execution failed.', 'clawpress'),
       });
     }
   };
@@ -649,8 +650,13 @@ const Panel = () => {
   const runMockScenario = () => {
     if (!mockEnabled) return;
     setInput('');
-    appendMessage('user', `Mock: ${mockScenario}`);
-    streamPrompt(`Mock: ${mockScenario}`);
+    const prompt = sprintf(
+      /* translators: %s: selected mock scenario */
+      __('Mock: %s', 'clawpress'),
+      mockScenario
+    );
+    appendMessage('user', prompt);
+    streamPrompt(prompt);
   };
 
   useEffect(() => {

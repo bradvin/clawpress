@@ -1,4 +1,5 @@
 import { ToolDialogShell } from './toolDialogHelpers';
+import { __ } from '@wordpress/i18n';
 import {
   toolName as updatePostsFindReplaceName,
   policy as updatePostsFindReplacePolicy,
@@ -14,7 +15,7 @@ const ToolDefaultRenderer = ({ toolName, args, toolDialog, runTool, onCancel, po
   return (
     <ToolDialogShell
       status={status}
-      title={toolName || 'Unknown tool'}
+      title={toolName || __('Unknown tool', 'clawpress')}
       canRerun={canRerun}
       policy={policy}
       isOpen={isOpen}
@@ -37,7 +38,7 @@ const ToolDefaultRenderer = ({ toolName, args, toolDialog, runTool, onCancel, po
       )}
       {toolDialog.diff ? (
         <div className="clawpress-tool-dialog-diff">
-          <h4>Changes:</h4>
+          <h4>{__('Changes:', 'clawpress')}</h4>
           <syntax-highlight language="json">{JSON.stringify(toolDialog.diff, null, 2)}</syntax-highlight>
         </div>
       ) : null}

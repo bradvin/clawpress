@@ -1,4 +1,5 @@
 import { ToolDialogShell } from '../toolDialogHelpers';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import ToolDialogForm from '../../components/ToolDialogForm';
 
 export const toolName = 'update_posts_find_replace';
@@ -40,36 +41,36 @@ export const Renderer = ({
   const fields = [
     {
       name: 'search',
-      label: 'Find',
+      label: __('Find', 'clawpress'),
       type: 'text',
-      help: 'The text to search for.',
+      help: __('The text to search for.', 'clawpress'),
     },
     {
       name: 'replace',
-      label: 'Replace',
+      label: __('Replace', 'clawpress'),
       type: 'text',
-      help: 'The text to replace with.',
+      help: __('The text to replace with.', 'clawpress'),
     },
     {
       name: 'post_status',
-      label: 'Post status',
+      label: __('Post status', 'clawpress'),
       type: 'select',
       options: [
-        { value: 'any', label: 'Any' },
-        { value: 'publish', label: 'Published' },
-        { value: 'draft', label: 'Draft' },
+        { value: 'any', label: __('Any', 'clawpress') },
+        { value: 'publish', label: __('Published', 'clawpress') },
+        { value: 'draft', label: __('Draft', 'clawpress') },
       ],
     },
     {
       name: 'dry_run',
-      label: 'Dry run',
+      label: __('Dry run', 'clawpress'),
       type: 'hidden',
     },
   ];
 
   const title = status === 'cancelled'
-    ? 'Update Posts - Find and Replace (Cancelled)'
-    : 'Update Posts - Find and Replace';
+    ? __('Update Posts - Find and Replace (Cancelled)', 'clawpress')
+    : __('Update Posts - Find and Replace', 'clawpress');
 
   return (
     <ToolDialogShell
@@ -108,10 +109,10 @@ export const Renderer = ({
               })
             }
           >
-            Retry
+            {__('Retry', 'clawpress')}
           </button>
           <button className="button" type="button" onClick={() => onCancel(toolDialog.id)}>
-            Cancel
+            {__('Cancel', 'clawpress')}
           </button>
         </div>
       ) : status !== 'done' ? (
@@ -142,24 +143,41 @@ export const Renderer = ({
         <div className="clawpress-tool-result">
           <div className="clawpress-tool-result-summary">
             <span>
-              {isPreviewResult ? 'Preview ' : ''}
-              Results
+              {isPreviewResult
+                ? __('Preview Results', 'clawpress')
+                : __('Results', 'clawpress')}
             </span>
           </div>
           {total === 0 ? (
-            <p>No matches found.</p>
+            <p>{__('No matches found.', 'clawpress')}</p>
           ) : (
             <details className="clawpress-tool-result-list" open>
-              <summary>Changed posts ({total})</summary>
+              <summary>
+                {sprintf(
+                  /* translators: %d: number of changed posts */
+                  __('Changed posts (%d)', 'clawpress'),
+                  total
+                )}
+              </summary>
               <ul>
                 {changed.map((item) => (
                   <li key={item.id}>
                     <span className="clawpress-tool-result-title">
-                      {item.title || 'Untitled'}
+                      {item.title || __('Untitled', 'clawpress')}
                     </span>
-                    <span className="clawpress-tool-result-meta">ID {item.id}</span>
                     <span className="clawpress-tool-result-meta">
-                      {item.count} change{item.count === 1 ? '' : 's'}
+                      {sprintf(
+                        /* translators: %d: post ID */
+                        __('ID %d', 'clawpress'),
+                        item.id
+                      )}
+                    </span>
+                    <span className="clawpress-tool-result-meta">
+                      {sprintf(
+                        /* translators: %d: number of replacements in a post */
+                        _n('%d change', '%d changes', item.count, 'clawpress'),
+                        item.count
+                      )}
                     </span>
                   </li>
                 ))}
@@ -180,10 +198,10 @@ export const Renderer = ({
                   })
                 }
               >
-                Run
+                {__('Run', 'clawpress')}
               </button>
               <button className="button" type="button" onClick={() => onCancel(toolDialog.id)}>
-                Cancel
+                {__('Cancel', 'clawpress')}
               </button>
             </div>
           ) : null}
