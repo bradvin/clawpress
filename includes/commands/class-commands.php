@@ -10,16 +10,25 @@ declare( strict_types=1 );
 namespace ClawPress\Commands;
 
 use ClawPress\Commands\Handlers\Clear_Command_Handler;
+use ClawPress\Commands\Handlers\Create_Agent_Files_Command_Handler;
+use ClawPress\Commands\Handlers\Create_Agent_User_Command_Handler;
+use ClawPress\Commands\Handlers\Create_Workspace_Command_Handler;
 use ClawPress\Commands\Handlers\Help_Command_Handler;
 use ClawPress\Commands\Handlers\Memory_Command_Handler;
 use ClawPress\Commands\Handlers\Onboarding_Command_Handler;
 use ClawPress\Commands\Handlers\Reset_Command_Handler;
+use ClawPress\Commands\Handlers\Settings_Command_Handler;
 use ClawPress\Commands\Handlers\Site_Command_Handler;
 use ClawPress\Commands\Handlers\Status_Command_Handler;
+use ClawPress\Commands\Handlers\Test_Command_Handler;
 use ClawPress\Commands\Handlers\Tools_Command_Handler;
 use ClawPress\Helpers\Chat_History_Helper;
+use ClawPress\Helpers\Agent_File_Helper;
+use ClawPress\Helpers\Provider_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use ClawPress\Helpers\Status_Helper;
+use ClawPress\Helpers\User_Helper;
+use ClawPress\Helpers\Workspace_Helper;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,8 +50,12 @@ final class Commands {
 		$this->registry = new Command_Registry();
 
 		$settings_helper    = Settings_Helper::get_instance();
+		$agent_file_helper  = Agent_File_Helper::get_instance();
+		$provider_helper    = Provider_Helper::get_instance();
 		$status_helper      = Status_Helper::get_instance();
 		$history_helper     = Chat_History_Helper::get_instance();
+		$user_helper        = User_Helper::get_instance();
+		$workspace_helper   = Workspace_Helper::get_instance();
 		$confirmation_store = new Command_Confirmation_Store();
 
 		$this->registry->register( new Help_Command_Handler( $this->registry ), false );
@@ -52,7 +65,12 @@ final class Commands {
 		$this->registry->register( new Clear_Command_Handler( $history_helper ), true );
 		$this->registry->register( new Site_Command_Handler(), false );
 		$this->registry->register( new Tools_Command_Handler( $status_helper ), false );
+		$this->registry->register( new Test_Command_Handler( $settings_helper, $provider_helper ), false );
+		$this->registry->register( new Create_Agent_User_Command_Handler( $user_helper ), false, false );
+		$this->registry->register( new Create_Workspace_Command_Handler( $settings_helper, $workspace_helper ), false, false );
+		$this->registry->register( new Create_Agent_Files_Command_Handler( $agent_file_helper ), false, false );
 		$this->registry->register( new Reset_Command_Handler(), true, false );
+		$this->registry->register( new Settings_Command_Handler( $settings_helper ), false, false );
 	}
 
 	/**

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-14T13:28:36+00:00\n"
+"POT-Creation-Date: 2026-02-14T14:17:05+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -94,7 +94,7 @@ msgstr ""
 #. translators: %s: expected command usage
 #: includes/commands/handlers/class-clear-command-handler.php:82
 #: includes/commands/handlers/class-memory-command-handler.php:103
-#: includes/commands/handlers/class-reset-command-handler.php:65
+#: includes/commands/handlers/class-reset-command-handler.php:75
 #: includes/commands/handlers/class-site-command-handler.php:66
 #: includes/commands/handlers/class-tools-command-handler.php:83
 #, php-format
@@ -117,10 +117,6 @@ msgstr ""
 #: includes/commands/handlers/class-help-command-handler.php:85
 #, php-format
 msgid "- %1$s: %2$s"
-msgstr ""
-
-#: includes/commands/handlers/class-help-command-handler.php:91
-msgid "Tip: `/memory clear` requires confirmation and will return a tokenized re-run command."
 msgstr ""
 
 #: includes/commands/handlers/class-memory-command-handler.php:70
@@ -193,16 +189,16 @@ msgstr ""
 msgid "Onboarding reset. Current step: `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-reset-command-handler.php:33
+#: includes/commands/handlers/class-reset-command-handler.php:43
 msgid "Reset all stored ClawPress user meta."
 msgstr ""
 
-#: includes/commands/handlers/class-reset-command-handler.php:79
+#: includes/commands/handlers/class-reset-command-handler.php:89
 msgid "Unable to resolve current user."
 msgstr ""
 
 #. translators: %d: number of user meta keys removed
-#: includes/commands/handlers/class-reset-command-handler.php:108
+#: includes/commands/handlers/class-reset-command-handler.php:122
 #, php-format
 msgid "Reset complete. Removed %d ClawPress user meta entries."
 msgstr ""
@@ -359,6 +355,18 @@ msgstr ""
 msgid "No settings provided"
 msgstr ""
 
+#: includes/helpers/class-workspace-helper.php:72
+msgid "Invalid user ID for workspace creation."
+msgstr ""
+
+#: includes/helpers/class-workspace-helper.php:87
+msgid "Unable to resolve uploads directory for workspace."
+msgstr ""
+
+#: includes/helpers/class-workspace-helper.php:95
+msgid "Unable to create workspace directory structure."
+msgstr ""
+
 #: includes/rest/class-chat-controller.php:103
 msgid "Message is required."
 msgstr ""
@@ -513,13 +521,13 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/panel/components/cards/WelcomeCard.jsx:7
-#: src/panel/Panel.jsx:542
+#: src/panel/components/cards/WelcomeCard.jsx:8
+#: src/panel/Panel.jsx:560
 msgid "Welcome to ClawPress"
 msgstr ""
 
-#: src/panel/components/cards/WelcomeCard.jsx:11
-#: src/panel/Panel.jsx:543
+#: src/panel/components/cards/WelcomeCard.jsx:12
+#: src/panel/Panel.jsx:561
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -571,6 +579,10 @@ msgstr ""
 msgid "Run"
 msgstr ""
 
+#: src/panel/components/PanelCard.jsx:20
+msgid "Card"
+msgstr ""
+
 #: src/panel/components/PanelHeader.jsx:19
 msgid "ClawPress Agent"
 msgstr ""
@@ -604,11 +616,11 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:67
+#: src/panel/components/PanelMessages.jsx:68
 msgid "System"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:93
+#: src/panel/components/PanelMessages.jsx:99
 msgid "Thinking"
 msgstr ""
 
@@ -693,28 +705,36 @@ msgstr ""
 msgid "Sample Post"
 msgstr ""
 
-#: src/panel/Panel.jsx:380
+#: src/panel/Panel.jsx:396
 msgid "Preparing tool plan..."
 msgstr ""
 
-#: src/panel/Panel.jsx:389
+#: src/panel/Panel.jsx:407
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:562
+#: src/panel/Panel.jsx:566
+msgid "Start Onboarding"
+msgstr ""
+
+#: src/panel/Panel.jsx:587
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:626
+#: src/panel/Panel.jsx:651
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:666
+#: src/panel/Panel.jsx:689
 msgid "Tool execution failed."
 msgstr ""
 
+#: src/panel/Panel.jsx:747
+msgid "Invalid card action."
+msgstr ""
+
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:717
+#: src/panel/Panel.jsx:785
 #, js-format
 msgid "Mock: %s"
 msgstr ""

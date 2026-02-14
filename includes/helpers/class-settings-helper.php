@@ -86,6 +86,15 @@ final class Settings_Helper {
 	}
 
 	/**
+	 * Get supported settings keys.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_supported_setting_keys(): array {
+		return array_keys( self::SETTINGS );
+	}
+
+	/**
 	 * Update settings by applying a partial or full update payload.
 	 *
 	 * @param array<string,mixed> $updates Update payload.

@@ -12,6 +12,7 @@ namespace ClawPress\Commands\Handlers;
 use ClawPress\Commands\Command_Handler;
 use ClawPress\Commands\Command_Request;
 use ClawPress\Commands\Command_Response;
+use ClawPress\Helpers\Workspace_Helper;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -19,6 +20,15 @@ defined( 'ABSPATH' ) || exit;
  * Reset all ClawPress user meta for the current user.
  */
 final class Reset_Command_Handler implements Command_Handler {
+	/**
+	 * ClawPress meta keys preserved during reset.
+	 *
+	 * @var array<int,string>
+	 */
+	private const PRESERVED_META_KEYS = [
+		Workspace_Helper::USER_META_WORKSPACE_HASH,
+	];
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -94,6 +104,10 @@ final class Reset_Command_Handler implements Command_Handler {
 
 		foreach ( array_keys( $all_meta ) as $meta_key ) {
 			if ( ! is_string( $meta_key ) || 0 !== strpos( $meta_key, 'clawpress_' ) ) {
+				continue;
+			}
+
+			if ( in_array( $meta_key, self::PRESERVED_META_KEYS, true ) ) {
 				continue;
 			}
 
