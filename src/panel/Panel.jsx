@@ -70,13 +70,35 @@ const Panel = () => {
   const startX = useRef(0);
   const startW = useRef(width);
 
-  const appendMessage = (role, content) =>
+  const normalizeCard = (rawCard) => {
+    if (!rawCard || typeof rawCard !== 'object') {
+      return null;
+    }
+
+    const type = typeof rawCard.type === 'string' ? rawCard.type.trim() : '';
+    if (!type) {
+      return null;
+    }
+
+    const data =
+      rawCard.data && typeof rawCard.data === 'object' && !Array.isArray(rawCard.data)
+        ? rawCard.data
+        : {};
+
+    return {
+      type,
+      data,
+    };
+  };
+
+  const appendMessage = (role, content, card = null) =>
     setMessages((prev) => [
       ...prev,
       {
         id: `msg-${Date.now()}-${Math.random()}`,
         role,
         content,
+        card: normalizeCard(card),
         createdAt: ++timelineRef.current,
       },
     ]);
@@ -101,8 +123,9 @@ const Panel = () => {
           typeof item.id === 'string' && item.id
             ? item.id
             : `history-${createdAt}-${index}`;
+        const card = normalizeCard(item.card);
 
-        return { id, role, content, createdAt };
+        return { id, role, content, card, createdAt };
       });
   };
 
@@ -112,6 +135,7 @@ const Panel = () => {
         open: null,
         width: null,
         lastHistoryId: '',
+        welcomeCardSeen: false,
       };
     }
 
@@ -119,11 +143,14 @@ const Panel = () => {
     const nextWidth = Number.isFinite(Number(state.width)) ? Number(state.width) : null;
     const lastHistoryId =
       typeof state.last_history_id === 'string' ? state.last_history_id : '';
+    const welcomeCardSeen =
+      typeof state.welcome_card_seen === 'boolean' ? state.welcome_card_seen : false;
 
     return {
       open: nextOpen,
       width: nextWidth,
       lastHistoryId,
+      welcomeCardSeen,
     };
   };
 
@@ -329,6 +356,15 @@ const Panel = () => {
           );
         }
         break;
+      case 'response_card':
+        if (parsed?.card) {
+          appendMessage(
+            parsed?.role === 'system' ? 'system' : 'assistant',
+            typeof parsed?.text === 'string' ? parsed.text : '',
+            parsed.card
+          );
+        }
+        break;
       case 'history_reset':
         setMessages([]);
         setToolDialogs([]);
@@ -449,17 +485,18 @@ const Panel = () => {
 
     const initializePanelState = async () => {
       const client = buildClient();
+      let resolvedPanelState = normalizePanelState(null);
 
       try {
         const panelStateResponse = await client.getPanelState?.();
         if (!mounted) return;
 
-        const panelState = normalizePanelState(panelStateResponse);
-        if (typeof panelState.open === 'boolean') {
-          setOpen(panelState.open);
+        resolvedPanelState = normalizePanelState(panelStateResponse);
+        if (typeof resolvedPanelState.open === 'boolean') {
+          setOpen(resolvedPanelState.open);
         }
-        if (Number.isFinite(panelState.width) && panelState.width > 0) {
-          setWidth(panelState.width);
+        if (Number.isFinite(resolvedPanelState.width) && resolvedPanelState.width > 0) {
+          setWidth(resolvedPanelState.width);
         }
       } catch {
         // Keep localStorage fallback.
@@ -490,11 +527,36 @@ const Panel = () => {
         if (!mounted) return;
 
         const historyMessages = normalizeHistoryItems(historyResponse?.items || []);
-        setMessages(historyMessages);
-        timelineRef.current = historyMessages.reduce(
-          (max, item) => Math.max(max, Number(item.createdAt) || 0),
-          0
-        );
+        const shouldShowWelcomeCard =
+          historyMessages.length === 0 && resolvedPanelState.welcomeCardSeen !== true;
+
+        if (shouldShowWelcomeCard) {
+          const now = Date.now();
+          const welcomeMessage = {
+            id: `welcome-${now}`,
+            role: 'assistant',
+            content: '',
+            card: {
+              type: 'welcome',
+              data: {
+                title: __('Welcome to ClawPress', 'clawpress'),
+                message: __('Hello! I am ready to help with your WordPress tasks.', 'clawpress'),
+                emoji: '👋',
+              },
+            },
+            createdAt: now,
+          };
+
+          setMessages([welcomeMessage]);
+          timelineRef.current = now;
+          client.setPanelState?.({ welcome_card_seen: true }).catch(() => {});
+        } else {
+          setMessages(historyMessages);
+          timelineRef.current = historyMessages.reduce(
+            (max, item) => Math.max(max, Number(item.createdAt) || 0),
+            0
+          );
+        }
       } catch {
         if (!mounted) return;
         appendMessage('system', __('Unable to load chat history.', 'clawpress'));

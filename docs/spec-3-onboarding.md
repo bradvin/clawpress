@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implement chat-led onboarding state machine which guides the user through the initial setup process.
+Implement chat-led onboarding state machine which guides the user through the initial setup process. It shold provide a nice UX and explain everything that is happening.
 
 ## Source Requirements
 
@@ -12,8 +12,8 @@ Implement chat-led onboarding state machine which guides the user through the in
 ## In Scope
 
 - Onboarding state machine storage and progression.
-- Provider and model selection. If providers not setup then include link to `wp-admin/options-general.php?page=wp-ai-client`
-- Execution user selection.
+- Provider and model selection. If providers not setup then include link to `wp-admin/options-general.php?page=wp-ai-client`. Onboarding is blocked.
+- Execution user selection. (suggest to create a new user that the agent will use as the executing user. Suggest giving it contributor permissions to start.)
 - Provision `SOUL.md`, `AGENTS.md`, `USER.md`, `HEARTBEAT.md` from template files.
 
 ## Out of Scope
@@ -27,9 +27,7 @@ Implement chat-led onboarding state machine which guides the user through the in
 - Add `includes/onboarding.php` with state transitions and resumable progress.
 - Persist onboarding state to settings.
 
-2. REST contract
-- Add `GET /onboarding` and `POST /onboarding` handlers in `includes/rest/class-onboarding-controller.php`.
-- Validate transitions server-side; reject invalid jumps.
+2. Onboarding card which is a wizard that guides the user through the onboarding process.
 
 3. Execution user flow
 - Add helpers to list eligible users and validate selected user.

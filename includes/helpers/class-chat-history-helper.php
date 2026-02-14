@@ -70,20 +70,27 @@ final class Chat_History_Helper {
 	/**
 	 * Append a message to a user's history.
 	 *
-	 * @param string   $role Message role.
-	 * @param string   $content Message content.
-	 * @param int|null $user_id User ID.
+	 * @param string                   $role Message role.
+	 * @param string                   $content Message content.
+	 * @param array<string,mixed>|null $card Optional card metadata.
+	 * @param int|null                 $user_id User ID.
 	 */
-	public function append_history_message( string $role, string $content, ?int $user_id = null ): void {
+	public function append_history_message( string $role, string $content, ?array $card = null, ?int $user_id = null ): void {
 		$items      = $this->get_history_items( $user_id );
 		$created_at = (int) round( microtime( true ) * 1000 );
 
-		$items[] = [
+		$item = [
 			'id'        => sprintf( 'msg-%d-%d', $created_at, count( $items ) + 1 ),
 			'role'      => $role,
 			'content'   => $content,
 			'createdAt' => $created_at,
 		];
+		$card = $this->normalize_card( $card );
+		if ( null !== $card ) {
+			$item['card'] = $card;
+		}
+
+		$items[] = $item;
 
 		if ( count( $items ) > self::HISTORY_LIMIT ) {
 			$items = array_slice( $items, -self::HISTORY_LIMIT );
@@ -137,6 +144,32 @@ final class Chat_History_Helper {
 			'role'      => $role,
 			'content'   => $content,
 			'createdAt' => $created,
+			'card'      => $this->normalize_card( isset( $item['card'] ) && is_array( $item['card'] ) ? $item['card'] : null ),
 		];
+	}
+
+	/**
+	 * Normalize card payload.
+	 *
+	 * @param array<string,mixed>|null $card Raw card payload.
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_card( ?array $card ): ?array {
+		if ( ! is_array( $card ) ) {
+			return null;
+		}
+
+		$type = isset( $card['type'] ) ? strtolower( sanitize_text_field( (string) $card['type'] ) ) : '';
+		$type = (string) preg_replace( '/[^a-z0-9_\-]/', '', $type );
+		if ( '' === $type ) {
+			return null;
+		}
+
+		$normalized = [ 'type' => $type ];
+		if ( isset( $card['data'] ) && is_array( $card['data'] ) ) {
+			$normalized['data'] = $card['data'];
+		}
+
+		return $normalized;
 	}
 }

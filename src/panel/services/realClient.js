@@ -77,6 +77,24 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
       body: state,
     });
 
+  const normalizeCard = (rawCard) => {
+    if (!rawCard || typeof rawCard !== 'object') {
+      return null;
+    }
+
+    const type = typeof rawCard.type === 'string' ? rawCard.type.trim() : '';
+    if (!type) {
+      return null;
+    }
+
+    const data =
+      rawCard.data && typeof rawCard.data === 'object' && !Array.isArray(rawCard.data)
+        ? rawCard.data
+        : {};
+
+    return { type, data };
+  };
+
   // Keep a stream-compatible interface for the existing panel flow.
   const stream = (prompt) => {
     const controller = new AbortController();
@@ -100,8 +118,15 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
           typeof response?.reply === 'string' ? response.reply.trim() : '';
 
         const isCommandResponse = Boolean(response?.meta?.command?.name);
+        const card = normalizeCard(response?.meta?.card);
 
-        if (reply) {
+        if (card) {
+          onEvent('response_card', {
+            card,
+            text: reply,
+            role: isCommandResponse ? 'system' : 'assistant',
+          });
+        } else if (reply) {
           onEvent('response_message', {
             text: reply,
             role: isCommandResponse ? 'system' : 'assistant',

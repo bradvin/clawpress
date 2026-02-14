@@ -74,6 +74,7 @@ final class Commands {
 			'provider'    => null,
 			'model'       => null,
 			'suggestions' => $response->get_suggestions(),
+			'card'        => $response->get_card(),
 			'command'     => [
 				'name'                  => $response->get_command(),
 				'error'                 => $response->is_error(),

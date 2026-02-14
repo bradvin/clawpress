@@ -119,12 +119,15 @@ final class Chat_Controller implements Route_Controller {
 		$command_meta         = isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 			? $reply_payload['command']
 			: [];
+		$card_meta            = isset( $reply_payload['card'] ) && is_array( $reply_payload['card'] )
+			? $reply_payload['card']
+			: null;
 		$clear_history_effect = isset( $command_meta['effects']['clear_history'] ) && true === $command_meta['effects']['clear_history'];
 		$is_command_response  = [] !== $command_meta;
 
 		if ( ! $clear_history_effect ) {
 			$this->history_helper->append_history_message( 'user', $message );
-			$this->history_helper->append_history_message( $is_command_response ? 'system' : 'assistant', $reply );
+			$this->history_helper->append_history_message( $is_command_response ? 'system' : 'assistant', $reply, $card_meta );
 		}
 
 		return new \WP_REST_Response(
@@ -141,6 +144,9 @@ final class Chat_Controller implements Route_Controller {
 						: null,
 					'suggestions' => isset( $reply_payload['suggestions'] ) && is_array( $reply_payload['suggestions'] )
 						? array_values( $reply_payload['suggestions'] )
+						: null,
+					'card'        => isset( $reply_payload['card'] ) && is_array( $reply_payload['card'] )
+						? $reply_payload['card']
 						: null,
 					'command'     => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 						? $reply_payload['command']

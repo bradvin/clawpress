@@ -65,15 +65,23 @@ final class Command_Response {
 	private array $suggestions;
 
 	/**
+	 * Optional card metadata for custom panel rendering.
+	 *
+	 * @var array<string,mixed>|null
+	 */
+	private ?array $card;
+
+	/**
 	 * Constructor.
 	 *
-	 * @param string $text Response text.
-	 * @param bool   $is_error Error flag.
-	 * @param string $command Command name.
-	 * @param bool   $is_destructive Destructive flag.
-	 * @param bool               $requires_confirmation Confirmation flag.
-	 * @param array<string,mixed> $effects Optional side-effects metadata.
-	 * @param array<int,string>   $suggestions Optional follow-up suggestions.
+	 * @param string                   $text Response text.
+	 * @param bool                     $is_error Error flag.
+	 * @param string                   $command Command name.
+	 * @param bool                     $is_destructive Destructive flag.
+	 * @param bool                     $requires_confirmation Confirmation flag.
+	 * @param array<string,mixed>      $effects Optional side-effects metadata.
+	 * @param array<int,string>        $suggestions Optional follow-up suggestions.
+	 * @param array<string,mixed>|null $card Optional card metadata.
 	 */
 	public function __construct(
 		string $text,
@@ -82,7 +90,8 @@ final class Command_Response {
 		bool $is_destructive,
 		bool $requires_confirmation,
 		array $effects = [],
-		array $suggestions = []
+		array $suggestions = [],
+		?array $card = null
 	) {
 		$this->text                  = $text;
 		$this->is_error              = $is_error;
@@ -99,17 +108,19 @@ final class Command_Response {
 				static fn ( string $suggestion ): bool => '' !== $suggestion
 			)
 		);
+		$this->card                  = $this->normalize_card( $card );
 	}
 
 	/**
 	 * Build a success response.
 	 *
-	 * @param string $text Response text.
-	 * @param string $command Command name.
-	 * @param bool   $is_destructive Destructive flag.
-	 * @param bool               $requires_confirmation Confirmation flag.
-	 * @param array<string,mixed> $effects Optional side-effects metadata.
-	 * @param array<int,string>   $suggestions Optional follow-up suggestions.
+	 * @param string                   $text Response text.
+	 * @param string                   $command Command name.
+	 * @param bool                     $is_destructive Destructive flag.
+	 * @param bool                     $requires_confirmation Confirmation flag.
+	 * @param array<string,mixed>      $effects Optional side-effects metadata.
+	 * @param array<int,string>        $suggestions Optional follow-up suggestions.
+	 * @param array<string,mixed>|null $card Optional card metadata.
 	 */
 	public static function success(
 		string $text,
@@ -117,20 +128,22 @@ final class Command_Response {
 		bool $is_destructive = false,
 		bool $requires_confirmation = false,
 		array $effects = [],
-		array $suggestions = []
+		array $suggestions = [],
+		?array $card = null
 	): self {
-		return new self( $text, false, $command, $is_destructive, $requires_confirmation, $effects, $suggestions );
+		return new self( $text, false, $command, $is_destructive, $requires_confirmation, $effects, $suggestions, $card );
 	}
 
 	/**
 	 * Build an error response.
 	 *
-	 * @param string $text Response text.
-	 * @param string $command Command name.
-	 * @param bool   $is_destructive Destructive flag.
-	 * @param bool               $requires_confirmation Confirmation flag.
-	 * @param array<string,mixed> $effects Optional side-effects metadata.
-	 * @param array<int,string>   $suggestions Optional follow-up suggestions.
+	 * @param string                   $text Response text.
+	 * @param string                   $command Command name.
+	 * @param bool                     $is_destructive Destructive flag.
+	 * @param bool                     $requires_confirmation Confirmation flag.
+	 * @param array<string,mixed>      $effects Optional side-effects metadata.
+	 * @param array<int,string>        $suggestions Optional follow-up suggestions.
+	 * @param array<string,mixed>|null $card Optional card metadata.
 	 */
 	public static function error(
 		string $text,
@@ -138,7 +151,8 @@ final class Command_Response {
 		bool $is_destructive = false,
 		bool $requires_confirmation = false,
 		array $effects = [],
-		array $suggestions = []
+		array $suggestions = [],
+		?array $card = null
 	): self {
 		$text = trim( $text );
 		if ( '' === $text ) {
@@ -147,7 +161,7 @@ final class Command_Response {
 		if ( false === strpos( $text, '🚨' ) ) {
 			$text = '🚨 ' . $text;
 		}
-		return new self( $text, true, $command, $is_destructive, $requires_confirmation, $effects, $suggestions );
+		return new self( $text, true, $command, $is_destructive, $requires_confirmation, $effects, $suggestions, $card );
 	}
 
 	/**
@@ -201,5 +215,40 @@ final class Command_Response {
 	 */
 	public function get_suggestions(): array {
 		return $this->suggestions;
+	}
+
+	/**
+	 * Get card metadata.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	public function get_card(): ?array {
+		return $this->card;
+	}
+
+	/**
+	 * Normalize card payload.
+	 *
+	 * @param array<string,mixed>|null $card Raw card payload.
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_card( ?array $card ): ?array {
+		if ( ! is_array( $card ) ) {
+			return null;
+		}
+
+		$type = isset( $card['type'] ) ? strtolower( sanitize_text_field( (string) $card['type'] ) ) : '';
+		$type = (string) preg_replace( '/[^a-z0-9_\-]/', '', $type );
+		if ( '' === $type ) {
+			return null;
+		}
+
+		$normalized = [ 'type' => $type ];
+
+		if ( isset( $card['data'] ) && is_array( $card['data'] ) ) {
+			$normalized['data'] = $card['data'];
+		}
+
+		return $normalized;
 	}
 }

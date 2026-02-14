@@ -24,6 +24,36 @@
   border: 1px solid var(--fp-border);
 }
 
+.clawpress-card {
+  background: var(--fp-bg);
+  border: 1px solid var(--fp-border);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.clawpress-card-emoji {
+  font-size: 20px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.clawpress-card-body {
+  min-width: 0;
+}
+
+.clawpress-card-title {
+  font-weight: 600;
+  color: var(--fp-text);
+}
+
+.clawpress-card-text {
+  color: var(--fp-text);
+  margin-top: 2px;
+}
+
 .clawpress-msg-label {
   font-size: 10px;
   text-transform: uppercase;

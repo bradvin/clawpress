@@ -79,6 +79,10 @@ final class Panel_Helper {
 			$state['last_history_id'] = sanitize_text_field( (string) $state_updates['last_history_id'] );
 		}
 
+		if ( array_key_exists( 'welcome_card_seen', $state_updates ) ) {
+			$state['welcome_card_seen'] = clawpress_sanitize_boolean( $state_updates['welcome_card_seen'] );
+		}
+
 		update_user_meta( $resolved_user_id, self::USER_META_KEY, $state );
 
 		return $state;
@@ -123,9 +127,10 @@ final class Panel_Helper {
 	 */
 	public function normalize_panel_state( $state ): array {
 		$defaults = [
-			'open'            => false,
-			'width'           => 420,
-			'last_history_id' => '',
+			'open'              => false,
+			'width'             => 420,
+			'last_history_id'   => '',
+			'welcome_card_seen' => false,
 		];
 
 		if ( ! is_array( $state ) ) {
@@ -133,9 +138,10 @@ final class Panel_Helper {
 		}
 
 		return [
-			'open'            => isset( $state['open'] ) ? clawpress_sanitize_boolean( $state['open'] ) : $defaults['open'],
-			'width'           => isset( $state['width'] ) ? $this->sanitize_width( $state['width'] ) : $defaults['width'],
-			'last_history_id' => isset( $state['last_history_id'] ) ? sanitize_text_field( (string) $state['last_history_id'] ) : '',
+			'open'              => isset( $state['open'] ) ? clawpress_sanitize_boolean( $state['open'] ) : $defaults['open'],
+			'width'             => isset( $state['width'] ) ? $this->sanitize_width( $state['width'] ) : $defaults['width'],
+			'last_history_id'   => isset( $state['last_history_id'] ) ? sanitize_text_field( (string) $state['last_history_id'] ) : '',
+			'welcome_card_seen' => isset( $state['welcome_card_seen'] ) ? clawpress_sanitize_boolean( $state['welcome_card_seen'] ) : false,
 		];
 	}
 

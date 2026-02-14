@@ -193,6 +193,7 @@ final class RestApiTest extends TestCase {
 					'provider' => 'openai',
 					'model'    => 'gpt-4.1-mini',
 					'suggestions' => null,
+					'card'     => null,
 					'command'  => null,
 				),
 			),
@@ -449,6 +450,7 @@ final class RestApiTest extends TestCase {
 					'open'            => true,
 					'width'           => 512,
 					'last_history_id' => 'msg-abc',
+					'welcome_card_seen' => true,
 				)
 			)
 		);
@@ -461,6 +463,7 @@ final class RestApiTest extends TestCase {
 				'open'            => true,
 				'width'           => 512,
 				'last_history_id' => 'msg-abc',
+				'welcome_card_seen' => true,
 			),
 			$get_response->get_data()
 		);

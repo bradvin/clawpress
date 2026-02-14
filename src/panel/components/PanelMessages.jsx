@@ -1,6 +1,7 @@
 import { useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import ToolDialog from './ToolDialog';
+import PanelCard from './PanelCard';
 import { getToolPolicy } from '../utils/toolDialogRenderers';
 const PanelMessages = ({
   messages,
@@ -49,6 +50,7 @@ const PanelMessages = ({
       {items.map((item) =>
         item.type === 'message' ? (() => {
           const isSystem = item.data.role === 'system';
+          const hasCard = item.data.card && typeof item.data.card === 'object';
           const content = item.data.content || '';
           const hasEllipsis = /(\.\.\.|…)\s*$/.test(content);
           const showThinking = isSystem && hasEllipsis;
@@ -64,11 +66,15 @@ const PanelMessages = ({
               {isSystem ? (
                 <div className="clawpress-msg-label">{__('System', 'clawpress')}</div>
               ) : null}
-              <div
-                className={`clawpress-msg-content${showThinking ? ' clawpress-thinking' : ''}`}
-              >
-                {displayContent}
-              </div>
+              {hasCard ? (
+                <PanelCard card={item.data.card} fallbackText={displayContent} />
+              ) : (
+                <div
+                  className={`clawpress-msg-content${showThinking ? ' clawpress-thinking' : ''}`}
+                >
+                  {displayContent}
+                </div>
+              )}
             </div>
           );
         })() : (

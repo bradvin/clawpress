@@ -53,18 +53,22 @@ final class Panel_State_Controller implements Route_Controller {
 				'callback'            => [ $this, 'update_panel_state' ],
 				'permission_callback' => 'clawpress_check_permissions',
 				'args'                => [
-					'open'            => [
+					'open'              => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
-					'width'           => [
+					'width'             => [
 						'required'          => false,
 						'validate_callback' => [ $this, 'validate_width' ],
 						'sanitize_callback' => [ $this, 'sanitize_width' ],
 					],
-					'last_history_id' => [
+					'last_history_id'   => [
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
+					],
+					'welcome_card_seen' => [
+						'required'          => false,
+						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
 				],
 			]
@@ -99,6 +103,11 @@ final class Panel_State_Controller implements Route_Controller {
 		$last_history_id = $request->get_param( 'last_history_id' );
 		if ( null !== $last_history_id ) {
 			$state_updates['last_history_id'] = $last_history_id;
+		}
+
+		$welcome_card_seen = $request->get_param( 'welcome_card_seen' );
+		if ( null !== $welcome_card_seen ) {
+			$state_updates['welcome_card_seen'] = $welcome_card_seen;
 		}
 
 		$state = $this->panel_helper->update_panel_state( $state_updates );
