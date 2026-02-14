@@ -680,6 +680,7 @@ const Panel = () => {
           onSend={sendPrompt}
           onStop={stopStream}
           streaming={streaming}
+          statusMode={statusSnapshot?.mode || 'offline'}
           onHistoryUp={(currentValue) => {
             if (inputHistory.length === 0) return null;
             if (historyIndex === -1) {

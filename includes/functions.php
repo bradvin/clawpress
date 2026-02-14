@@ -75,3 +75,24 @@ if ( ! function_exists( 'clawpress_check_permissions' ) ) {
 		return current_user_can( $capability );
 	}
 }
+
+if ( ! function_exists( 'clawpress_sanitize_multiline_text' ) ) {
+	/**
+	 * Sanitize multiline plain text for deterministic command responses.
+	 *
+	 * @param mixed $value Raw text.
+	 */
+	function clawpress_sanitize_multiline_text( $value ): string {
+		$text = (string) $value;
+		$text = str_replace( [ "\r\n", "\r" ], "\n", $text );
+
+		$lines = array_map(
+			static function ( string $line ): string {
+				return sanitize_text_field( $line );
+			},
+			explode( "\n", $text )
+		);
+
+		return trim( implode( "\n", $lines ) );
+	}
+}

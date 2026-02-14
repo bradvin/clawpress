@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\RestAPI\Controllers;
 
+use ClawPress\Commands\Commands;
 use ClawPress\Helpers\Chat_Helper;
 use ClawPress\Helpers\Chat_History_Helper;
 
@@ -40,6 +41,13 @@ final class Chat_Controller implements Route_Controller {
 	private Chat_Helper $chat_helper;
 
 	/**
+	 * Offline command engine.
+	 *
+	 * @var Commands
+	 */
+	private Commands $commands;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param callable(string):array<string,mixed>|null $reply_generator Optional reply generator callback.
@@ -47,6 +55,7 @@ final class Chat_Controller implements Route_Controller {
 	public function __construct( ?callable $reply_generator = null ) {
 		$this->chat_helper     = Chat_Helper::get_instance();
 		$this->history_helper  = Chat_History_Helper::get_instance();
+		$this->commands        = new Commands();
 		$this->reply_generator = $reply_generator ?? [ $this->chat_helper, 'generate_ai_reply' ];
 	}
 
@@ -97,7 +106,11 @@ final class Chat_Controller implements Route_Controller {
 			);
 		}
 
-		$reply_payload = call_user_func( $this->reply_generator, $message );
+		$command_payload = $this->commands->maybe_dispatch( $message );
+		$reply_payload   = is_array( $command_payload )
+			? $command_payload
+			: call_user_func( $this->reply_generator, $message );
+
 		$reply         = isset( $reply_payload['reply'] ) ? trim( (string) $reply_payload['reply'] ) : '';
 		if ( '' === $reply ) {
 			$reply = $this->chat_helper->build_offline_reply( $message );
@@ -117,6 +130,9 @@ final class Chat_Controller implements Route_Controller {
 						: null,
 					'model'    => isset( $reply_payload['model'] ) && '' !== (string) $reply_payload['model']
 						? (string) $reply_payload['model']
+						: null,
+					'command'  => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
+						? $reply_payload['command']
 						: null,
 				],
 			],

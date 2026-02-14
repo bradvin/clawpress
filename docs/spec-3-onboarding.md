@@ -1,8 +1,8 @@
-# Spec 2: Onboarding, Execution User, and Template Bootstrap
+# Spec 3: Onboarding
 
 ## Goal
 
-Implement chat-led onboarding state machine with required execution-user setup and idempotent template provisioning into `agent-file` CPT.
+Implement chat-led onboarding state machine which guides the user through the initial setup process.
 
 ## Source Requirements
 
@@ -12,9 +12,9 @@ Implement chat-led onboarding state machine with required execution-user setup a
 ## In Scope
 
 - Onboarding state machine storage and progression.
-- Execution user selection and persistence (`clawpress_execution_user_id`).
-- Provision `SOUL.md`, `AGENTS.md`, `USER.md`, `HEARTBEAT.md` from `docs/templates/`.
-- Protected-file behavior for `SOUL.md`.
+- Provider and model selection. If providers not setup then include link to `wp-admin/options-general.php?page=wp-ai-client`
+- Execution user selection.
+- Provision `SOUL.md`, `AGENTS.md`, `USER.md`, `HEARTBEAT.md` from template files.
 
 ## Out of Scope
 
@@ -24,11 +24,11 @@ Implement chat-led onboarding state machine with required execution-user setup a
 ## Implementation Tasks
 
 1. Onboarding module
-- Add `inc/onboarding.php` with state transitions and resumable progress.
-- Persist site-level onboarding state and per-user completion metadata.
+- Add `includes/onboarding.php` with state transitions and resumable progress.
+- Persist onboarding state to settings.
 
 2. REST contract
-- Add `GET /onboarding` and `POST /onboarding` handlers in `inc/rest-api.php`.
+- Add `GET /onboarding` and `POST /onboarding` handlers in `includes/rest/class-onboarding-controller.php`.
 - Validate transitions server-side; reject invalid jumps.
 
 3. Execution user flow
@@ -48,8 +48,8 @@ Implement chat-led onboarding state machine with required execution-user setup a
 ## Acceptance Criteria
 
 - Fresh install enters onboarding and can resume after reload.
-- Onboarding cannot complete until required files exist and execution user is set.
-- Existing agent-file records are not overwritten unless explicit reset action is invoked.
+- Onboarding cannot complete until settings are valid.
+- Existing agent-file records are not overwritten if they already exist.
 
 ## Test Plan
 

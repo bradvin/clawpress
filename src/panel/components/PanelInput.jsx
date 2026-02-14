@@ -6,10 +6,20 @@ const PanelInput = ({
   onSend,
   onStop,
   streaming,
+  statusMode,
   onHistoryUp,
   onHistoryDown,
 }) => {
   const textareaRef = useRef(null);
+  const isOffline = statusMode !== 'online';
+  const suggestions = [
+    '/help',
+    '/status',
+    '/onboarding resume',
+    '/memory list',
+    '/site info',
+    '/tools list',
+  ];
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -60,6 +70,24 @@ const PanelInput = ({
 
   return (
     <div className="clawpress-input">
+      {isOffline ? (
+        <div className="clawpress-command-suggestions" aria-label="Offline command suggestions">
+          <div className="clawpress-command-suggestions-label">Offline commands</div>
+          <div className="clawpress-command-suggestions-list">
+            {suggestions.map((command) => (
+              <button
+                key={command}
+                className="clawpress-command-suggestion button button-secondary"
+                onClick={() => onInputChange({ target: { value: command } })}
+                type="button"
+                disabled={streaming}
+              >
+                {command}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <textarea
         ref={textareaRef}
         value={input}

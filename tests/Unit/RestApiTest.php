@@ -192,10 +192,101 @@ final class RestApiTest extends TestCase {
 					'mode'     => 'online',
 					'provider' => 'openai',
 					'model'    => 'gpt-4.1-mini',
+					'command'  => null,
 				),
 			),
 			$response->get_data()
 		);
+	}
+
+	public function test_chat_command_dispatch_skips_reply_generator(): void {
+		$reply_generator_calls = 0;
+		$chat_controller       = new Chat_Controller(
+			static function ( string $message ) use ( &$reply_generator_calls ): array {
+				++$reply_generator_calls;
+
+				return array(
+					'reply'    => 'Unexpected model path: ' . $message,
+					'mode'     => 'online',
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				);
+			}
+		);
+
+		$response = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => '/help',
+				)
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 0, $reply_generator_calls );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'offline', $data['meta']['mode'] );
+		$this->assertSame( '/help', $data['meta']['command']['name'] );
+		$this->assertStringContainsString( 'Available commands:', $data['reply'] );
+	}
+
+	public function test_chat_unknown_command_returns_help_text(): void {
+		$chat_controller = new Chat_Controller();
+		$response        = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => '/does-not-exist',
+				)
+			)
+		);
+		$data            = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'offline', $data['meta']['mode'] );
+		$this->assertSame( '/help', $data['meta']['command']['name'] );
+		$this->assertStringContainsString( 'Unknown command', $data['reply'] );
+		$this->assertStringContainsString( '/help', $data['reply'] );
+	}
+
+	public function test_memory_clear_requires_confirmation_and_clears_on_second_call(): void {
+		WordPress_Stubs::$options['clawpress_settings'] = array(
+			'memory_enabled'    => true,
+			'execution_user_id' => 9,
+		);
+		WordPress_Stubs::$options['clawpress_memory_entries'] = array(
+			'Entry A',
+			'Entry B',
+		);
+
+		$chat_controller = new Chat_Controller();
+		$first_response  = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => '/memory clear',
+				)
+			)
+		);
+		$first_data      = $first_response->get_data();
+
+		$this->assertSame( 200, $first_response->get_status() );
+		$this->assertSame( true, $first_data['meta']['command']['requires_confirmation'] );
+		$this->assertStringContainsString( '--confirm=', $first_data['reply'] );
+
+		preg_match( '/--confirm=([a-f0-9]+)/', $first_data['reply'], $matches );
+		$this->assertNotEmpty( $matches[1] ?? '' );
+
+		$second_response = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => '/memory clear --confirm=' . $matches[1],
+				)
+			)
+		);
+		$second_data     = $second_response->get_data();
+
+		$this->assertSame( 200, $second_response->get_status() );
+		$this->assertStringContainsString( 'Memory cleared.', $second_data['reply'] );
+		$this->assertSame( array(), WordPress_Stubs::$options['clawpress_memory_entries'] );
 	}
 
 	public function test_chat_get_history_returns_empty_items_array(): void {
@@ -265,7 +356,10 @@ final class RestApiTest extends TestCase {
 		$data              = $response->get_data();
 
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( array( 'mode' => 'offline' ), $data );
+		$this->assertSame( 'offline', $data['mode'] );
+		$this->assertSame( null, $data['provider']['id'] );
+		$this->assertSame( false, $data['provider']['configured'] );
+		$this->assertSame( false, $data['memory']['enabled'] );
 	}
 
 	public function test_status_endpoint_returns_online_when_provider_and_model_configured(): void {
@@ -275,9 +369,13 @@ final class RestApiTest extends TestCase {
 		);
 		$status_controller = new Status_Controller();
 		$response          = $status_controller->get_status();
+		$data              = $response->get_data();
 
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( array( 'mode' => 'online' ), $response->get_data() );
+		$this->assertSame( 'online', $data['mode'] );
+		$this->assertSame( 'openai', $data['provider']['id'] );
+		$this->assertSame( true, $data['provider']['configured'] );
+		$this->assertSame( 'gpt-4.1-mini', $data['model']['id'] );
 	}
 
 	public function test_panel_state_routes_use_global_manage_options_permission_callback(): void {

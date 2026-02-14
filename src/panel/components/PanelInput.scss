@@ -20,6 +20,29 @@
   border: 1px solid var(--fp-border);
 }
 
-.clawpress-input button {
+.clawpress-input > button {
   align-self: flex-end;
+}
+
+.clawpress-command-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clawpress-command-suggestions-label {
+  font-size: 11px;
+  color: var(--fp-muted);
+}
+
+.clawpress-command-suggestions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.clawpress-command-suggestion {
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 2px 6px;
 }

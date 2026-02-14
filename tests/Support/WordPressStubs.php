@@ -51,6 +51,12 @@ final class WordPress_Stubs {
 
 	public static int $current_user_id = 1;
 
+	public static string $site_name = 'Test Site';
+
+	public static string $site_url = 'https://example.test/';
+
+	public static string $wp_version = '6.9';
+
 	public static function reset(): void {
 		self::$actions              = array();
 		self::$menu_pages           = array();
@@ -67,6 +73,9 @@ final class WordPress_Stubs {
 		self::$is_rtl               = false;
 		self::$has_scheduled_action = false;
 		self::$current_user_id      = 1;
+		self::$site_name            = 'Test Site';
+		self::$site_url             = 'https://example.test/';
+		self::$wp_version           = '6.9';
 	}
 }
 
@@ -86,6 +95,13 @@ namespace {
 				'accepted_args' => $accepted_args,
 			);
 			return true;
+		}
+	}
+
+	if ( ! function_exists( 'apply_filters' ) ) {
+		function apply_filters( string $hook, $value ) {
+			unset( $hook );
+			return $value;
 		}
 	}
 
@@ -267,6 +283,31 @@ namespace {
 	if ( ! function_exists( 'rest_url' ) ) {
 		function rest_url( string $path = '' ): string {
 			return 'https://example.test/wp-json/' . ltrim( $path, '/' );
+		}
+	}
+
+	if ( ! function_exists( 'get_bloginfo' ) ) {
+		function get_bloginfo( string $show = '', string $filter = 'raw' ): string {
+			unset( $filter );
+
+			if ( 'name' === $show ) {
+				return WordPress_Stubs::$site_name;
+			}
+
+			if ( 'version' === $show ) {
+				return WordPress_Stubs::$wp_version;
+			}
+
+			return '';
+		}
+	}
+
+	if ( ! function_exists( 'home_url' ) ) {
+		function home_url( string $path = '', ?string $scheme = null ): string {
+			unset( $scheme );
+			$base = rtrim( WordPress_Stubs::$site_url, '/' );
+			$path = ltrim( $path, '/' );
+			return '' === $path ? $base . '/' : $base . '/' . $path;
 		}
 	}
 

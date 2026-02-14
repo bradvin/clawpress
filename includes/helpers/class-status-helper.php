@@ -64,9 +64,35 @@ final class Status_Helper {
 		$settings    = $this->settings_helper->get_settings();
 		$provider_id = $this->provider_helper->resolve_provider_from_settings( $settings );
 		$model_id    = $this->provider_helper->resolve_model( $settings );
+		$mode        = ( '' !== $provider_id && '' !== $model_id ) ? 'online' : 'offline';
+		$execution   = $this->settings_helper->resolve_execution_user_id( $settings );
 
 		return [
-			'mode' => ( '' !== $provider_id && '' !== $model_id ) ? 'online' : 'offline',
+			'mode' => $mode,
+			'provider' => [
+				'id'         => '' !== $provider_id ? $provider_id : null,
+				'configured' => '' !== $provider_id,
+			],
+			'model' => [
+				'id'         => '' !== $model_id ? $model_id : null,
+				'configured' => '' !== $model_id,
+			],
+			'memory' => [
+				'enabled' => $this->settings_helper->get_memory_enabled( $settings ),
+			],
+			'onboarding' => [
+				'completed' => $this->settings_helper->get_onboarding_completed( $settings ),
+			],
+			'execution_user' => [
+				'id'         => $execution > 0 ? $execution : null,
+				'configured' => $execution > 0,
+			],
+			'permissions' => [
+				'can_manage_options' => current_user_can( 'manage_options' ),
+			],
+			'plugin' => [
+				'version' => defined( 'CLAWPRESS_VERSION' ) ? (string) CLAWPRESS_VERSION : 'unknown',
+			],
 		];
 	}
 }
