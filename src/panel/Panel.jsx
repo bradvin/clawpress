@@ -542,6 +542,13 @@ const Panel = () => {
                 title: __('Welcome to ClawPress', 'clawpress'),
                 message: __('Hello! I am ready to help with your WordPress tasks.', 'clawpress'),
                 emoji: '👋',
+                actions: [
+                  {
+                    id: 'start-onboarding',
+                    label: __('Start Onboarding', 'clawpress'),
+                    prompt: '/onboarding start',
+                  },
+                ],
               },
             },
             createdAt: now,
@@ -795,6 +802,7 @@ const Panel = () => {
           toolDialogs={toolDialogs}
           onRunToolDialog={requestRunToolDialog}
           onCancelToolDialog={cancelToolDialog}
+          onSendCardAction={(prompt) => sendPrompt(prompt)}
         />
         <PanelInput
           input={input}

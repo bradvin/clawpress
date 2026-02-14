@@ -54,6 +54,13 @@
   margin-top: 2px;
 }
 
+.clawpress-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .clawpress-msg-label {
   font-size: 10px;
   text-transform: uppercase;

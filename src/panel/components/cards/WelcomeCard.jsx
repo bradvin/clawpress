@@ -1,6 +1,7 @@
 import { __ } from '@wordpress/i18n';
+import { normalizeCardActions } from '../../utils/cardActions';
 
-const WelcomeCard = ({ card }) => {
+const WelcomeCard = ({ card, onSendAction, isBusy = false }) => {
   const title =
     typeof card?.data?.title === 'string' && card.data.title.trim()
       ? card.data.title
@@ -13,6 +14,7 @@ const WelcomeCard = ({ card }) => {
     typeof card?.data?.emoji === 'string' && card.data.emoji.trim()
       ? card.data.emoji
       : '👋';
+  const actions = normalizeCardActions(card);
 
   return (
     <div className="clawpress-card clawpress-card-welcome">
@@ -22,6 +24,21 @@ const WelcomeCard = ({ card }) => {
       <div className="clawpress-card-body">
         <div className="clawpress-card-title">{title}</div>
         <div className="clawpress-card-text">{message}</div>
+        {actions.length > 0 ? (
+          <div className="clawpress-card-actions">
+            {actions.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                className="button button-secondary button-small"
+                onClick={() => onSendAction?.(action.prompt)}
+                disabled={isBusy}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

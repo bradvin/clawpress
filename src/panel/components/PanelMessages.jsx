@@ -11,6 +11,7 @@ const PanelMessages = ({
   toolDialogs,
   onRunToolDialog,
   onCancelToolDialog,
+  onSendCardAction,
 }) => {
   const containerRef = useRef(null);
 
@@ -67,7 +68,12 @@ const PanelMessages = ({
                 <div className="clawpress-msg-label">{__('System', 'clawpress')}</div>
               ) : null}
               {hasCard ? (
-                <PanelCard card={item.data.card} fallbackText={displayContent} />
+                <PanelCard
+                  card={item.data.card}
+                  fallbackText={displayContent}
+                  onSendAction={onSendCardAction}
+                  isBusy={streaming}
+                />
               ) : (
                 <div
                   className={`clawpress-msg-content${showThinking ? ' clawpress-thinking' : ''}`}
