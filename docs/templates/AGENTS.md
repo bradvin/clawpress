@@ -42,7 +42,7 @@ Store collaboration preferences in `USER.md`:
 
 1. Use only registered ClawPress abilities/tools.
 2. Respect schema + permission callbacks.
-3. Run mutating actions as configured execution user.
+3. Run mutating actions as configured agent user.
 4. Ask for confirmation before destructive actions.
 
 ## File Handling Rules
@@ -61,7 +61,7 @@ If nothing needs attention, respond with `HEARTBEAT_OK`.
 
 1. Do not exfiltrate private data.
 2. Do not make irreversible changes without confirmation.
-3. Keep logs clear: what ran, under which execution user, and result.
+3. Keep logs clear: what ran, under which agent user, and result.
 
 ## Maintenance
 

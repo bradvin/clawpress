@@ -66,7 +66,7 @@ export default function SettingsView() {
 	const [ success, setSuccess ] = useState( '' );
 	const [ provider, setProvider ] = useState( '' );
 	const [ model, setModel ] = useState( '' );
-	const [ executionUserId, setExecutionUserId ] = useState( 0 );
+	const [ agentUserId, setAgentUserId ] = useState( 0 );
 	const [ memoryEnabled, setMemoryEnabled ] = useState( false );
 	const [ onboardingCompleted, setOnboardingCompleted ] = useState( false );
 
@@ -93,9 +93,9 @@ export default function SettingsView() {
 						? settings.model
 						: ''
 				);
-				setExecutionUserId(
-					Number.isFinite( Number( settings.execution_user_id ) )
-						? Number( settings.execution_user_id )
+				setAgentUserId(
+					Number.isFinite( Number( settings.agent_user_id ) )
+						? Number( settings.agent_user_id )
 						: 0
 				);
 				setMemoryEnabled( Boolean( settings.memory_enabled ) );
@@ -135,10 +135,10 @@ export default function SettingsView() {
 				body: {
 					provider,
 					model,
-					execution_user_id:
-						Number.isFinite( Number( executionUserId ) ) &&
-						Number( executionUserId ) > 0
-							? Number( executionUserId )
+					agent_user_id:
+						Number.isFinite( Number( agentUserId ) ) &&
+						Number( agentUserId ) > 0
+							? Number( agentUserId )
 							: 0,
 					memory_enabled: memoryEnabled,
 					onboarding_completed: onboardingCompleted,
@@ -225,14 +225,14 @@ export default function SettingsView() {
 							/>
 							<TextControl
 								label={ __(
-									'Execution User ID',
+									'Agent User ID',
 									'clawpress'
 								) }
 								type="number"
 								min={ 0 }
-								value={ String( executionUserId ) }
+								value={ String( agentUserId ) }
 								onChange={ ( value ) =>
-									setExecutionUserId(
+									setAgentUserId(
 										Number.isFinite( Number( value ) )
 											? Number( value )
 											: 0

@@ -51,4 +51,4 @@ Implement tool registration/execution through WordPress Abilities API with execu
 
 - Unit: ability registration and allowlist enforcement.
 - Integration: tool execution with and without confirmation.
-- Manual: permission differences between requesting user and execution user.
+- Manual: permission differences between requesting user and agent user.

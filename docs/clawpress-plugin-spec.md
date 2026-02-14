@@ -68,7 +68,7 @@ ClawPress will not ever be:
 - Least privilege capability model for every endpoint and action.
 - Tool authorization and execution policy enforced via WordPress Abilities API.
 - Offline mode as default until provider is configured.
-- Agent actions execute as a selected WordPress execution user (recommended low-privilege dedicated account).
+- Agent actions execute as a selected WordPress agent user (recommended low-privilege dedicated account).
 - Confirmation step for destructive actions.
 - Full audit trail for agent actions (requesting actor + execution actor).
 - Input/output sanitization and escaped rendering across admin UI.
@@ -95,7 +95,7 @@ ClawPress will not ever be:
    - LLM configured? yes/no
    - required capabilities present?
    - memory enabled?
-   - execution user configured? yes/no
+   - agent user configured? yes/no
    - `SOUL.md` configured? yes/no
    - core onboarding files provisioned? yes/no
 2. If no LLM configured, show Offline status and guide user through:
@@ -104,9 +104,9 @@ ClawPress will not ever be:
    - test connection
 3. Include execution-user selection/setup step:
    - choose existing WP user or create/select dedicated low-privilege service user
-   - persist selected execution user per site
-   - selected execution user becomes the author for agent-created files
-   - agent file access is isolated to that execution user's allowed files/workspace
+   - persist selected agent user per site
+   - selected agent user becomes the author for agent-created files
+   - agent file access is isolated to that agent user's allowed files/workspace
 4. Provision onboarding files into `agent-file` CPT from `docs/templates/`:
    - `SOUL.md`
    - `AGENTS.md`
@@ -116,7 +116,7 @@ ClawPress will not ever be:
    - create if missing (idempotent)
    - do not overwrite existing file content unless user explicitly chooses reset
    - mark `SOUL.md` as protected
-   - set file author to configured execution user
+   - set file author to configured agent user
 6. If user skips provider setup, onboarding continues with offline command tutorial.
 7. Onboarding is resumable and persists progress.
 
@@ -184,7 +184,7 @@ Use Option A (hybrid) for v1:
 - `user_meta` for per-user workspace mapping and per-user onboarding/chat UI state.
 - Additional options for agent behavior:
   - `clawpress_active_soul_file` (active `SOUL.md` file reference)
-  - `clawpress_execution_user_id` (selected WP user for agent action execution)
+  - `clawpress_agent_user_id` (selected WP user for agent action execution)
   - `clawpress_onboarding_templates_version` (tracks template bootstrap version applied)
 
 #### 6.3.1 Memory Storage (`clawpress_memory` CPT)
@@ -243,8 +243,8 @@ Resolver order for built-in file tools:
 
 Authoring and isolation rules:
 
-- Files created by the agent are authored by the configured execution user.
-- Agent reads/writes are restricted to that execution user's file/workspace scope.
+- Files created by the agent are authored by the configured agent user.
+- Agent reads/writes are restricted to that agent user's file/workspace scope.
 - Agent must not access files/workspaces owned by other users.
 
 Onboarding bootstrap files (created in `agent-file` CPT):
@@ -361,7 +361,7 @@ Endpoint requirements:
    - store encrypted at rest where environment permits.
 5. Action safety:
    - require explicit confirmation for destructive actions.
-   - execute mutating actions as configured execution user, not requesting chat user.
+   - execute mutating actions as configured agent user, not requesting chat user.
    - keep immutable action log with requesting actor, execution actor, timestamp, ability/tool, args hash, outcome.
 6. Prompt safety:
    - apply system constraints and tool-use policy server-side (not client-only).
@@ -384,7 +384,7 @@ States:
 
 1. `welcome`
 2. `permissions`
-3. `execution_user_setup`
+3. `agent_user_setup`
 4. `agent_files_setup`
 5. `provider_setup`
 6. `connection_test`
@@ -395,7 +395,7 @@ States:
 Rules:
 
 - If provider not configured, `provider_setup` is required before online status.
-- `execution_user_setup` is required before mutating actions are allowed.
+- `agent_user_setup` is required before mutating actions are allowed.
 - `agent_files_setup` creates required onboarding files in `agent-file` CPT using templates.
 - Onboarding cannot reach `ready` unless required onboarding files exist.
 - `offline_commands_tutorial` is always available and can complete onboarding even offline.
@@ -412,7 +412,7 @@ Rules:
    - use allowlisted internal tools only.
    - register and execute tools through Abilities API only.
    - pass minimal context and capability-limited execution.
-   - execute as configured execution user and evaluate action capability in that context.
+   - execute as configured agent user and evaluate action capability in that context.
    - resolve files via `agent-file` CPT first; filesystem workspace only as fallback.
 
 ## 11) WordPress Best Practices Checklist
@@ -481,7 +481,7 @@ Rules:
 5. Chat history persists across page reloads.
 6. Memory can be viewed and cleared from command or settings UX.
 7. Every mutating action is permission-checked and logged with requesting + execution actor IDs.
-8. Mutating actions are blocked until onboarding sets execution user.
+8. Mutating actions are blocked until onboarding sets agent user.
 9. Agent identity policy is sourced from editable protected `SOUL.md` file.
 10. Agent can create and reference user files; built-in file tools resolve `agent-file` CPT first and workspace second.
 11. All ClawPress tools are registered and authorized via Abilities API.
@@ -497,7 +497,7 @@ Resolved for v1:
 4. Workspace location: uploads subdirectory with non-guessable randomized folder names.
 5. Retention baseline: configurable TTL with Action Scheduler purge jobs.
 6. Multisite: single-site first.
-7. Agent action model: execute actions as selected WP execution user (recommended low-privilege dedicated account).
+7. Agent action model: execute actions as selected WP agent user (recommended low-privilege dedicated account).
 8. Identity model: `SOUL.md` is an editable protected file in `agent-file` CPT and is injected server-side through resolver.
 9. File model: built-in file tools resolve `agent-file` CPT first, with workspace filesystem fallback.
 10. Tool model: all ClawPress tools are abilities (Abilities API).

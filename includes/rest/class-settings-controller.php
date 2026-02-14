@@ -61,7 +61,7 @@ final class Settings_Controller implements Route_Controller {
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
 					],
-					'execution_user_id'    => [
+					'agent_user_id'        => [
 						'required'          => false,
 						'validate_callback' => 'clawpress_validate_int',
 						'sanitize_callback' => 'clawpress_sanitize_int',
@@ -99,11 +99,13 @@ final class Settings_Controller implements Route_Controller {
 	 * @param \WP_REST_Request $request The request object.
 	 */
 	public function update_settings( \WP_REST_Request $request ): \WP_REST_Response {
+		$agent_user_id = $request->get_param( 'agent_user_id' );
+
 		$result = $this->settings_helper->update_settings(
 			[
 				'provider'             => $request->get_param( 'provider' ),
 				'model'                => $request->get_param( 'model' ),
-				'execution_user_id'    => $request->get_param( 'execution_user_id' ),
+				'agent_user_id'        => $agent_user_id,
 				'memory_enabled'       => $request->get_param( 'memory_enabled' ),
 				'onboarding_completed' => $request->get_param( 'onboarding_completed' ),
 			]

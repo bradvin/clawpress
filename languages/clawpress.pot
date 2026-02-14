@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-14T12:51:35+00:00\n"
+"POT-Creation-Date: 2026-02-14T13:16:41+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -70,8 +70,12 @@ msgstr ""
 msgid "No agent files found in Trash."
 msgstr ""
 
+#: includes/commands/class-command-response.php:159
+msgid "An unknown error occurred."
+msgstr ""
+
 #. translators: 1: command name, 2: help text
-#: includes/commands/class-commands.php:98
+#: includes/commands/class-commands.php:99
 #, php-format
 msgid ""
 "Unknown command: `%1$s`.\n"
@@ -79,7 +83,7 @@ msgid ""
 "%2$s"
 msgstr ""
 
-#: includes/commands/class-commands.php:131
+#: includes/commands/class-commands.php:132
 msgid "Use `/help` to view available commands."
 msgstr ""
 
@@ -147,7 +151,7 @@ msgid "Memory is disabled, so there is nothing to clear."
 msgstr ""
 
 #: includes/commands/handlers/class-memory-command-handler.php:210
-msgid "Setup required: configure an execution user before running `/memory clear`."
+msgid "Setup required: configure an agent user before running `/memory clear`."
 msgstr ""
 
 #. translators: %s: confirmation command to rerun
@@ -288,10 +292,10 @@ msgstr ""
 msgid "- Memory enabled: %s"
 msgstr ""
 
-#. translators: %s: yes/no execution user state
+#. translators: %s: yes/no agent user state
 #: includes/commands/handlers/class-status-command-handler.php:119
 #, php-format
-msgid "- Execution user configured: %s"
+msgid "- Agent user configured: %s"
 msgstr ""
 
 #. translators: %s: yes/no onboarding completion state
@@ -336,7 +340,7 @@ msgstr ""
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
-#: includes/helpers/class-settings-helper.php:109
+#: includes/helpers/class-settings-helper.php:117
 msgid "No settings provided"
 msgstr ""
 
@@ -398,7 +402,7 @@ msgid "Example: gpt-4.1-mini"
 msgstr ""
 
 #: src/js/admin/components/views/SettingsView.js:227
-msgid "Execution User ID"
+msgid "Agent User ID"
 msgstr ""
 
 #: src/js/admin/components/views/SettingsView.js:241
@@ -494,6 +498,16 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: src/panel/components/cards/WelcomeCard.jsx:7
+#: src/panel/Panel.jsx:542
+msgid "Welcome to ClawPress"
+msgstr ""
+
+#: src/panel/components/cards/WelcomeCard.jsx:11
+#: src/panel/Panel.jsx:543
+msgid "Hello! I am ready to help with your WordPress tasks."
+msgstr ""
+
 #: src/panel/components/MockPanel.jsx:15
 #: src/panel/components/MockPanel.jsx:23
 msgid "Normal"
@@ -575,11 +589,11 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:65
+#: src/panel/components/PanelMessages.jsx:67
 msgid "System"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:87
+#: src/panel/components/PanelMessages.jsx:93
 msgid "Thinking"
 msgstr ""
 
@@ -664,28 +678,28 @@ msgstr ""
 msgid "Sample Post"
 msgstr ""
 
-#: src/panel/Panel.jsx:344
+#: src/panel/Panel.jsx:380
 msgid "Preparing tool plan..."
 msgstr ""
 
-#: src/panel/Panel.jsx:353
+#: src/panel/Panel.jsx:389
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:500
+#: src/panel/Panel.jsx:562
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:564
+#: src/panel/Panel.jsx:626
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:604
+#: src/panel/Panel.jsx:666
 msgid "Tool execution failed."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:655
+#: src/panel/Panel.jsx:717
 #, js-format
 msgid "Mock: %s"
 msgstr ""
@@ -696,11 +710,11 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:117
+#: src/panel/services/realClient.js:142
 msgid "Chat request failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:126
+#: src/panel/services/realClient.js:151
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 

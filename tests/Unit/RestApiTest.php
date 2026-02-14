@@ -80,7 +80,7 @@ final class RestApiTest extends TestCase {
 			array(
 				'provider'             => 'openai',
 				'model'                => 'gpt-4.1-mini',
-				'execution_user_id'    => 0,
+				'agent_user_id'        => 0,
 				'memory_enabled'       => false,
 				'onboarding_completed' => false,
 			),
@@ -113,7 +113,7 @@ final class RestApiTest extends TestCase {
 				array(
 					'provider'             => 'openai',
 					'model'                => 'gpt-4.1-mini',
-					'execution_user_id'    => 12,
+					'agent_user_id'        => 12,
 					'memory_enabled'       => true,
 					'onboarding_completed' => true,
 				)
@@ -125,14 +125,14 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( true, $data['success'] );
 		$this->assertSame( 'openai', $data['settings']['provider'] );
 		$this->assertSame( 'gpt-4.1-mini', $data['settings']['model'] );
-		$this->assertSame( 12, $data['settings']['execution_user_id'] );
+		$this->assertSame( 12, $data['settings']['agent_user_id'] );
 		$this->assertSame( true, $data['settings']['memory_enabled'] );
 		$this->assertSame( true, $data['settings']['onboarding_completed'] );
 		$this->assertSame( 'openai', WordPress_Stubs::$options['clawpress_settings']['provider'] );
-		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_settings']['execution_user_id'] );
+		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_settings']['agent_user_id'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['memory_enabled'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['onboarding_completed'] );
-		$this->assertArrayNotHasKey( 'clawpress_execution_user_id', WordPress_Stubs::$options );
+		$this->assertArrayNotHasKey( 'clawpress_agent_user_id', WordPress_Stubs::$options );
 		$this->assertArrayNotHasKey( 'clawpress_memory_enabled', WordPress_Stubs::$options );
 		$this->assertArrayNotHasKey( 1, WordPress_Stubs::$user_meta );
 	}
@@ -255,7 +255,7 @@ final class RestApiTest extends TestCase {
 	public function test_memory_clear_requires_confirmation_and_clears_on_second_call(): void {
 		WordPress_Stubs::$options['clawpress_settings'] = array(
 			'memory_enabled'    => true,
-			'execution_user_id' => 9,
+			'agent_user_id' => 9,
 		);
 		WordPress_Stubs::$options['clawpress_memory_entries'] = array(
 			'Entry A',

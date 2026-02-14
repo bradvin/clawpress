@@ -13,7 +13,7 @@ This document defines how ClawPress should implement an agent using the same ste
 
 Primary objective: ship a practical, secure, in-admin WordPress agent that is useful from day 1 and grows in capability by levels.
 
-Execution model requirement: all agent actions that read/write WordPress state must execute as a selected WordPress execution user (chosen during onboarding), not as the requesting chat user. This execution user should default to a dedicated low-permission account.
+Execution model requirement: all agent actions that read/write WordPress state must execute as a selected WordPress agent user (chosen during onboarding), not as the requesting chat user. This agent user should default to a dedicated low-permission account.
 
 File model requirement: all file lookups run through built-in `file_read` tool semantics: resolve `agent-file` CPT first, then fallback scan in the resolved workspace under uploads.
 
@@ -48,7 +48,7 @@ Security requirements:
 1. Capability checks on every command path.
 2. REST nonce required for request.
 3. Sanitize user input and escape response rendering.
-4. Do not allow action execution without a configured execution user.
+4. Do not allow action execution without a configured agent user.
 
 Definition of done:
 
@@ -134,10 +134,10 @@ WordPress implementation:
     - fallback: filesystem workspace path
 6. New files created by agent file tools should default to `agent-file` CPT unless caller explicitly targets workspace.
 7. Workspace path must be obtained from a single workspace location resolver only; direct path construction is not allowed.
-8. Agent-created files must be authored by the configured execution user.
-9. File reads/writes must be isolated to the execution user's file/workspace scope.
+8. Agent-created files must be authored by the configured agent user.
+9. File reads/writes must be isolated to the agent user's file/workspace scope.
 10. Execute tool calls server-side only; never from JS directly.
-11. Execute all tools under the configured execution user context for the thread/site.
+11. Execute all tools under the configured agent user context for the thread/site.
 12. Evaluate permissions through each ability's `permission_callback` in execution-user context, while still validating that the requesting user is allowed to use ClawPress.
 13. Log each action in `{$wpdb->prefix}clawpress_action_logs`:
    - requesting_actor
@@ -281,8 +281,8 @@ Definition of done:
 
 1. Message enters `POST /chat/message`.
 2. Policy gate checks capability + nonce + rate limit.
-3. Resolve execution user for site/thread context.
-4. If execution user is missing, allow read-only chat/status/onboarding and return setup-required for mutating requests.
+3. Resolve agent user for site/thread context.
+4. If agent user is missing, allow read-only chat/status/onboarding and return setup-required for mutating requests.
 5. Router selects mode:
    - Offline command engine (Level 0)
    - Online agent pipeline (Levels 1+)
@@ -337,10 +337,10 @@ Required modules:
 5. Memory is scoped, queryable, and deletable per policy.
 6. Scheduled jobs are observable and safe to retry through Action Scheduler.
 7. Orchestrated tasks are bounded by explicit execution budgets.
-8. Mutating actions are blocked until onboarding sets an execution user.
+8. Mutating actions are blocked until onboarding sets an agent user.
 9. Agent file lookups always resolve via built-in `file_read` semantics (CPT first, workspace fallback).
 10. Workspace paths are obtained only through a single resolver interface.
-11. Agent-created files are authored by execution user and isolated from other users' file/workspace scopes.
+11. Agent-created files are authored by agent user and isolated from other users' file/workspace scopes.
 
 ## 6) Implementation Notes
 

@@ -37,7 +37,7 @@ Current `wp-admin` MVP features implemented in this plugin:
   - `GET /wp-json/clawpress/v1/chat/history`
 - Status contract endpoint:
   - `GET /wp-json/clawpress/v1/status`
-  - Envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `execution_user`
+  - Envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `agent_user`
 - Panel state persistence endpoint (per-user):
   - `GET /wp-json/clawpress/v1/panel/state`
   - `POST /wp-json/clawpress/v1/panel/state`

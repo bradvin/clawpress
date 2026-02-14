@@ -41,7 +41,7 @@ Upgrade the existing floating chat panel implementation so it becomes the stable
 2. REST endpoint
 - Add `GET /status` through existing controller architecture (`includes/class-rest-api.php` + route controller class).
 - Add strict args and `permission_callback`.
-- Return stable envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `execution_user`.
+- Return stable envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `agent_user`.
 
 3. Existing panel API alignment
 - Decide one MVP transport path and align both sides:

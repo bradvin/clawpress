@@ -115,9 +115,9 @@ final class Status_Command_Handler implements Command_Handler {
 				! empty( $status['memory']['enabled'] ) ? $yes : $no
 			),
 			sprintf(
-				/* translators: %s: yes/no execution user state */
-				__( '- Execution user configured: %s', 'clawpress' ),
-				! empty( $status['execution_user']['configured'] ) ? $yes : $no
+				/* translators: %s: yes/no agent user state */
+				__( '- Agent user configured: %s', 'clawpress' ),
+				! empty( $status['agent_user']['configured'] ) ? $yes : $no
 			),
 			sprintf(
 				/* translators: %s: yes/no onboarding completion state */

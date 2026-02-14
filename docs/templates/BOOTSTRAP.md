@@ -11,7 +11,7 @@ Use this only during initial onboarding.
 
 ## Setup Steps
 
-1. Confirm execution user is selected.
+1. Confirm agent user is selected.
 2. Create or initialize:
    - `SOUL.md`
    - `USER.md`

@@ -34,7 +34,7 @@ final class Settings_Helper {
 			'default'  => '',
 			'sanitize' => 'sanitize_text_field',
 		],
-		'execution_user_id'    => [
+		'agent_user_id'        => [
 			'default'  => 0,
 			'sanitize' => 'clawpress_sanitize_int',
 		],
@@ -120,13 +120,13 @@ final class Settings_Helper {
 	}
 
 	/**
-	 * Resolve configured execution user ID.
+	 * Resolve configured agent user ID.
 	 *
 	 * @param array<string,mixed>|null $settings Optional settings array.
 	 */
-	public function resolve_execution_user_id( ?array $settings = null ): int {
+	public function resolve_agent_user_id( ?array $settings = null ): int {
 		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
-		return (int) $settings['execution_user_id'];
+		return (int) $settings['agent_user_id'];
 	}
 
 	/**

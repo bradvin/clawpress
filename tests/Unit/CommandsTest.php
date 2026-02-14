@@ -49,10 +49,10 @@ final class CommandsTest extends TestCase {
 		$this->assertStringContainsString( 'Available commands:', $payload['reply'] );
 	}
 
-	public function test_memory_clear_is_blocked_when_execution_user_missing(): void {
+	public function test_memory_clear_is_blocked_when_agent_user_missing(): void {
 		WordPress_Stubs::$options['clawpress_settings'] = array(
-			'memory_enabled'    => true,
-			'execution_user_id' => 0,
+			'memory_enabled' => true,
+			'agent_user_id'  => 0,
 		);
 
 		$commands = new Commands();

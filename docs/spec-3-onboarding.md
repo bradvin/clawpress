@@ -13,7 +13,7 @@ Implement chat-led onboarding state machine which guides the user through the in
 
 - Onboarding state machine storage and progression.
 - Provider and model selection. If providers not setup then include link to `wp-admin/options-general.php?page=wp-ai-client`. Onboarding is blocked.
-- Execution user selection. (suggest to create a new user that the agent will use as the executing user. Suggest giving it contributor permissions to start.)
+- Agent user selection. (suggest creating a dedicated user the agent will use. Suggest giving it contributor permissions to start.)
 - Provision `SOUL.md`, `AGENTS.md`, `USER.md`, `HEARTBEAT.md` from template files.
 
 ## Out of Scope
@@ -29,14 +29,14 @@ Implement chat-led onboarding state machine which guides the user through the in
 
 2. Onboarding card which is a wizard that guides the user through the onboarding process.
 
-3. Execution user flow
+3. Agent user flow
 - Add helpers to list eligible users and validate selected user.
-- Store `clawpress_execution_user_id` option.
+- Store `clawpress_agent_user_id` option.
 - Return setup-required status when mutating operations are attempted without this value.
 
 4. Template bootstrap
 - Implement idempotent bootstrap from `docs/templates/*` into `clawpress_agent_file` posts.
-- Set author to execution user for agent-created records.
+- Set author to agent user for agent-created records.
 - Mark `SOUL.md` protected using post meta.
 - Track template version via `clawpress_onboarding_templates_version`.
 

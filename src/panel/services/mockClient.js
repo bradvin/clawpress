@@ -19,7 +19,7 @@ const createMockClient = ({ mockScenario, mockDelay, onEvent, onDone, onError })
     model: { id: null, configured: false },
     onboarding: { completed: false },
     memory: { enabled: false },
-    execution_user: { id: null, configured: false },
+    agent_user: { id: null, configured: false },
     suggestions: [
       '/help',
       '/clear',

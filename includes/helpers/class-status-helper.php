@@ -67,7 +67,7 @@ final class Status_Helper {
 		$provider_id = $this->provider_helper->resolve_provider_from_settings( $settings );
 		$model_id    = $this->provider_helper->resolve_model( $settings );
 		$mode        = ( '' !== $provider_id && '' !== $model_id ) ? 'online' : 'offline';
-		$execution   = $this->settings_helper->resolve_execution_user_id( $settings );
+		$agent_user  = $this->settings_helper->resolve_agent_user_id( $settings );
 		$suggestions = 'offline' === $mode ? ( new Commands() )->get_default_suggestions() : [];
 
 		return [
@@ -86,9 +86,9 @@ final class Status_Helper {
 			'onboarding' => [
 				'completed' => $this->settings_helper->get_onboarding_completed( $settings ),
 			],
-			'execution_user' => [
-				'id'         => $execution > 0 ? $execution : null,
-				'configured' => $execution > 0,
+			'agent_user' => [
+				'id'         => $agent_user > 0 ? $agent_user : null,
+				'configured' => $agent_user > 0,
 			],
 			'permissions' => [
 				'can_manage_options' => current_user_can( 'manage_options' ),

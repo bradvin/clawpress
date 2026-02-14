@@ -205,9 +205,9 @@ final class Memory_Command_Handler implements Command_Handler {
 			);
 		}
 
-		if ( $this->settings_helper->resolve_execution_user_id( $settings ) <= 0 ) {
+		if ( $this->settings_helper->resolve_agent_user_id( $settings ) <= 0 ) {
 			return Command_Response::error(
-				__( 'Setup required: configure an execution user before running `/memory clear`.', 'clawpress' ),
+				__( 'Setup required: configure an agent user before running `/memory clear`.', 'clawpress' ),
 				$this->get_command(),
 				$this->is_destructive(),
 				false,
