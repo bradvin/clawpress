@@ -16,6 +16,24 @@ const getChoiceActions = (actions, prefix) =>
     }))
     .filter((action) => action.value.length > 0);
 
+const getRelativeWorkspacePath = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const normalized = value.trim().replace(/\\/g, '/');
+  if (!normalized) {
+    return '';
+  }
+
+  const index = normalized.indexOf('/wp-content');
+  if (index === -1) {
+    return normalized;
+  }
+
+  return normalized.slice(index);
+};
+
 const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
   const data =
     card?.data && typeof card.data === 'object' && !Array.isArray(card.data)
@@ -25,6 +43,8 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
     typeof data.title === 'string' && data.title.trim()
       ? data.title
       : __('Onboarding Wizard', 'clawpress');
+  const emoji =
+    typeof data.emoji === 'string' && data.emoji.trim() ? data.emoji : '🧙';
   const message =
     typeof data.message === 'string' && data.message.trim()
       ? data.message
@@ -44,8 +64,7 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
   const stepTotal = Number.isFinite(Number(data.step_total))
     ? Number(data.step_total)
     : null;
-  const steps = Array.isArray(data.steps) ? data.steps : [];
-
+  const stepItems = Array.isArray(data.steps) ? data.steps : [];
   const actions = normalizeCardActions(card);
   const providerChoiceActions = useMemo(
     () => getChoiceActions(actions, '/onboarding provider '),
@@ -64,6 +83,29 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
 
     return actions.filter((action) => !hiddenIds.has(action.id));
   }, [actions, providerChoiceActions, modelChoiceActions]);
+
+  const actionsWithBack = useMemo(() => {
+    const hasBackAction = filteredActions.some(
+      (action) =>
+        action?.type === 'send_prompt' &&
+        typeof action.prompt === 'string' &&
+        action.prompt.trim() === '/onboarding back'
+    );
+
+    if (step === 'provider' || hasBackAction) {
+      return filteredActions;
+    }
+
+    return [
+      {
+        id: 'wizard-back-fallback',
+        label: __('Back', 'clawpress'),
+        type: 'send_prompt',
+        prompt: '/onboarding back',
+      },
+      ...filteredActions,
+    ];
+  }, [filteredActions, step]);
 
   const [selectedProviderId, setSelectedProviderId] = useState(
     providerChoiceActions[0]?.id || ''
@@ -126,151 +168,229 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
     }
   }, [settingsUrl]);
 
-  const stepProgressText =
+  const stepHeaderText =
     stepIndex && stepTotal
       ? sprintf(
-          /* translators: 1: current step number, 2: total step count. */
-          __('Step %1$d of %2$d', 'clawpress'),
+          /* translators: 1: current step number, 2: total step count, 3: step label. */
+          __('Step %1$d OF %2$d : %3$s', 'clawpress'),
           stepIndex,
-          stepTotal
+          stepTotal,
+          stepLabel || ''
         )
       : '';
+  const workspacePathValue =
+    step === 'workspace' &&
+    typeof data.workspace_path === 'string' &&
+    data.workspace_path.trim()
+      ? getRelativeWorkspacePath(data.workspace_path)
+      : '';
+  const workspaceExistsValue = (() => {
+    if (step !== 'workspace') {
+      return '';
+    }
+
+    if (
+      typeof data.workspace_exists === 'string' &&
+      data.workspace_exists.trim()
+    ) {
+      return data.workspace_exists.trim();
+    }
+
+    if (
+      typeof data.workspace_exists_line === 'string' &&
+      data.workspace_exists_line.trim()
+    ) {
+      return data.workspace_exists_line.replace(/^Exists\s*:\s*/i, '').trim();
+    }
+
+    return '';
+  })();
+  const showProviderPicker = step === 'provider' && providerChoiceActions.length > 1;
+  const showModelPicker = step === 'model' && modelChoiceActions.length > 1;
+  const showSingleProviderAction =
+    step === 'provider' && providerChoiceActions.length === 1;
+  const showSingleModelAction = step === 'model' && modelChoiceActions.length === 1;
+  const showActionButtons =
+    showSingleProviderAction || showSingleModelAction || actionsWithBack.length > 0;
+  const hasButtonsSection =
+    showProviderPicker || showModelPicker || showActionButtons;
 
   return (
     <div className="clawpress-card clawpress-card-onboarding">
       <div className="clawpress-card-body">
-        <div className="clawpress-card-title">{title}</div>
-        {stepProgressText ? (
-          <div className="clawpress-card-step-progress">{stepProgressText}</div>
-        ) : null}
-        {stepLabel ? (
-          <div className="clawpress-card-step-label">{stepLabel}</div>
-        ) : null}
-        <div className="clawpress-card-text">{message}</div>
-        {detail ? <div className="clawpress-card-detail">{detail}</div> : null}
-        {onProviderSettingsPage && step === 'provider' ? (
-          <div className="clawpress-card-detail">
-            {__(
-              'Provider settings page detected. After saving credentials, click Refresh Providers here.',
-              'clawpress'
-            )}
+        <div className="clawpress-card-section-title">
+          <div className="clawpress-card-onboarding-title-line">
+            <span className="clawpress-card-onboarding-emoji" aria-hidden="true">
+              {emoji}
+            </span>
+            <div className="clawpress-card-title">{title}</div>
+          </div>
+        </div>
+        {stepHeaderText || stepItems.length > 0 ? (
+          <div className="clawpress-card-section-subtitle">
+            {stepHeaderText ? (
+              <div className="clawpress-card-subtitle clawpress-card-onboarding-step-line">
+                {stepHeaderText}
+              </div>
+            ) : null}
+            {stepItems.length > 0 ? (
+              <div className="clawpress-card-onboarding-progress" aria-hidden="true">
+                {stepItems.map((item, index) => {
+                  const status =
+                    typeof item?.status === 'string' ? item.status : 'pending';
+
+                  return (
+                    <div
+                      key={`${item?.id || index}`}
+                      className={`clawpress-card-onboarding-progress-item clawpress-card-onboarding-progress-${status}`}
+                    >
+                      <span className="clawpress-card-onboarding-progress-dot">
+                        {index + 1}
+                      </span>
+                      {index < stepItems.length - 1 ? (
+                        <span className="clawpress-card-onboarding-progress-line" />
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         ) : null}
-        {error ? <div className="clawpress-card-error">{error}</div> : null}
+        <div className="clawpress-card-section-content">
+          <div className="clawpress-card-text">{message}</div>
+          {workspacePathValue || workspaceExistsValue ? (
+            <div className="clawpress-card-onboarding-field-list">
+              {workspacePathValue ? (
+                <div className="clawpress-card-onboarding-field-row">
+                  <span className="clawpress-card-onboarding-field-label">
+                    {__('Path', 'clawpress')} :
+                  </span>
+				  <span className="clawpress-card-onboarding-field-value">
+					{workspacePathValue}
+				  </span>
+                </div>
+              ) : null}
+              {workspaceExistsValue ? (
+                <div className="clawpress-card-onboarding-field-row">
+                  <span className="clawpress-card-onboarding-field-label">
+                    {__('Exists', 'clawpress')} :
+                  </span>
+				  <span className="clawpress-card-onboarding-field-value">
+					{workspaceExistsValue}
+				  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {detail ? (
+            <div className="clawpress-card-onboarding-detail">{detail}</div>
+          ) : null}
+          {onProviderSettingsPage && step === 'provider' ? (
+            <div className="clawpress-card-onboarding-detail">
+              {__(
+                'Provider settings page detected. After saving credentials, click Refresh Providers here.',
+                'clawpress'
+              )}
+            </div>
+          ) : null}
+          {error ? (
+            <div className="clawpress-card-onboarding-error">{error}</div>
+          ) : null}
+        </div>
 
-        {steps.length > 0 ? (
-          <div className="clawpress-card-steps" aria-label={__('Onboarding steps', 'clawpress')}>
-            {steps.map((item, index) => {
-              const status =
-                typeof item?.status === 'string' ? item.status : 'pending';
-              const label =
-                typeof item?.label === 'string' && item.label.trim()
-                  ? item.label
-                  : String(item?.id || '');
-
-              return (
-                <span
-                  key={`${item?.id || label}-${index}`}
-                  className={`clawpress-card-step clawpress-card-step-${status}`}
+        {hasButtonsSection ? (
+          <div className="clawpress-card-section-buttons clawpress-card-onboarding-buttons">
+            {showProviderPicker || showModelPicker ? (
+              <div className="clawpress-card-onboarding-inline-controls">
+                {showProviderPicker ? (
+                  <select
+                    className="clawpress-card-onboarding-select"
+                    value={selectedProviderId}
+                    onChange={(event) => setSelectedProviderId(event.target.value)}
+                    disabled={isBusy}
+                  >
+                    {providerChoiceActions.map((action) => (
+                      <option key={action.id} value={action.id}>
+                        {action.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {showModelPicker ? (
+                  <select
+                    className="clawpress-card-onboarding-select"
+                    value={selectedModelId}
+                    onChange={(event) => setSelectedModelId(event.target.value)}
+                    disabled={isBusy}
+                  >
+                    {modelChoiceActions.map((action) => (
+                      <option key={action.id} value={action.id}>
+                        {action.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <button
+                  type="button"
+                  className="button button-primary button-small"
+                  disabled={
+                    isBusy ||
+                    (step === 'provider' && !selectedProviderAction) ||
+                    (step === 'model' && !selectedModelAction)
+                  }
+                  onClick={() =>
+                    onSendAction?.(
+                      step === 'provider'
+                        ? selectedProviderAction?.prompt || ''
+                        : selectedModelAction?.prompt || ''
+                    )
+                  }
                 >
-                  {label}
-                </span>
-              );
-            })}
+                  {step === 'provider'
+                    ? __('Use Selected Provider', 'clawpress')
+                    : __('Use Selected Model', 'clawpress')}
+                </button>
+              </div>
+            ) : null}
+
+            {showActionButtons ? (
+              <div className="clawpress-card-actions">
+                {showSingleProviderAction ? (
+                  <button
+                    type="button"
+                    className="button button-primary button-small"
+                    onClick={() => onSendAction?.(providerChoiceActions[0])}
+                    disabled={isBusy}
+                  >
+                    {providerChoiceActions[0].label}
+                  </button>
+                ) : null}
+                {showSingleModelAction ? (
+                  <button
+                    type="button"
+                    className="button button-primary button-small"
+                    onClick={() => onSendAction?.(modelChoiceActions[0])}
+                    disabled={isBusy}
+                  >
+                    {modelChoiceActions[0].label}
+                  </button>
+                ) : null}
+                {actionsWithBack.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    className="button button-secondary button-small"
+                    onClick={() => onSendAction?.(action)}
+                    disabled={isBusy}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ) : null}
-
-        {(step === 'provider' && providerChoiceActions.length > 1) ||
-        (step === 'model' && modelChoiceActions.length > 1) ? (
-          <div className="clawpress-card-inline-controls">
-            {step === 'provider' && providerChoiceActions.length > 1 ? (
-              <select
-                className="clawpress-card-select"
-                value={selectedProviderId}
-                onChange={(event) => setSelectedProviderId(event.target.value)}
-                disabled={isBusy}
-              >
-                {providerChoiceActions.map((action) => (
-                  <option key={action.id} value={action.id}>
-                    {action.label}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            {step === 'model' && modelChoiceActions.length > 1 ? (
-              <select
-                className="clawpress-card-select"
-                value={selectedModelId}
-                onChange={(event) => setSelectedModelId(event.target.value)}
-                disabled={isBusy}
-              >
-                {modelChoiceActions.map((action) => (
-                  <option key={action.id} value={action.id}>
-                    {action.label}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <button
-              type="button"
-              className="button button-primary button-small"
-              disabled={
-                isBusy ||
-                (step === 'provider' && !selectedProviderAction) ||
-                (step === 'model' && !selectedModelAction)
-              }
-              onClick={() =>
-                onSendAction?.(
-                  step === 'provider'
-                    ? selectedProviderAction?.prompt || ''
-                    : selectedModelAction?.prompt || ''
-                )
-              }
-            >
-              {step === 'provider'
-                ? __('Use Selected Provider', 'clawpress')
-                : __('Use Selected Model', 'clawpress')}
-            </button>
-          </div>
-        ) : null}
-
-        {((step === 'provider' && providerChoiceActions.length === 1) ||
-          (step === 'model' && modelChoiceActions.length === 1) ||
-          filteredActions.length > 0) && (
-          <div className="clawpress-card-actions">
-            {step === 'provider' && providerChoiceActions.length === 1 ? (
-              <button
-                type="button"
-                className="button button-primary button-small"
-                onClick={() => onSendAction?.(providerChoiceActions[0])}
-                disabled={isBusy}
-              >
-                {providerChoiceActions[0].label}
-              </button>
-            ) : null}
-            {step === 'model' && modelChoiceActions.length === 1 ? (
-              <button
-                type="button"
-                className="button button-primary button-small"
-                onClick={() => onSendAction?.(modelChoiceActions[0])}
-                disabled={isBusy}
-              >
-                {modelChoiceActions[0].label}
-              </button>
-            ) : null}
-            {filteredActions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                className="button button-secondary button-small"
-                onClick={() => onSendAction?.(action)}
-                disabled={isBusy}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

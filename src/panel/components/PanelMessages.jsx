@@ -33,6 +33,12 @@ const PanelMessages = ({
   const openId =
     serialCandidates[0]?.id || toolDialogs[toolDialogs.length - 1]?.id || null;
 
+  const latestCardMessageId =
+    [...messages]
+      .reverse()
+      .find((message) => message?.card && typeof message.card === 'object')?.id ||
+    null;
+
   const items = [
     ...messages.map((message) => ({
       type: 'message',
@@ -72,7 +78,11 @@ const PanelMessages = ({
                   card={item.data.card}
                   fallbackText={displayContent}
                   onSendAction={onSendCardAction}
-                  isBusy={streaming || waitingForResponse}
+                  isBusy={
+                    streaming ||
+                    waitingForResponse ||
+                    item.data.id !== latestCardMessageId
+                  }
                 />
               ) : (
                 <div

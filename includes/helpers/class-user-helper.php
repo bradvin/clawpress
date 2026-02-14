@@ -18,6 +18,11 @@ defined( 'ABSPATH' ) || exit;
  */
 final class User_Helper {
 	/**
+	 * User meta key used to mark dedicated agent users.
+	 */
+	public const AGENT_USER_META_KEY = 'clawpress_agent';
+
+	/**
 	 * Agent user role.
 	 */
 	private const AGENT_ROLE = 'contributor';
@@ -107,6 +112,8 @@ final class User_Helper {
 			];
 		}
 
+		update_user_meta( (int) $user_id, self::AGENT_USER_META_KEY, 1 );
+
 		return [
 			'success'      => true,
 			'user_id'      => (int) $user_id,
@@ -144,6 +151,53 @@ final class User_Helper {
 		}
 
 		return in_array( self::AGENT_ROLE, (array) $user->roles, true );
+	}
+
+	/**
+	 * Get existing users marked as ClawPress agent users.
+	 *
+	 * @return array<int,\WP_User>
+	 */
+	public function get_existing_agent_users(): array {
+		$candidate_ids = get_users(
+			[
+				'number'   => 20,
+				'orderby'  => 'ID',
+				'order'    => 'ASC',
+				'fields'   => 'ids',
+				'meta_key' => self::AGENT_USER_META_KEY,
+			]
+		);
+
+		if ( ! is_array( $candidate_ids ) ) {
+			return [];
+		}
+
+		$users = [];
+
+		foreach ( $candidate_ids as $candidate_id ) {
+			$user_id = (int) $candidate_id;
+			if ( $user_id <= 0 || ! $this->is_valid_agent_user( $user_id ) ) {
+				continue;
+			}
+
+			$user = $this->get_user_by_id( $user_id );
+			if ( $user instanceof \WP_User ) {
+				$users[] = $user;
+			}
+		}
+
+		return $users;
+	}
+
+	/**
+	 * Get the first existing user marked as a ClawPress agent user.
+	 *
+	 * @return \WP_User|null
+	 */
+	public function get_existing_agent_user(): ?\WP_User {
+		$users = $this->get_existing_agent_users();
+		return isset( $users[0] ) && $users[0] instanceof \WP_User ? $users[0] : null;
 	}
 
 	/**

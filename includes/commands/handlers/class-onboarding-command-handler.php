@@ -18,6 +18,7 @@ use ClawPress\Helpers\Provider_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use ClawPress\Helpers\User_Helper;
 use ClawPress\Helpers\Workspace_Helper;
+use ClawPress\PostTypes\Post_Types;
 use Throwable;
 use WordPress\AiClient\AiClient;
 
@@ -36,6 +37,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	 * Provider setup admin path.
 	 */
 	private const PROVIDER_SETUP_PATH = '/wp-admin/options-general.php?page=wp-ai-client';
+
+	/**
+	 * ClawPress settings admin path.
+	 */
+	private const CLAWPRESS_SETTINGS_PATH = '/wp-admin/admin.php?page=clawpress';
 
 	/**
 	 * Step order.
@@ -176,16 +182,18 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				return $this->reset_onboarding();
 			case 'refresh':
 				return $this->resume_onboarding();
+			case 'back':
+				return $this->go_back_step();
 			case 'provider':
 				return $this->set_provider( $request );
 			case 'model':
 				return $this->set_model( $request );
 			case 'test':
 				return $this->test_connection();
+			case 'agent-user':
+				return $this->set_agent_user( $request );
 			case 'create-agent-user':
 				return $this->create_agent_user();
-			case 'use-current-user':
-				return $this->use_current_user();
 			case 'create-workspace':
 				return $this->create_workspace();
 			case 'create-agent-files':
@@ -233,9 +241,39 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				'step'              => 'provider',
 			]
 		);
-		$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+		$this->settings_helper->update_settings(
+			[
+				'provider'             => '',
+				'model'                => '',
+				'onboarding_completed' => false,
+			]
+		);
 
 		return $this->resume_with_notice( __( 'Onboarding reset.', 'clawpress' ) );
+	}
+
+	/**
+	 * Move onboarding to the previous wizard step.
+	 */
+	private function go_back_step(): Command_Response {
+		$settings     = $this->settings_helper->get_settings();
+		$current_step = $this->resolve_onboarding_step( $settings );
+		$target_step  = $this->get_previous_step( $current_step );
+
+		if ( $target_step === $current_step ) {
+			return $this->resume_with_notice( __( 'Already at the first step.', 'clawpress' ) );
+		}
+
+		$this->persist_onboarding_state( [ 'step' => $target_step ] );
+		$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+
+		return $this->resume_with_notice(
+			sprintf(
+				/* translators: %s: step key */
+				__( 'Moved back to `%s`.', 'clawpress' ),
+				$target_step
+			)
+		);
 	}
 
 	/**
@@ -261,6 +299,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			]
 		);
 		$this->persist_onboarding_state( [ 'connection_tested' => false ] );
+		$this->persist_onboarding_state( [ 'step' => 'model' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -301,6 +340,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			]
 		);
 		$this->persist_onboarding_state( [ 'connection_tested' => false ] );
+		$this->persist_onboarding_state( [ 'step' => 'test_connection' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -354,7 +394,12 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$this->persist_onboarding_state( [ 'connection_tested' => true ] );
+		$this->persist_onboarding_state(
+			[
+				'connection_tested' => true,
+				'step'              => 'agent_user',
+			]
+		);
 
 		return $this->resume_with_notice( __( 'Connection test passed.', 'clawpress' ) );
 	}
@@ -389,6 +434,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				'onboarding_completed' => false,
 			]
 		);
+		$this->persist_onboarding_state( [ 'step' => 'workspace' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -400,12 +446,24 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	}
 
 	/**
-	 * Use current user as the agent user.
+	 * Set agent user by user ID.
+	 *
+	 * @param Command_Request $request Parsed request.
 	 */
-	private function use_current_user(): Command_Response {
-		$user_id = get_current_user_id();
+	private function set_agent_user( Command_Request $request ): Command_Response {
+		$user_id_raw = trim( $request->get_argument( 1 ) );
+		if ( '' === $user_id_raw || ! preg_match( '/^\d+$/', $user_id_raw ) ) {
+			return $this->build_error_response( __( 'Provide a valid user ID for the agent user step.', 'clawpress' ) );
+		}
+
+		$user_id = (int) $user_id_raw;
 		if ( $user_id <= 0 ) {
-			return $this->build_error_response( __( 'Unable to resolve current user ID.', 'clawpress' ) );
+			return $this->build_error_response( __( 'Invalid agent user ID.', 'clawpress' ) );
+		}
+
+		$user = $this->user_helper->get_user_by_id( $user_id );
+		if ( ! $user instanceof \WP_User ) {
+			return $this->build_error_response( __( 'Agent user does not exist.', 'clawpress' ) );
 		}
 
 		$this->settings_helper->update_settings(
@@ -414,11 +472,13 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				'onboarding_completed' => false,
 			]
 		);
+		$this->persist_onboarding_state( [ 'step' => 'workspace' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
-				/* translators: %d: user ID */
-				__( 'Using current user as agent user: `%d`.', 'clawpress' ),
+				/* translators: 1: user login, 2: user ID */
+				__( 'Using agent user `%1$s` (ID `%2$d`).', 'clawpress' ),
+				$user->user_login,
 				$user_id
 			)
 		);
@@ -449,6 +509,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				)
 			);
 		}
+		$this->persist_onboarding_state( [ 'step' => 'agent_files' ] );
 
 		return $this->resume_with_notice( __( 'Workspace created.', 'clawpress' ) );
 	}
@@ -469,6 +530,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				)
 			);
 		}
+		$this->persist_onboarding_state( [ 'step' => 'ready' ] );
 
 		return $this->resume_with_notice( __( 'Agent files created.', 'clawpress' ) );
 	}
@@ -482,8 +544,14 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$state             = $this->get_onboarding_state();
 		$configured        = $this->provider_helper->get_configured_provider_ids();
 		$selected_provider = clawpress_sanitize_provider( $settings['provider'] ?? '' );
+		$requested_step    = isset( $state['step'] ) ? $this->normalize_step( $state['step'] ) : 'agent_user';
 
 		if ( [] === $configured || '' === $selected_provider || ! in_array( $selected_provider, $configured, true ) ) {
+			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			return 'provider';
+		}
+
+		if ( 'provider' === $requested_step ) {
 			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
 			return 'provider';
 		}
@@ -495,8 +563,17 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			return 'model';
 		}
 
+		if ( 'model' === $requested_step ) {
+			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			return 'model';
+		}
+
 		$connection_tested = isset( $state['connection_tested'] ) && true === $state['connection_tested'];
-		if ( ! $connection_tested ) {
+		if ( ! $connection_tested && ! in_array( $requested_step, [ 'provider', 'model', 'test_connection' ], true ) ) {
+			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			return 'test_connection';
+		}
+		if ( 'test_connection' === $requested_step ) {
 			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
 			return 'test_connection';
 		}
@@ -507,18 +584,27 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			return 'agent_user';
 		}
 
-		if ( ! $this->is_workspace_ready( $agent_user_id ) ) {
+		if ( in_array( $requested_step, [ 'workspace', 'agent_files', 'ready' ], true ) && $agent_user_id <= 0 ) {
+			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			return 'agent_user';
+		}
+
+		$workspace_ready = $this->is_workspace_ready( $agent_user_id );
+		if ( in_array( $requested_step, [ 'agent_files', 'ready' ], true ) && ! $workspace_ready ) {
 			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
 			return 'workspace';
 		}
 
-		if ( ! $this->agent_file_helper->has_default_agent_files_from_templates() ) {
+		$agent_files_ready = $this->agent_file_helper->has_default_agent_files_from_templates();
+		if ( 'ready' === $requested_step && ! $agent_files_ready ) {
 			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
 			return 'agent_files';
 		}
 
-		$this->settings_helper->update_settings( [ 'onboarding_completed' => true ] );
-		return 'ready';
+		$is_fully_ready = $agent_user_id > 0 && $workspace_ready && $agent_files_ready;
+		$this->settings_helper->update_settings( [ 'onboarding_completed' => $is_fully_ready && 'ready' === $requested_step ] );
+
+		return $requested_step;
 	}
 
 	/**
@@ -705,7 +791,8 @@ final class Onboarding_Command_Handler implements Command_Handler {
 
 			case 'agent_user':
 				$current_user_id = get_current_user_id();
-				$data['message'] = __( 'Select the user account the agent will use. A dedicated Contributor user is recommended.', 'clawpress' );
+				$existing_users  = $this->user_helper->get_existing_agent_users();
+				$data['message'] = __( 'Select the user account the agent will use. All actions taken by the agent will be performed as this user. A dedicated Contributor user is recommended to start, and more access can be granted later.', 'clawpress' );
 				$data['actions'] = [
 					[
 						'id'     => 'create-agent-user',
@@ -713,26 +800,50 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						'type'   => 'send_prompt',
 						'prompt' => '/onboarding create-agent-user',
 					],
-					[
-						'id'     => 'use-current-user',
-						/* translators: %d: user ID */
-						'label'  => sprintf( __( 'Use Current User (%d)', 'clawpress' ), $current_user_id ),
-						'type'   => 'send_prompt',
-						'prompt' => '/onboarding use-current-user',
-					],
 				];
+
+				if ( $current_user_id > 0 ) {
+					$data['actions'][] = [
+						'id'     => 'use-current-user',
+						'label'  => __( 'Use Current User', 'clawpress' ),
+						'type'   => 'send_prompt',
+						'prompt' => sprintf( '/onboarding agent-user %d', $current_user_id ),
+					];
+				}
+
+				foreach ( $existing_users as $existing_user ) {
+					if ( ! $existing_user instanceof \WP_User || ! isset( $existing_user->ID ) ) {
+						continue;
+					}
+
+					$existing_user_id = (int) $existing_user->ID;
+					if ( $existing_user_id <= 0 || $existing_user_id === $current_user_id ) {
+						continue;
+					}
+
+					$data['actions'][] = [
+						'id'     => sprintf( 'use-existing-agent-user-%d', $existing_user_id ),
+						/* translators: %s: user login */
+						'label'  => sprintf( __( 'Use Existing (%s)', 'clawpress' ), $existing_user->user_login ),
+						'type'   => 'send_prompt',
+						'prompt' => sprintf( '/onboarding agent-user %d', $existing_user_id ),
+					];
+				}
 				break;
 
 			case 'workspace':
 				$agent_user_id   = $this->settings_helper->resolve_agent_user_id( $settings );
-				$workspace       = $agent_user_id > 0 ? $this->workspace_helper->get_workspace_path_for_agent_user( $agent_user_id ) : '';
+				$workspace       = $agent_user_id > 0 ? $this->workspace_helper->ensure_workspace_path_for_agent_user( $agent_user_id ) : '';
+				$workspace_short = '' !== $workspace ? $this->get_workspace_display_path( $workspace ) : '';
+				$workspace_ready = '' !== $workspace && is_dir( $workspace );
 				$data['message'] = __( 'Create a secure workspace for the agent to read/write files.', 'clawpress' );
-				if ( '' !== $workspace ) {
-					$data['detail'] = sprintf(
-						/* translators: %s: workspace path */
-						__( 'Current path: %s', 'clawpress' ),
-						$workspace
-					);
+				if ( '' !== $workspace_short ) {
+					$data['workspace_path']   = $workspace_short;
+					$data['workspace_exists'] = $workspace_ready
+						? __( 'Yes', 'clawpress' )
+						: __( 'No', 'clawpress' );
+				} else {
+					$data['detail'] = __( 'Workspace path is not available until an agent user is selected.', 'clawpress' );
 				}
 				$data['actions'] = [
 					[
@@ -761,13 +872,37 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				$data['message'] = __( 'Onboarding is complete. ClawPress is ready to use.', 'clawpress' );
 				$data['actions'] = [
 					[
-						'id'     => 'view-status',
-						'label'  => __( 'View Status', 'clawpress' ),
+						'id'    => 'view-clawpress-settings',
+						'label' => __( 'View Settings', 'clawpress' ),
+						'type'  => 'open_url',
+						'url'   => self::CLAWPRESS_SETTINGS_PATH,
+					],
+					[
+						'id'    => 'view-agent-files',
+						'label' => __( 'View Agent Files', 'clawpress' ),
+						'type'  => 'open_url',
+						'url'   => sprintf( '/wp-admin/edit.php?post_type=%s', Post_Types::AGENT_FILE_POST_TYPE ),
+					],
+					[
+						'id'     => 'say-hi',
+						'label'  => __( 'Say Hi to Your Agent', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '/status',
+						'prompt' => 'Hello',
 					],
 				];
 				break;
+		}
+
+		if ( 'provider' !== self::STEP_ORDER[ $step_index ] ) {
+			array_unshift(
+				$data['actions'],
+				[
+					'id'     => 'back-step',
+					'label'  => __( 'Back', 'clawpress' ),
+					'type'   => 'send_prompt',
+					'prompt' => '/onboarding back',
+				]
+			);
 		}
 
 		return [
@@ -848,6 +983,67 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		}
 
 		return $state;
+	}
+
+	/**
+	 * Normalize a raw step value to a valid onboarding step.
+	 *
+	 * @param mixed $step Raw step value.
+	 */
+	private function normalize_step( $step ): string {
+		$step = is_string( $step ) ? trim( strtolower( $step ) ) : '';
+		if ( ! in_array( $step, self::STEP_ORDER, true ) ) {
+			return 'agent_user';
+		}
+
+		return $step;
+	}
+
+	/**
+	 * Resolve previous step key for a current step.
+	 *
+	 * @param string $current_step Current step.
+	 */
+	private function get_previous_step( string $current_step ): string {
+		$current_index = array_search( $current_step, self::STEP_ORDER, true );
+		if ( false === $current_index || $current_index <= 0 ) {
+			return 'provider';
+		}
+
+		return self::STEP_ORDER[ $current_index - 1 ];
+	}
+
+	/**
+	 * Convert absolute workspace path to a display path rooted at /wp-content.
+	 *
+	 * @param string $workspace_path Absolute workspace path.
+	 */
+	private function get_workspace_display_path( string $workspace_path ): string {
+		$normalized_path = str_replace( '\\', '/', trim( $workspace_path ) );
+		if ( '' === $normalized_path ) {
+			return '';
+		}
+
+		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? str_replace( '\\', '/', wp_normalize_path( (string) WP_CONTENT_DIR ) ) : '';
+		if ( '' !== $wp_content_dir && 0 === strpos( $normalized_path, $wp_content_dir ) ) {
+			$suffix = substr( $normalized_path, strlen( $wp_content_dir ) );
+			if ( false === $suffix ) {
+				$suffix = '';
+			}
+
+			return '/wp-content' . $suffix;
+		}
+
+		$position = strpos( $normalized_path, '/wp-content/' );
+		if ( false === $position ) {
+			$position = strpos( $normalized_path, '/wp-content' );
+		}
+
+		if ( false !== $position ) {
+			return substr( $normalized_path, $position );
+		}
+
+		return $normalized_path;
 	}
 
 	/**

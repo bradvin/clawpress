@@ -25,7 +25,7 @@ final class Workspace_Helper {
 	/**
 	 * Number of random bytes used to generate the workspace hash.
 	 */
-	private const WORKSPACE_HASH_BYTES = 16;
+	private const WORKSPACE_HASH_BYTES = 8;
 
 	/**
 	 * Filesystem permissions.
@@ -135,6 +135,27 @@ final class Workspace_Helper {
 	}
 
 	/**
+	 * Return workspace path for a user, creating and persisting a hash if needed.
+	 *
+	 * This method does not create any directories; it only ensures a stable path can be displayed.
+	 *
+	 * @param int $user_id Agent user ID.
+	 */
+	public function ensure_workspace_path_for_agent_user( int $user_id ): string {
+		if ( $user_id <= 0 ) {
+			return '';
+		}
+
+		$workspace_hash = $this->get_workspace_hash_for_user( $user_id );
+		if ( '' === $workspace_hash ) {
+			$workspace_hash = $this->generate_workspace_hash();
+			update_user_meta( $user_id, self::USER_META_WORKSPACE_HASH, $workspace_hash );
+		}
+
+		return $this->build_workspace_path_from_hash( $user_id, $workspace_hash );
+	}
+
+	/**
 	 * Return stored workspace hash for a user when valid.
 	 *
 	 * @param int $user_id User ID.
@@ -143,7 +164,8 @@ final class Workspace_Helper {
 		$workspace_hash = get_user_meta( $user_id, self::USER_META_WORKSPACE_HASH, true );
 		$workspace_hash = strtolower( trim( (string) $workspace_hash ) );
 
-		if ( ! preg_match( '/^[a-f0-9]{32}$/', $workspace_hash ) ) {
+		// Accept both current (16 chars) and legacy (32 chars) hashes.
+		if ( ! preg_match( '/^[a-f0-9]{16}(?:[a-f0-9]{16})?$/', $workspace_hash ) ) {
 			return '';
 		}
 
@@ -243,7 +265,7 @@ final class Workspace_Helper {
 			return bin2hex( random_bytes( self::WORKSPACE_HASH_BYTES ) );
 		} catch ( Throwable $throwable ) {
 			unset( $throwable );
-			return substr( hash( 'sha256', wp_generate_password( 64, true, true ) . microtime( true ) ), 0, 32 );
+			return substr( hash( 'sha256', wp_generate_password( 64, true, true ) . microtime( true ) ), 0, self::WORKSPACE_HASH_BYTES * 2 );
 		}
 	}
 }

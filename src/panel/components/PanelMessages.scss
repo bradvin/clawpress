@@ -28,105 +28,65 @@
   background: var(--fp-bg);
   border: 1px solid var(--fp-border);
   border-radius: 6px;
-  padding: 10px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  overflow: hidden;
 }
 
 .clawpress-card-emoji {
   font-size: 20px;
   line-height: 1;
-  margin-top: 2px;
 }
 
 .clawpress-card-body {
   min-width: 0;
+  width: 100%;
+}
+
+.clawpress-card-section-title {
+  padding: 12px 14px 8px;
+}
+
+.clawpress-card-section-subtitle {
+  padding: 0 14px 10px;
+}
+
+.clawpress-card-section-content {
+  padding: 0 14px 14px;
+}
+
+.clawpress-card-section-buttons {
+  padding: 0 14px 14px;
 }
 
 .clawpress-card-title {
   font-weight: 600;
   color: var(--fp-text);
+  margin: 0;
+}
+
+.clawpress-card-subtitle {
+  font-size: 11px;
+  color: var(--fp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
 }
 
 .clawpress-card-text {
   color: var(--fp-text);
-  margin-top: 2px;
+  margin: 0;
+}
+
+.clawpress-card-welcome-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .clawpress-card-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
-}
-
-.clawpress-card-onboarding {
-  width: 100%;
-}
-
-.clawpress-card-step-progress {
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--fp-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.clawpress-card-step-label {
-  margin-top: 8px;
-  font-weight: 600;
-  color: var(--fp-text);
-}
-
-.clawpress-card-detail {
-  margin-top: 6px;
-  color: var(--fp-muted);
-  font-size: 12px;
-}
-
-.clawpress-card-error {
-  margin-top: 8px;
-  color: var(--fp-danger);
-  font-size: 12px;
-}
-
-.clawpress-card-steps {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.clawpress-card-step {
-  border: 1px solid var(--fp-border);
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--fp-muted);
-}
-
-.clawpress-card-step-done {
-  border-color: var(--fp-accent);
-  color: var(--fp-accent);
-}
-
-.clawpress-card-step-current {
-  border-color: var(--fp-text);
-  color: var(--fp-text);
-}
-
-.clawpress-card-inline-controls {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.clawpress-card-select {
-  min-width: 180px;
-  max-width: 100%;
+  margin: 0;
 }
 
 .clawpress-msg-label {

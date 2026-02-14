@@ -25,6 +25,10 @@ const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
     typeof card?.data?.message === 'string' && card.data.message.trim()
       ? card.data.message
       : fallbackText || '';
+  const subtitle =
+    typeof card?.data?.subtitle === 'string' && card.data.subtitle.trim()
+      ? card.data.subtitle
+      : '';
   const actions = normalizeCardActions(card);
 
   if (!message && actions.length === 0) {
@@ -34,21 +38,36 @@ const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
   return (
     <div className="clawpress-card clawpress-card-generic">
       <div className="clawpress-card-body">
-        {title ? <div className="clawpress-card-title">{title}</div> : null}
-        {message ? <div className="clawpress-card-text">{message}</div> : null}
+        {title ? (
+          <div className="clawpress-card-section-title">
+            <div className="clawpress-card-title">{title}</div>
+          </div>
+        ) : null}
+        {subtitle ? (
+          <div className="clawpress-card-section-subtitle">
+            <div className="clawpress-card-subtitle">{subtitle}</div>
+          </div>
+        ) : null}
+        {message ? (
+          <div className="clawpress-card-section-content">
+            <div className="clawpress-card-text">{message}</div>
+          </div>
+        ) : null}
         {actions.length > 0 ? (
-          <div className="clawpress-card-actions">
-            {actions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                className="button button-secondary button-small"
-                onClick={() => onSendAction?.(action)}
-                disabled={isBusy}
-              >
-                {action.label}
-              </button>
-            ))}
+          <div className="clawpress-card-section-buttons">
+            <div className="clawpress-card-actions">
+              {actions.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className="button button-secondary button-small"
+                  onClick={() => onSendAction?.(action)}
+                  disabled={isBusy}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>

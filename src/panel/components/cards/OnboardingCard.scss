@@ -1,0 +1,135 @@
+.clawpress-card-onboarding {
+  width: 100%;
+}
+
+.clawpress-card-onboarding-title-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clawpress-card-onboarding-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.clawpress-card-onboarding-step-line {
+  margin: 0;
+}
+
+.clawpress-card-onboarding-progress {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+}
+
+.clawpress-card-onboarding-progress-item {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.clawpress-card-onboarding-progress-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid var(--fp-border);
+  background: var(--fp-bg);
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--fp-muted);
+}
+
+.clawpress-card-onboarding-progress-line {
+  height: 2px;
+  background: var(--fp-border);
+  flex: 1 1 auto;
+}
+
+.clawpress-card-onboarding-progress-done .clawpress-card-onboarding-progress-dot {
+  border-color: var(--fp-accent);
+  background: var(--fp-accent);
+  color: #fff;
+}
+
+.clawpress-card-onboarding-progress-done .clawpress-card-onboarding-progress-line {
+  background: var(--fp-accent);
+}
+
+.clawpress-card-onboarding-progress-current .clawpress-card-onboarding-progress-dot {
+  border-color: var(--fp-accent);
+  background: var(--fp-bg);
+  color: var(--fp-accent);
+}
+
+.clawpress-card-onboarding-field-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.clawpress-card-onboarding-field-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.clawpress-card-onboarding-field-label {
+  color: var(--fp-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  min-width: 52px;
+  padding-top: 8px;
+}
+
+.clawpress-card-onboarding-field-value {
+  margin: 0;
+  padding: 4px 8px;
+  background: var(--fp-surface);
+  border: 1px solid var(--fp-border);
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: var(--fp-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.clawpress-card-onboarding-detail {
+  margin-top: 8px;
+  color: var(--fp-muted);
+  font-size: 12px;
+}
+
+.clawpress-card-onboarding-error {
+  margin-top: 8px;
+  color: var(--fp-danger);
+  font-size: 12px;
+}
+
+.clawpress-card-onboarding-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clawpress-card-onboarding-inline-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clawpress-card-onboarding-select {
+  min-width: 180px;
+  max-width: 100%;
+}
