@@ -50,12 +50,23 @@ final class Site_Command_Handler implements Command_Handler {
 	/**
 	 * {@inheritDoc}
 	 */
+	public function get_default_suggestions(): array {
+		return [ '/site info' ];
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public function handle( Command_Request $request ): Command_Response {
 		$subcommand = strtolower( $request->get_argument( 0 ) );
 		if ( 'info' !== $subcommand ) {
 			return Command_Response::error(
 				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
-				$this->get_command()
+				$this->get_command(),
+				false,
+				false,
+				[],
+				[ '/site info', '/status', '/help' ]
 			);
 		}
 
@@ -72,6 +83,13 @@ final class Site_Command_Handler implements Command_Handler {
 			sprintf( '- ClawPress: %s', '' !== $plugin_version ? $plugin_version : 'unknown' ),
 		];
 
-		return Command_Response::success( implode( "\n", $lines ), $this->get_command() );
+		return Command_Response::success(
+			implode( "\n", $lines ),
+			$this->get_command(),
+			false,
+			false,
+			[],
+			[ '/status', '/tools list', '/help' ]
+		);
 	}
 }

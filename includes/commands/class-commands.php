@@ -9,12 +9,14 @@ declare( strict_types=1 );
 
 namespace ClawPress\Commands;
 
+use ClawPress\Commands\Handlers\Clear_Command_Handler;
 use ClawPress\Commands\Handlers\Help_Command_Handler;
 use ClawPress\Commands\Handlers\Memory_Command_Handler;
 use ClawPress\Commands\Handlers\Onboarding_Command_Handler;
 use ClawPress\Commands\Handlers\Site_Command_Handler;
 use ClawPress\Commands\Handlers\Status_Command_Handler;
 use ClawPress\Commands\Handlers\Tools_Command_Handler;
+use ClawPress\Helpers\Chat_History_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use ClawPress\Helpers\Status_Helper;
 
@@ -39,12 +41,14 @@ final class Commands {
 
 		$settings_helper    = Settings_Helper::get_instance();
 		$status_helper      = Status_Helper::get_instance();
+		$history_helper     = Chat_History_Helper::get_instance();
 		$confirmation_store = new Command_Confirmation_Store();
 
 		$this->registry->register( new Help_Command_Handler( $this->registry ), false );
 		$this->registry->register( new Status_Command_Handler( $status_helper ), false );
 		$this->registry->register( new Onboarding_Command_Handler( $settings_helper ), false );
 		$this->registry->register( new Memory_Command_Handler( $settings_helper, $confirmation_store ), true );
+		$this->registry->register( new Clear_Command_Handler( $history_helper ), true );
 		$this->registry->register( new Site_Command_Handler(), false );
 		$this->registry->register( new Tools_Command_Handler( $status_helper ), false );
 	}
@@ -69,11 +73,13 @@ final class Commands {
 			'mode'     => 'offline',
 			'provider' => null,
 			'model'    => null,
+			'suggestions' => $response->get_suggestions(),
 			'command'  => [
 				'name'                  => $response->get_command(),
 				'error'                 => $response->is_error(),
 				'destructive'           => $response->is_destructive(),
 				'requires_confirmation' => $response->requires_confirmation(),
+				'effects'               => $response->get_effects(),
 			],
 		];
 	}
@@ -88,7 +94,11 @@ final class Commands {
 		if ( null === $handler ) {
 			return Command_Response::error(
 				sprintf( "Unknown command: `%s`.\n\n%s", $request->get_command(), $this->get_help_text() ),
-				'/help'
+				'/help',
+				false,
+				false,
+				[],
+				$this->get_help_suggestions()
 			);
 		}
 
@@ -101,7 +111,11 @@ final class Commands {
 			trim( $response->get_text() ) . "\n\n" . $this->get_help_text(),
 			$response->get_command(),
 			$response->is_destructive(),
-			$response->requires_confirmation()
+			$response->requires_confirmation(),
+			$response->get_effects(),
+			[] !== $response->get_suggestions()
+				? $response->get_suggestions()
+				: $this->get_help_suggestions()
 		);
 	}
 
@@ -115,5 +129,47 @@ final class Commands {
 		}
 
 		return 'Use `/help` to view available commands.';
+	}
+
+	/**
+	 * Resolve help suggestions fallback.
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_help_suggestions(): array {
+		$handler = $this->registry->get_handler( '/help' );
+		if ( $handler instanceof Help_Command_Handler ) {
+			return $handler->get_help_suggestions();
+		}
+
+		return [];
+	}
+
+	/**
+	 * Resolve default offline suggestions from registered handlers.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_default_suggestions(): array {
+		$suggestions = [];
+
+		foreach ( $this->registry->get_registered_handlers() as $handler ) {
+			$suggestions = array_merge( $suggestions, $handler->get_default_suggestions() );
+		}
+
+		$seen = [];
+		$unique_suggestions = [];
+
+		foreach ( $suggestions as $suggestion ) {
+			$normalized = trim( (string) $suggestion );
+			if ( '' === $normalized || isset( $seen[ $normalized ] ) ) {
+				continue;
+			}
+
+			$seen[ $normalized ]   = true;
+			$unique_suggestions[] = $normalized;
+		}
+
+		return array_values( $unique_suggestions );
 	}
 }

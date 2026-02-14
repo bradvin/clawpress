@@ -116,8 +116,15 @@ final class Chat_Controller implements Route_Controller {
 			$reply = $this->chat_helper->build_offline_reply( $message );
 		}
 
-		$this->history_helper->append_history_message( 'user', $message );
-		$this->history_helper->append_history_message( 'assistant', $reply );
+		$command_meta          = isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
+			? $reply_payload['command']
+			: [];
+		$clear_history_effect = isset( $command_meta['effects']['clear_history'] ) && true === $command_meta['effects']['clear_history'];
+
+		if ( ! $clear_history_effect ) {
+			$this->history_helper->append_history_message( 'user', $message );
+			$this->history_helper->append_history_message( 'assistant', $reply );
+		}
 
 		return new \WP_REST_Response(
 			[
@@ -130,6 +137,9 @@ final class Chat_Controller implements Route_Controller {
 						: null,
 					'model'    => isset( $reply_payload['model'] ) && '' !== (string) $reply_payload['model']
 						? (string) $reply_payload['model']
+						: null,
+					'suggestions' => isset( $reply_payload['suggestions'] ) && is_array( $reply_payload['suggestions'] )
+						? array_values( $reply_payload['suggestions'] )
 						: null,
 					'command'  => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 						? $reply_payload['command']

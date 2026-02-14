@@ -77,6 +77,13 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	/**
 	 * {@inheritDoc}
 	 */
+	public function get_default_suggestions(): array {
+		return [ '/onboarding resume' ];
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public function handle( Command_Request $request ): Command_Response {
 		$action = strtolower( $request->get_argument( 0 ) );
 		if ( '' === $action ) {
@@ -93,7 +100,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			default:
 				return Command_Response::error(
 					sprintf( 'Invalid onboarding action. Expected: `%s`', $this->get_usage() ),
-					$this->get_command()
+					$this->get_command(),
+					false,
+					false,
+					[],
+					[ '/onboarding resume', '/help', '/status' ]
 				);
 		}
 	}
@@ -107,7 +118,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 
 		return Command_Response::success(
 			sprintf( 'Onboarding started. Current step: `%s`.', self::DEFAULT_STEP ),
-			$this->get_command()
+			$this->get_command(),
+			false,
+			false,
+			[],
+			[ '/onboarding resume', '/status', '/help' ]
 		);
 	}
 
@@ -120,7 +135,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 
 		return Command_Response::success(
 			sprintf( 'Onboarding resume point: `%s`.', $step ),
-			$this->get_command()
+			$this->get_command(),
+			false,
+			false,
+			[],
+			[ '/onboarding start', '/onboarding reset', '/status' ]
 		);
 	}
 
@@ -133,7 +152,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 
 		return Command_Response::success(
 			sprintf( 'Onboarding reset. Current step: `%s`.', self::DEFAULT_STEP ),
-			$this->get_command()
+			$this->get_command(),
+			false,
+			false,
+			[],
+			[ '/onboarding resume', '/status', '/help' ]
 		);
 	}
 

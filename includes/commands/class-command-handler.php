@@ -36,6 +36,13 @@ interface Command_Handler {
 	public function is_destructive(): bool;
 
 	/**
+	 * Default suggestions this command contributes in offline mode.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_default_suggestions(): array;
+
+	/**
 	 * Execute the command.
 	 *
 	 * @param Command_Request $request Parsed request.

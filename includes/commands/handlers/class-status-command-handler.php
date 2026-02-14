@@ -67,11 +67,22 @@ final class Status_Command_Handler implements Command_Handler {
 	/**
 	 * {@inheritDoc}
 	 */
+	public function get_default_suggestions(): array {
+		return [ '/status' ];
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public function handle( Command_Request $request ): Command_Response {
 		if ( '' !== $request->get_argument( 0 ) ) {
 			return Command_Response::error(
 				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
-				$this->get_command()
+				$this->get_command(),
+				false,
+				false,
+				[],
+				[ '/status', '/help' ]
 			);
 		}
 
@@ -87,7 +98,17 @@ final class Status_Command_Handler implements Command_Handler {
 			sprintf( '- Permissions (manage_options): %s', ! empty( $status['permissions']['can_manage_options'] ) ? 'yes' : 'no' ),
 			sprintf( '- Plugin version: %s', (string) ( $status['plugin']['version'] ?? 'unknown' ) ),
 		];
+		$suggestions = 'offline' === (string) ( $status['mode'] ?? 'offline' )
+			? [ '/help', '/onboarding resume', '/site info', '/tools list', '/clear' ]
+			: [ '/help', '/site info', '/tools list' ];
 
-		return Command_Response::success( implode( "\n", $lines ), $this->get_command() );
+		return Command_Response::success(
+			implode( "\n", $lines ),
+			$this->get_command(),
+			false,
+			false,
+			[],
+			$suggestions
+		);
 	}
 }

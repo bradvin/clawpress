@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use ClawPress\Commands\Commands;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -66,6 +68,7 @@ final class Status_Helper {
 		$model_id    = $this->provider_helper->resolve_model( $settings );
 		$mode        = ( '' !== $provider_id && '' !== $model_id ) ? 'online' : 'offline';
 		$execution   = $this->settings_helper->resolve_execution_user_id( $settings );
+		$suggestions = 'offline' === $mode ? ( new Commands() )->get_default_suggestions() : [];
 
 		return [
 			'mode' => $mode,
@@ -93,6 +96,7 @@ final class Status_Helper {
 			'plugin' => [
 				'version' => defined( 'CLAWPRESS_VERSION' ) ? (string) CLAWPRESS_VERSION : 'unknown',
 			],
+			'suggestions' => $suggestions,
 		];
 	}
 }

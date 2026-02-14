@@ -65,6 +65,13 @@ final class Help_Command_Handler implements Command_Handler {
 	}
 
 	/**
+	 * {@inheritDoc}
+	 */
+	public function get_default_suggestions(): array {
+		return [ '/help' ];
+	}
+
+	/**
 	 * Build deterministic help text.
 	 */
 	public function build_help_text(): string {
@@ -82,11 +89,34 @@ final class Help_Command_Handler implements Command_Handler {
 	}
 
 	/**
+	 * Default help suggestions.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_help_suggestions(): array {
+		return [
+			'/status',
+			'/clear',
+			'/onboarding resume',
+			'/memory list',
+			'/site info',
+			'/tools list',
+		];
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	public function handle( Command_Request $request ): Command_Response {
 		unset( $request );
 
-		return Command_Response::success( $this->build_help_text(), $this->get_command() );
+		return Command_Response::success(
+			$this->build_help_text(),
+			$this->get_command(),
+			false,
+			false,
+			[],
+			$this->get_help_suggestions()
+		);
 	}
 }

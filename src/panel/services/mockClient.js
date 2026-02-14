@@ -20,6 +20,15 @@ const createMockClient = ({ mockScenario, mockDelay, onEvent, onDone, onError })
     onboarding: { completed: false },
     memory: { enabled: false },
     execution_user: { id: null, configured: false },
+    suggestions: [
+      '/help',
+      '/clear',
+      '/status',
+      '/onboarding resume',
+      '/memory list',
+      '/site info',
+      '/tools list',
+    ],
   }),
   getPanelState: async () => ({
     open: false,

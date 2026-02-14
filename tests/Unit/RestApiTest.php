@@ -192,6 +192,7 @@ final class RestApiTest extends TestCase {
 					'mode'     => 'online',
 					'provider' => 'openai',
 					'model'    => 'gpt-4.1-mini',
+					'suggestions' => null,
 					'command'  => null,
 				),
 			),
@@ -227,6 +228,7 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'offline', $data['meta']['mode'] );
 		$this->assertSame( '/help', $data['meta']['command']['name'] );
+		$this->assertNotEmpty( $data['meta']['suggestions'] );
 		$this->assertStringContainsString( 'Available commands:', $data['reply'] );
 	}
 
@@ -244,6 +246,7 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( 'offline', $data['meta']['mode'] );
 		$this->assertSame( '/help', $data['meta']['command']['name'] );
+		$this->assertNotEmpty( $data['meta']['suggestions'] );
 		$this->assertStringContainsString( 'Unknown command', $data['reply'] );
 		$this->assertStringContainsString( '/help', $data['reply'] );
 	}
@@ -287,6 +290,44 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 200, $second_response->get_status() );
 		$this->assertStringContainsString( 'Memory cleared.', $second_data['reply'] );
 		$this->assertSame( array(), WordPress_Stubs::$options['clawpress_memory_entries'] );
+	}
+
+	public function test_clear_command_clears_history_and_is_not_repersisted(): void {
+		$chat_controller = new Chat_Controller(
+			static function ( string $message ): array {
+				return array(
+					'reply'    => 'Model: ' . $message,
+					'mode'     => 'online',
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				);
+			}
+		);
+
+		$chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => 'first',
+				)
+			)
+		);
+
+		$clear_response = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => '/clear',
+				)
+			)
+		);
+		$clear_data     = $clear_response->get_data();
+
+		$this->assertSame( 200, $clear_response->get_status() );
+		$this->assertSame( '/clear', $clear_data['meta']['command']['name'] );
+		$this->assertSame( true, $clear_data['meta']['command']['effects']['clear_history'] );
+
+		$history_response = $chat_controller->get_history();
+		$history_data     = $history_response->get_data();
+		$this->assertSame( array(), $history_data['items'] );
 	}
 
 	public function test_chat_get_history_returns_empty_items_array(): void {
@@ -360,6 +401,8 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( null, $data['provider']['id'] );
 		$this->assertSame( false, $data['provider']['configured'] );
 		$this->assertSame( false, $data['memory']['enabled'] );
+		$this->assertContains( '/help', $data['suggestions'] );
+		$this->assertContains( '/clear', $data['suggestions'] );
 	}
 
 	public function test_status_endpoint_returns_online_when_provider_and_model_configured(): void {

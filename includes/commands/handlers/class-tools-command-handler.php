@@ -67,12 +67,23 @@ final class Tools_Command_Handler implements Command_Handler {
 	/**
 	 * {@inheritDoc}
 	 */
+	public function get_default_suggestions(): array {
+		return [ '/tools list' ];
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public function handle( Command_Request $request ): Command_Response {
 		$subcommand = strtolower( $request->get_argument( 0 ) );
 		if ( 'list' !== $subcommand ) {
 			return Command_Response::error(
 				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
-				$this->get_command()
+				$this->get_command(),
+				false,
+				false,
+				[],
+				[ '/tools list', '/status', '/help' ]
 			);
 		}
 
@@ -86,6 +97,13 @@ final class Tools_Command_Handler implements Command_Handler {
 			'- tool_execution: disabled (planned in a later level)',
 		];
 
-		return Command_Response::success( implode( "\n", $lines ), $this->get_command() );
+		return Command_Response::success(
+			implode( "\n", $lines ),
+			$this->get_command(),
+			false,
+			false,
+			[],
+			[ '/status', '/help', '/site info' ]
+		);
 	}
 }

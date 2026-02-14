@@ -76,6 +76,18 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
     (async () => {
       try {
         const response = await sendMessage(prompt, controller.signal);
+        const clearHistory =
+          response?.meta?.command?.effects &&
+          response.meta.command.effects.clear_history === true;
+
+        if (clearHistory) {
+          onEvent('history_reset', {});
+        }
+
+        if (Array.isArray(response?.meta?.suggestions)) {
+          onEvent('suggestions', { items: response.meta.suggestions });
+        }
+
         const reply =
           typeof response?.reply === 'string' ? response.reply.trim() : '';
 

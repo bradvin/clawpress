@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use ClawPress\Commands\Commands;
 use Throwable;
 use WordPress\AiClient\AiClient;
 
@@ -71,10 +72,11 @@ final class Chat_Helper {
 
 		if ( '' === $provider ) {
 			return [
-				'reply'    => $this->build_offline_reply( $message ),
-				'mode'     => 'offline',
-				'provider' => null,
-				'model'    => null,
+				'reply'       => $this->build_offline_reply( $message ),
+				'mode'        => 'offline',
+				'provider'    => null,
+				'model'       => null,
+				'suggestions' => $this->get_default_offline_suggestions(),
 			];
 		}
 
@@ -87,27 +89,30 @@ final class Chat_Helper {
 			$reply = trim( $builder->generateText() );
 			if ( '' === $reply ) {
 				return [
-					'reply'    => $this->build_offline_reply( $message ),
-					'mode'     => 'offline',
-					'provider' => $provider,
-					'model'    => '' !== $model ? $model : null,
+					'reply'       => $this->build_offline_reply( $message ),
+					'mode'        => 'offline',
+					'provider'    => $provider,
+					'model'       => '' !== $model ? $model : null,
+					'suggestions' => $this->get_default_offline_suggestions(),
 				];
 			}
 
 			return [
-				'reply'    => $reply,
-				'mode'     => 'online',
-				'provider' => $provider,
-				'model'    => '' !== $model ? $model : null,
+				'reply'       => $reply,
+				'mode'        => 'online',
+				'provider'    => $provider,
+				'model'       => '' !== $model ? $model : null,
+				'suggestions' => $this->get_online_suggestions( $reply, $provider, $model ),
 			];
 		} catch ( Throwable $throwable ) {
 			unset( $throwable );
 
 			return [
-				'reply'    => $this->build_offline_reply( $message ),
-				'mode'     => 'offline',
-				'provider' => $provider,
-				'model'    => '' !== $model ? $model : null,
+				'reply'       => $this->build_offline_reply( $message ),
+				'mode'        => 'offline',
+				'provider'    => $provider,
+				'model'       => '' !== $model ? $model : null,
+				'suggestions' => $this->get_default_offline_suggestions(),
 			];
 		}
 	}
@@ -122,5 +127,50 @@ final class Chat_Helper {
 			'Offline mode: no configured AI provider was available. You said: "%s"',
 			$message
 		);
+	}
+
+	/**
+	 * Get default offline command suggestions.
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_default_offline_suggestions(): array {
+		return ( new Commands() )->get_default_suggestions();
+	}
+
+	/**
+	 * Resolve online suggestions from provider output via filter hook.
+	 *
+	 * @param string $reply Generated reply text.
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 * @return array<int,string>
+	 */
+	private function get_online_suggestions( string $reply, string $provider, string $model ): array {
+		$suggestions = apply_filters(
+			'clawpress_ai_suggestions',
+			[],
+			[
+				'reply'    => $reply,
+				'provider' => $provider,
+				'model'    => $model,
+			]
+		);
+
+		if ( ! is_array( $suggestions ) ) {
+			return [];
+		}
+
+		$normalized = array_values(
+			array_filter(
+				array_map(
+					static fn ( $suggestion ): string => trim( (string) $suggestion ),
+					$suggestions
+				),
+				static fn ( string $suggestion ): bool => '' !== $suggestion
+			)
+		);
+
+		return array_slice( $normalized, 0, 8 );
 	}
 }

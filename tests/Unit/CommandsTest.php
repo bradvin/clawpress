@@ -35,6 +35,7 @@ final class CommandsTest extends TestCase {
 		$this->assertIsArray( $payload );
 		$this->assertSame( 'offline', $payload['mode'] );
 		$this->assertSame( '/help', $payload['command']['name'] );
+		$this->assertNotEmpty( $payload['suggestions'] );
 		$this->assertStringContainsString( 'Available commands:', $payload['reply'] );
 	}
 
@@ -60,5 +61,38 @@ final class CommandsTest extends TestCase {
 		$this->assertIsArray( $payload );
 		$this->assertSame( true, $payload['command']['error'] );
 		$this->assertStringContainsString( 'Setup required', $payload['reply'] );
+	}
+
+	public function test_clear_command_clears_current_user_chat_history(): void {
+		WordPress_Stubs::$options['clawpress_chat_history_1'] = array(
+			array(
+				'id'        => 'msg-1',
+				'role'      => 'user',
+				'content'   => 'hello',
+				'createdAt' => 1,
+			),
+		);
+
+		$commands = new Commands();
+		$payload  = $commands->maybe_dispatch( '/clear' );
+
+		$this->assertIsArray( $payload );
+		$this->assertSame( '/clear', $payload['command']['name'] );
+		$this->assertSame( true, $payload['command']['effects']['clear_history'] );
+		$this->assertContains( '/help', $payload['suggestions'] );
+		$this->assertSame( array(), WordPress_Stubs::$options['clawpress_chat_history_1'] );
+	}
+
+	public function test_default_suggestions_are_derived_from_handlers(): void {
+		$commands    = new Commands();
+		$suggestions = $commands->get_default_suggestions();
+
+		$this->assertContains( '/help', $suggestions );
+		$this->assertContains( '/clear', $suggestions );
+		$this->assertContains( '/status', $suggestions );
+		$this->assertContains( '/onboarding resume', $suggestions );
+		$this->assertContains( '/memory list', $suggestions );
+		$this->assertContains( '/site info', $suggestions );
+		$this->assertContains( '/tools list', $suggestions );
 	}
 }

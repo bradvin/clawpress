@@ -87,13 +87,23 @@ final class Memory_Command_Handler implements Command_Handler {
 	/**
 	 * {@inheritDoc}
 	 */
+	public function get_default_suggestions(): array {
+		return [ '/memory list' ];
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
 	public function handle( Command_Request $request ): Command_Response {
 		$action = strtolower( $request->get_argument( 0 ) );
 		if ( '' === $action ) {
 			return Command_Response::error(
 				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
 				$this->get_command(),
-				$this->is_destructive()
+				$this->is_destructive(),
+				false,
+				[],
+				[ '/memory list', '/help', '/status' ]
 			);
 		}
 
@@ -106,7 +116,10 @@ final class Memory_Command_Handler implements Command_Handler {
 				return Command_Response::error(
 					sprintf( 'Invalid memory action. Expected: `%s`', $this->get_usage() ),
 					$this->get_command(),
-					$this->is_destructive()
+					$this->is_destructive(),
+					false,
+					[],
+					[ '/memory list', '/help', '/status' ]
 				);
 		}
 	}
@@ -119,7 +132,11 @@ final class Memory_Command_Handler implements Command_Handler {
 		if ( ! $this->settings_helper->get_memory_enabled( $settings ) ) {
 			return Command_Response::success(
 				'Memory is disabled. Enable memory in settings to store and list entries.',
-				$this->get_command()
+				$this->get_command(),
+				false,
+				false,
+				[],
+				[ '/status', '/help' ]
 			);
 		}
 
@@ -130,7 +147,14 @@ final class Memory_Command_Handler implements Command_Handler {
 
 		$normalized_entries = $this->normalize_entries( $entries );
 		if ( [] === $normalized_entries ) {
-			return Command_Response::success( 'No memory entries found.', $this->get_command() );
+			return Command_Response::success(
+				'No memory entries found.',
+				$this->get_command(),
+				false,
+				false,
+				[],
+				[ '/memory clear', '/status', '/help' ]
+			);
 		}
 
 		$lines = [
@@ -141,7 +165,14 @@ final class Memory_Command_Handler implements Command_Handler {
 			$lines[] = sprintf( '%d. %s', $index + 1, $entry );
 		}
 
-		return Command_Response::success( implode( "\n", $lines ), $this->get_command() );
+		return Command_Response::success(
+			implode( "\n", $lines ),
+			$this->get_command(),
+			false,
+			false,
+			[],
+			[ '/memory clear', '/status', '/help' ]
+		);
 	}
 
 	/**
@@ -155,7 +186,10 @@ final class Memory_Command_Handler implements Command_Handler {
 			return Command_Response::success(
 				'Memory is disabled, so there is nothing to clear.',
 				$this->get_command(),
-				$this->is_destructive()
+				$this->is_destructive(),
+				false,
+				[],
+				[ '/memory list', '/status', '/help' ]
 			);
 		}
 
@@ -163,7 +197,10 @@ final class Memory_Command_Handler implements Command_Handler {
 			return Command_Response::error(
 				'Setup required: configure an execution user before running `/memory clear`.',
 				$this->get_command(),
-				$this->is_destructive()
+				$this->is_destructive(),
+				false,
+				[],
+				[ '/onboarding resume', '/status', '/help' ]
 			);
 		}
 
@@ -178,7 +215,13 @@ final class Memory_Command_Handler implements Command_Handler {
 				),
 				$this->get_command(),
 				$this->is_destructive(),
-				true
+				true,
+				[],
+				[
+					'/memory clear --confirm=' . $issued_confirmation['token'],
+					'/memory list',
+					'/help',
+				]
 			);
 		}
 
@@ -187,7 +230,10 @@ final class Memory_Command_Handler implements Command_Handler {
 		return Command_Response::success(
 			'Memory cleared.',
 			$this->get_command(),
-			$this->is_destructive()
+			$this->is_destructive(),
+			false,
+			[],
+			[ '/memory list', '/status', '/help' ]
 		);
 	}
 

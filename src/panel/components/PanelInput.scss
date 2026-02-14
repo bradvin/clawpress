@@ -24,24 +24,24 @@
   align-self: flex-end;
 }
 
-.clawpress-command-suggestions {
+.clawpress-suggestions {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.clawpress-command-suggestions-label {
+.clawpress-suggestions-label {
   font-size: 11px;
   color: var(--fp-muted);
 }
 
-.clawpress-command-suggestions-list {
+.clawpress-suggestions-list {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.clawpress-command-suggestion {
+.clawpress-suggestion {
   font-size: 11px;
   line-height: 1.5;
   padding: 2px 6px;

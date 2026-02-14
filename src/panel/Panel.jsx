@@ -34,6 +34,7 @@ const Panel = () => {
   const [toolPlanningShown, setToolPlanningShown] = useState(false);
   const [statusSnapshot, setStatusSnapshot] = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState([]);
   const [panelStateReady, setPanelStateReady] = useState(false);
   const mockEnabled = Boolean(CLAWPRESS_PANEL.mockEnabled);
   const [themeMode, setThemeMode] = useState(
@@ -123,6 +124,24 @@ const Panel = () => {
       width: nextWidth,
       lastHistoryId,
     };
+  };
+
+  const normalizeSuggestions = (items) => {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    const seen = new Set();
+
+    return items
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter((item) => item.length > 0)
+      .filter((item) => {
+        if (seen.has(item)) return false;
+        seen.add(item);
+        return true;
+      })
+      .slice(0, 8);
   };
 
   const buildStatusLabel = (status) => {
@@ -226,9 +245,11 @@ const Panel = () => {
     document.body.classList.add('clawpress-resizing');
   };
 
-  const sendPrompt = () => {
-    if (!input.trim()) return;
-    const prompt = input;
+  const sendPrompt = (overridePrompt = null) => {
+    const prompt =
+      typeof overridePrompt === 'string' ? overridePrompt.trim() : input.trim();
+
+    if (!prompt) return;
     setInput('');
     setInputHistory((prev) => {
       const next = [...prev, prompt];
@@ -251,6 +272,10 @@ const Panel = () => {
     if (text && text.trim()) {
       appendMessage('assistant', text);
       setCurrentStreamText('');
+      currentStreamTextRef.current = '';
+    } else {
+      setCurrentStreamText('');
+      currentStreamTextRef.current = '';
     }
     const plan = toolPlanRef.current;
     if (plan) {
@@ -290,13 +315,21 @@ const Panel = () => {
     switch (eventType) {
       case 'delta':
         if (parsed.text) {
-          setCurrentStreamText((prev) => {
-            const next = prev + parsed.text;
-            currentStreamTextRef.current = next;
-            return next;
-          });
+          const next = `${currentStreamTextRef.current || ''}${parsed.text}`;
+          currentStreamTextRef.current = next;
+          setCurrentStreamText(next);
         }
         break;
+      case 'history_reset':
+        setMessages([]);
+        setToolDialogs([]);
+        timelineRef.current = 0;
+        break;
+      case 'suggestions': {
+        const nextSuggestions = normalizeSuggestions(parsed?.items);
+        setSuggestions(nextSuggestions);
+        break;
+      }
       case 'tool_call':
         if (!toolPlanningShown) {
           setEphemeralStatus('Preparing tool plan...');
@@ -388,9 +421,11 @@ const Panel = () => {
       const status = await buildClient().getStatus?.();
       if (status) {
         setStatusSnapshot(status);
+        setSuggestions(normalizeSuggestions(status?.suggestions));
       }
     } catch {
       setStatusSnapshot(null);
+      setSuggestions([]);
     } finally {
       setStatusLoading(false);
     }
@@ -422,9 +457,11 @@ const Panel = () => {
         if (!mounted) return;
 
         setStatusSnapshot(statusResponse || null);
+        setSuggestions(normalizeSuggestions(statusResponse?.suggestions));
       } catch {
         if (!mounted) return;
         setStatusSnapshot(null);
+        setSuggestions([]);
       } finally {
         if (mounted) {
           setStatusLoading(false);
@@ -497,6 +534,7 @@ const Panel = () => {
   const streamPrompt = async (prompt) => {
     setStreaming(true);
     setCurrentStreamText('');
+    currentStreamTextRef.current = '';
     setToolPlan(null);
 
     const client = buildClient();
@@ -678,9 +716,10 @@ const Panel = () => {
           input={input}
           onInputChange={(e) => setInput(e.target.value)}
           onSend={sendPrompt}
+          suggestions={suggestions}
+          onSendSuggestion={(suggestion) => sendPrompt(suggestion)}
           onStop={stopStream}
           streaming={streaming}
-          statusMode={statusSnapshot?.mode || 'offline'}
           onHistoryUp={(currentValue) => {
             if (inputHistory.length === 0) return null;
             if (historyIndex === -1) {

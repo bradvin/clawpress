@@ -93,6 +93,15 @@ final class Chat_History_Helper {
 	}
 
 	/**
+	 * Clear a user's chat history.
+	 *
+	 * @param int|null $user_id User ID.
+	 */
+	public function clear_history_items( ?int $user_id = null ): void {
+		update_option( $this->get_history_option_key( $user_id ), [] );
+	}
+
+	/**
 	 * Build the option key for a user's history.
 	 *
 	 * @param int|null $user_id User ID.
