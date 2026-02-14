@@ -40,7 +40,7 @@ const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
                 key={action.id}
                 type="button"
                 className="button button-secondary button-small"
-                onClick={() => onSendAction?.(action.prompt)}
+                onClick={() => onSendAction?.(action)}
                 disabled={isBusy}
               >
                 {action.label}

@@ -30,7 +30,7 @@ const Panel = () => {
   const [streaming, setStreaming] = useState(false);
   const [currentStreamText, setCurrentStreamText] = useState('');
   const [waitingForResponse, setWaitingForResponse] = useState(false);
-  const [toolPlan, setToolPlan] = useState(null);
+  const [toolPlans, setToolPlans] = useState([]);
   const [toolDialogs, setToolDialogs] = useState([]);
   const [toolPlanningShown, setToolPlanningShown] = useState(false);
   const [statusSnapshot, setStatusSnapshot] = useState(null);
@@ -52,7 +52,7 @@ const Panel = () => {
   const panelStateSyncTimerRef = useRef(null);
 
   const currentStreamTextRef = useRef(currentStreamText);
-  const toolPlanRef = useRef(toolPlan);
+  const toolPlansRef = useRef(toolPlans);
 
   useEffect(() => {
     currentStreamTextRef.current = currentStreamText;
@@ -63,8 +63,8 @@ const Panel = () => {
   }, []);
 
   useEffect(() => {
-    toolPlanRef.current = toolPlan;
-  }, [toolPlan]);
+    toolPlansRef.current = toolPlans;
+  }, [toolPlans]);
 
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -291,6 +291,33 @@ const Panel = () => {
     streamPrompt(prompt);
   };
 
+  const getToolConcurrency = (toolName) => getToolPolicy(toolName).concurrency || 'parallel';
+
+  const buildToolDialogEntry = (toolFunction, existingDialogs = []) => {
+    const toolName = toolFunction?.name || '';
+    const concurrency = getToolConcurrency(toolName);
+    const hasEarlierActive =
+      concurrency === 'serial' &&
+      existingDialogs.some(
+        (dialog) =>
+          dialog.function?.name === toolName &&
+          dialog.status !== 'done' &&
+          dialog.status !== 'error' &&
+          dialog.status !== 'cancelled'
+      );
+
+    return {
+      id: `tool-${Date.now()}-${Math.random()}`,
+      function: toolFunction,
+      args: getParsedArguments(toolFunction),
+      status: hasEarlierActive ? 'blocked' : 'idle',
+      result: null,
+      error: null,
+      diff: null,
+      createdAt: ++timelineRef.current,
+    };
+  };
+
   const finishStream = () => {
     setStreaming(false);
     streamHandleRef.current = null;
@@ -305,35 +332,23 @@ const Panel = () => {
       setCurrentStreamText('');
       currentStreamTextRef.current = '';
     }
-    const plan = toolPlanRef.current;
-    if (plan) {
+    const plans = Array.isArray(toolPlansRef.current) ? toolPlansRef.current : [];
+    if (plans.length > 0) {
       setToolDialogs((prev) => {
-        const toolName = plan.function?.name || '';
-        const concurrency = getToolConcurrency(toolName);
-        const hasEarlierActive =
-          concurrency === 'serial' &&
-          prev.some(
-            (dialog) =>
-              dialog.function?.name === toolName &&
-              dialog.status !== 'done' &&
-              dialog.status !== 'error'
-          );
+        const next = [...prev];
 
-        return [
-          ...prev,
-          {
-            id: `tool-${Date.now()}-${Math.random()}`,
-            function: plan.function,
-            args: getParsedArguments(plan.function),
-            status: hasEarlierActive ? 'blocked' : 'idle',
-            result: null,
-            error: null,
-            diff: null,
-            createdAt: ++timelineRef.current,
-          },
-        ];
+        plans.forEach((plan) => {
+          if (!plan?.function || typeof plan.function !== 'object') {
+            return;
+          }
+
+          next.push(buildToolDialogEntry(plan.function, next));
+        });
+
+        return next;
       });
     }
+    setToolPlans([]);
 
     requestStatus(true);
   };
@@ -368,6 +383,7 @@ const Panel = () => {
       case 'history_reset':
         setMessages([]);
         setToolDialogs([]);
+        setToolPlans([]);
         timelineRef.current = 0;
         break;
       case 'suggestions': {
@@ -382,7 +398,9 @@ const Panel = () => {
         }
         break;
       case 'tool_plan':
-        setToolPlan(parsed);
+        if (parsed?.function && typeof parsed.function === 'object') {
+          setToolPlans((prev) => [...prev, parsed]);
+        }
         setToolPlanningShown(false);
         break;
       case 'error':
@@ -621,7 +639,7 @@ const Panel = () => {
     setStreaming(true);
     setCurrentStreamText('');
     currentStreamTextRef.current = '';
-    setToolPlan(null);
+    setToolPlans([]);
 
     const client = buildClient();
 
@@ -642,8 +660,6 @@ const Panel = () => {
       throw e;
     }
   };
-
-  const getToolConcurrency = (toolName) => getToolPolicy(toolName).concurrency || 'parallel';
 
   const updateToolDialog = (id, updater) => {
     setToolDialogs((prev) =>
@@ -713,6 +729,51 @@ const Panel = () => {
 
   const cancelToolDialog = (dialogId) => {
     updateToolDialog(dialogId, { status: 'cancelled' });
+  };
+
+  const handleCardAction = (action) => {
+    if (typeof action === 'string') {
+      sendPrompt(action);
+      return;
+    }
+
+    if (!action || typeof action !== 'object') {
+      return;
+    }
+
+    if (action.type === 'run_tool') {
+      const toolName = typeof action.tool === 'string' ? action.tool.trim() : '';
+      if (!toolName) {
+        appendMessage('system', __('Invalid card action.', 'clawpress'));
+        return;
+      }
+
+      const args =
+        action.args && typeof action.args === 'object' && !Array.isArray(action.args)
+          ? action.args
+          : {};
+
+      setToolDialogs((prev) => {
+        const next = [...prev];
+        next.push(
+          buildToolDialogEntry(
+            {
+              name: toolName,
+              arguments: args,
+            },
+            next
+          )
+        );
+
+        return next;
+      });
+      return;
+    }
+
+    const prompt = typeof action.prompt === 'string' ? action.prompt.trim() : '';
+    if (prompt) {
+      sendPrompt(prompt);
+    }
   };
 
 
@@ -802,7 +863,7 @@ const Panel = () => {
           toolDialogs={toolDialogs}
           onRunToolDialog={requestRunToolDialog}
           onCancelToolDialog={cancelToolDialog}
-          onSendCardAction={(prompt) => sendPrompt(prompt)}
+          onSendCardAction={handleCardAction}
         />
         <PanelInput
           input={input}
