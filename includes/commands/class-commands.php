@@ -13,6 +13,7 @@ use ClawPress\Commands\Handlers\Clear_Command_Handler;
 use ClawPress\Commands\Handlers\Help_Command_Handler;
 use ClawPress\Commands\Handlers\Memory_Command_Handler;
 use ClawPress\Commands\Handlers\Onboarding_Command_Handler;
+use ClawPress\Commands\Handlers\Reset_Command_Handler;
 use ClawPress\Commands\Handlers\Site_Command_Handler;
 use ClawPress\Commands\Handlers\Status_Command_Handler;
 use ClawPress\Commands\Handlers\Tools_Command_Handler;
@@ -51,6 +52,7 @@ final class Commands {
 		$this->registry->register( new Clear_Command_Handler( $history_helper ), true );
 		$this->registry->register( new Site_Command_Handler(), false );
 		$this->registry->register( new Tools_Command_Handler( $status_helper ), false );
+		$this->registry->register( new Reset_Command_Handler(), true, false );
 	}
 
 	/**
@@ -154,7 +156,7 @@ final class Commands {
 	public function get_default_suggestions(): array {
 		$suggestions = [];
 
-		foreach ( $this->registry->get_registered_handlers() as $handler ) {
+		foreach ( $this->registry->get_visible_handlers() as $handler ) {
 			$suggestions = array_merge( $suggestions, $handler->get_default_suggestions() );
 		}
 

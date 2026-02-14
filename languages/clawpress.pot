@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-14T13:16:41+00:00\n"
+"POT-Creation-Date: 2026-02-14T13:28:36+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -75,7 +75,7 @@ msgid "An unknown error occurred."
 msgstr ""
 
 #. translators: 1: command name, 2: help text
-#: includes/commands/class-commands.php:99
+#: includes/commands/class-commands.php:101
 #, php-format
 msgid ""
 "Unknown command: `%1$s`.\n"
@@ -83,7 +83,7 @@ msgid ""
 "%2$s"
 msgstr ""
 
-#: includes/commands/class-commands.php:132
+#: includes/commands/class-commands.php:134
 msgid "Use `/help` to view available commands."
 msgstr ""
 
@@ -94,6 +94,7 @@ msgstr ""
 #. translators: %s: expected command usage
 #: includes/commands/handlers/class-clear-command-handler.php:82
 #: includes/commands/handlers/class-memory-command-handler.php:103
+#: includes/commands/handlers/class-reset-command-handler.php:65
 #: includes/commands/handlers/class-site-command-handler.php:66
 #: includes/commands/handlers/class-tools-command-handler.php:83
 #, php-format
@@ -190,6 +191,20 @@ msgstr ""
 #: includes/commands/handlers/class-onboarding-command-handler.php:168
 #, php-format
 msgid "Onboarding reset. Current step: `%s`."
+msgstr ""
+
+#: includes/commands/handlers/class-reset-command-handler.php:33
+msgid "Reset all stored ClawPress user meta."
+msgstr ""
+
+#: includes/commands/handlers/class-reset-command-handler.php:79
+msgid "Unable to resolve current user."
+msgstr ""
+
+#. translators: %d: number of user meta keys removed
+#: includes/commands/handlers/class-reset-command-handler.php:108
+#, php-format
+msgid "Reset complete. Removed %d ClawPress user meta entries."
 msgstr ""
 
 #: includes/commands/handlers/class-site-command-handler.php:33
@@ -340,7 +355,7 @@ msgstr ""
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
-#: includes/helpers/class-settings-helper.php:117
+#: includes/helpers/class-settings-helper.php:109
 msgid "No settings provided"
 msgstr ""
 

@@ -79,7 +79,7 @@ final class Help_Command_Handler implements Command_Handler {
 			__( 'Available commands:', 'clawpress' ),
 		];
 
-		foreach ( $this->registry->get_registered_handlers() as $handler ) {
+		foreach ( $this->registry->get_visible_handlers() as $handler ) {
 			$lines[] = sprintf(
 				/* translators: 1: command usage, 2: command description */
 				__( '- %1$s: %2$s', 'clawpress' ),
@@ -87,8 +87,6 @@ final class Help_Command_Handler implements Command_Handler {
 				$handler->get_description()
 			);
 		}
-
-		$lines[] = __( 'Tip: `/memory clear` requires confirmation and will return a tokenized re-run command.', 'clawpress' );
 
 		return implode( "\n", $lines );
 	}

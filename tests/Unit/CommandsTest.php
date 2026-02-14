@@ -94,5 +94,28 @@ final class CommandsTest extends TestCase {
 		$this->assertContains( '/memory list', $suggestions );
 		$this->assertContains( '/site info', $suggestions );
 		$this->assertContains( '/tools list', $suggestions );
+		$this->assertNotContains( '/reset', $suggestions );
+	}
+
+	public function test_reset_command_is_hidden_from_help_but_dispatchable(): void {
+		WordPress_Stubs::$user_meta[1] = array(
+			'clawpress_panel_state' => array( 'open' => true ),
+			'clawpress_demo_meta'   => 'demo',
+			'unrelated_meta'        => 'keep',
+		);
+
+		$commands      = new Commands();
+		$help_payload  = $commands->maybe_dispatch( '/help' );
+		$reset_payload = $commands->maybe_dispatch( '/reset' );
+
+		$this->assertIsArray( $help_payload );
+		$this->assertStringNotContainsString( '/reset', $help_payload['reply'] );
+
+		$this->assertIsArray( $reset_payload );
+		$this->assertSame( '/reset', $reset_payload['command']['name'] );
+		$this->assertStringContainsString( 'Removed 2', $reset_payload['reply'] );
+		$this->assertArrayNotHasKey( 'clawpress_panel_state', WordPress_Stubs::$user_meta[1] );
+		$this->assertArrayNotHasKey( 'clawpress_demo_meta', WordPress_Stubs::$user_meta[1] );
+		$this->assertSame( 'keep', WordPress_Stubs::$user_meta[1]['unrelated_meta'] );
 	}
 }

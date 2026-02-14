@@ -231,8 +231,20 @@ namespace {
 	}
 
 	if ( ! function_exists( 'get_user_meta' ) ) {
-		function get_user_meta( int $user_id, string $key, bool $single = false ) {
-			$meta_value = WordPress_Stubs::$user_meta[ $user_id ][ $key ] ?? null;
+		function get_user_meta( int $user_id, string $key = '', bool $single = false ) {
+			$user_meta = WordPress_Stubs::$user_meta[ $user_id ] ?? array();
+
+			if ( '' === $key ) {
+				$all_meta = array();
+
+				foreach ( $user_meta as $meta_key => $meta_value ) {
+					$all_meta[ $meta_key ] = array( $meta_value );
+				}
+
+				return $all_meta;
+			}
+
+			$meta_value = $user_meta[ $key ] ?? null;
 
 			if ( $single ) {
 				return $meta_value ?? '';
@@ -249,6 +261,19 @@ namespace {
 				WordPress_Stubs::$user_meta[ $user_id ] = array();
 			}
 			WordPress_Stubs::$user_meta[ $user_id ][ $key ] = $value;
+			return true;
+		}
+	}
+
+	if ( ! function_exists( 'delete_user_meta' ) ) {
+		function delete_user_meta( int $user_id, string $meta_key, $meta_value = '' ): bool {
+			unset( $meta_value );
+
+			if ( ! isset( WordPress_Stubs::$user_meta[ $user_id ][ $meta_key ] ) ) {
+				return false;
+			}
+
+			unset( WordPress_Stubs::$user_meta[ $user_id ][ $meta_key ] );
 			return true;
 		}
 	}
