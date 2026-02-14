@@ -63,15 +63,12 @@ if ( ! function_exists( 'clawpress_check_permissions' ) ) {
 	/**
 	 * Check permissions for ClawPress routes.
 	 *
-	 * Filter hook: `clawpress_permissions_capaability`.
+	 * Filter hook: `clawpress_permissions_capability`.
 	 */
 	function clawpress_check_permissions(): bool {
-		$capability = 'manage_options';
-		if ( function_exists( 'apply_filters' ) ) {
-			$capability = (string) apply_filters( 'clawpress_permissions_capaability', $capability );
-		}
+		$capability = apply_filters( 'clawpress_permissions_capability', 'manage_options' );
 
-		if ( '' === $capability ) {
+		if ( empty ( $capability ) ) {
 			$capability = 'manage_options';
 		}
 

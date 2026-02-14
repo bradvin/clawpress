@@ -21,19 +21,32 @@ final class Settings_Helper {
 	public const SETTINGS_OPTION = 'clawpress_settings';
 
 	/**
-	 * Memory enabled option key.
+	 * Registered settings schema.
+	 *
+	 * @var array<string,array<string,mixed>>
 	 */
-	public const MEMORY_ENABLED_OPTION = 'clawpress_memory_enabled';
-
-	/**
-	 * Execution user option key.
-	 */
-	public const EXECUTION_USER_OPTION = 'clawpress_execution_user_id';
-
-	/**
-	 * Legacy onboarding option name.
-	 */
-	private const ONBOARDING_OPTION = 'clawpress_onboarding_completed';
+	private const SETTINGS = [
+		'provider'             => [
+			'default'  => '',
+			'sanitize' => 'clawpress_sanitize_provider',
+		],
+		'model'                => [
+			'default'  => '',
+			'sanitize' => 'sanitize_text_field',
+		],
+		'execution_user_id'    => [
+			'default'  => 0,
+			'sanitize' => 'clawpress_sanitize_int',
+		],
+		'memory_enabled'       => [
+			'default'  => false,
+			'sanitize' => 'clawpress_sanitize_boolean',
+		],
+		'onboarding_completed' => [
+			'default'  => false,
+			'sanitize' => 'clawpress_sanitize_boolean',
+		],
+	];
 
 	/**
 	 * Singleton instance.
@@ -65,178 +78,121 @@ final class Settings_Helper {
 	 */
 	public function get_settings(): array {
 		$settings = get_option( self::SETTINGS_OPTION, [] );
-		return is_array( $settings ) ? $settings : [];
+		if ( ! is_array( $settings ) ) {
+			return $this->get_default_settings();
+		}
+
+		return $this->normalize_settings_array( $settings );
 	}
 
 	/**
-	 * Get raw settings option.
+	 * Update settings by applying a partial or full update payload.
 	 *
-	 * @return mixed
+	 * @param array<string,mixed> $updates Update payload.
+	 * @return array<string,mixed>
 	 */
-	public function get_raw_settings_option() {
-		return get_option( self::SETTINGS_OPTION, '' );
+	public function update_settings( array $updates ): array {
+		$settings   = $this->get_settings();
+		$has_update = false;
+
+		foreach ( self::SETTINGS as $setting_key => $schema ) {
+			if ( ! array_key_exists( $setting_key, $updates ) || null === $updates[ $setting_key ] ) {
+				continue;
+			}
+
+			$settings[ $setting_key ] = $this->sanitize_setting_value( $setting_key, $updates[ $setting_key ] );
+			$has_update               = true;
+		}
+
+		if ( ! $has_update ) {
+			return [
+				'error' => 'No settings provided',
+			];
+		}
+
+		$normalized = $this->normalize_settings_array( $settings );
+		update_option( self::SETTINGS_OPTION, $normalized );
+
+		return [
+			'success'  => true,
+			'settings' => $normalized,
+		];
 	}
 
 	/**
-	 * Persist settings option.
-	 *
-	 * @param array<string,mixed> $settings Settings array.
-	 */
-	public function update_settings( array $settings ): void {
-		update_option( self::SETTINGS_OPTION, $settings );
-	}
-
-	/**
-	 * Get memory enabled flag.
-	 */
-	public function get_memory_enabled(): bool {
-		return (bool) get_option( self::MEMORY_ENABLED_OPTION, false );
-	}
-
-	/**
-	 * Persist memory enabled flag.
-	 *
-	 * @param bool $enabled Whether memory is enabled.
-	 */
-	public function set_memory_enabled( bool $enabled ): void {
-		update_option( self::MEMORY_ENABLED_OPTION, $enabled );
-	}
-
-	/**
-	 * Get execution user from fallback option.
-	 */
-	public function get_execution_user_id_option(): int {
-		$user_id = (int) get_option( self::EXECUTION_USER_OPTION, 0 );
-		return $user_id > 0 ? $user_id : 0;
-	}
-
-	/**
-	 * Persist execution user fallback option.
-	 *
-	 * @param int $user_id Execution user ID.
-	 */
-	public function set_execution_user_id_option( int $user_id ): void {
-		update_option( self::EXECUTION_USER_OPTION, clawpress_sanitize_int( $user_id ) );
-	}
-
-	/**
-	 * Resolve execution user from settings first and option fallback second.
+	 * Resolve configured execution user ID.
 	 *
 	 * @param array<string,mixed>|null $settings Optional settings array.
 	 */
 	public function resolve_execution_user_id( ?array $settings = null ): int {
-		$settings         = is_array( $settings ) ? $settings : $this->get_settings();
-		$settings_user_id = isset( $settings['execution_user_id'] )
-			? clawpress_sanitize_int( $settings['execution_user_id'] )
-			: 0;
-		if ( $settings_user_id > 0 ) {
-			return $settings_user_id;
-		}
-
-		return $this->get_execution_user_id_option();
+		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
+		return (int) $settings['execution_user_id'];
 	}
 
 	/**
-	 * Update a legacy named setting.
+	 * Get memory enabled flag.
 	 *
-	 * @param string $option_name Setting option name.
-	 * @param mixed  $option_value Setting value.
+	 * @param array<string,mixed>|null $settings Optional settings array.
+	 */
+	public function get_memory_enabled( ?array $settings = null ): bool {
+		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
+		return (bool) $settings['memory_enabled'];
+	}
+
+	/**
+	 * Get onboarding completed flag.
+	 *
+	 * @param array<string,mixed>|null $settings Optional settings array.
+	 */
+	public function get_onboarding_completed( ?array $settings = null ): bool {
+		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
+		return (bool) $settings['onboarding_completed'];
+	}
+
+	/**
+	 * Normalize a settings array.
+	 *
+	 * @param array<string,mixed> $settings Raw settings.
 	 * @return array<string,mixed>
 	 */
-	public function update_named_setting( string $option_name, $option_value ): array {
-		if ( ! $this->is_valid_named_setting( $option_name ) ) {
-			return [
-				'error' => 'Invalid option name',
-			];
+	private function normalize_settings_array( array $settings ): array {
+		$normalized = $this->get_default_settings();
+
+		foreach ( self::SETTINGS as $setting_key => $schema ) {
+			if ( ! array_key_exists( $setting_key, $settings ) ) {
+				continue;
+			}
+
+			$normalized[ $setting_key ] = $this->sanitize_setting_value( $setting_key, $settings[ $setting_key ] );
 		}
 
-		if ( self::ONBOARDING_OPTION === $option_name ) {
-			$normalized = clawpress_sanitize_boolean( $option_value );
-			Onboarding_Helper::get_instance()->set_onboarding_complete( $normalized );
-
-			return [
-				'success' => true,
-				'option'  => $option_name,
-				'value'   => $normalized,
-			];
-		}
-
-		if ( self::EXECUTION_USER_OPTION === $option_name ) {
-			$normalized = clawpress_sanitize_int( $option_value );
-			$this->set_execution_user_id_option( $normalized );
-
-			$settings                      = $this->get_settings();
-			$settings['execution_user_id'] = $normalized;
-			$this->update_settings( $settings );
-
-			return [
-				'success' => true,
-				'option'  => $option_name,
-				'value'   => $normalized,
-			];
-		}
-
-		if ( self::MEMORY_ENABLED_OPTION === $option_name ) {
-			$normalized = clawpress_sanitize_boolean( $option_value );
-			$this->set_memory_enabled( $normalized );
-
-			return [
-				'success' => true,
-				'option'  => $option_name,
-				'value'   => $normalized,
-			];
-		}
-
-		$normalized = $this->normalize_settings_option_value( $option_value );
-		update_option( self::SETTINGS_OPTION, $normalized );
-
-		return [
-			'success' => true,
-			'option'  => $option_name,
-			'value'   => $normalized,
-		];
+		return $normalized;
 	}
 
 	/**
-	 * Whether a named setting can be updated by the legacy endpoint path.
+	 * Get default settings values.
 	 *
-	 * @param string $option_name Option name.
+	 * @return array<string,mixed>
 	 */
-	private function is_valid_named_setting( string $option_name ): bool {
-		$allowed_options = [
-			self::SETTINGS_OPTION,
-			self::MEMORY_ENABLED_OPTION,
-			self::EXECUTION_USER_OPTION,
-			self::ONBOARDING_OPTION,
-		];
+	private function get_default_settings(): array {
+		$defaults = [];
 
-		return in_array( $option_name, $allowed_options, true );
+		foreach ( self::SETTINGS as $setting_key => $schema ) {
+			$defaults[ $setting_key ] = $schema['default'];
+		}
+
+		return $defaults;
 	}
 
 	/**
-	 * Normalize a value for the main settings option.
+	 * Sanitize a setting value using the configured schema callback.
 	 *
-	 * @param mixed $value Raw value.
+	 * @param string $setting_key Setting key.
+	 * @param mixed  $value Raw value.
 	 * @return mixed
 	 */
-	private function normalize_settings_option_value( $value ) {
-		if ( ! is_array( $value ) ) {
-			return $value;
-		}
-
-		if ( isset( $value['provider'] ) ) {
-			$value['provider'] = clawpress_sanitize_provider( $value['provider'] );
-		}
-
-		if ( isset( $value['model'] ) ) {
-			$value['model'] = sanitize_text_field( (string) $value['model'] );
-		}
-
-		if ( isset( $value['execution_user_id'] ) ) {
-			$value['execution_user_id'] = clawpress_sanitize_int( $value['execution_user_id'] );
-			$this->set_execution_user_id_option( $value['execution_user_id'] );
-		}
-
-		return $value;
+	private function sanitize_setting_value( string $setting_key, $value ) {
+		$schema = self::SETTINGS[ $setting_key ];
+		return call_user_func( $schema['sanitize'], $value );
 	}
 }

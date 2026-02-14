@@ -50,6 +50,6 @@ final class Status_Controller implements Route_Controller {
 	 * Return deterministic plugin status envelope.
 	 */
 	public function get_status(): \WP_REST_Response {
-		return new \WP_REST_Response( $this->status_helper->build_status_payload(), 200 );
+		return new \WP_REST_Response( $this->status_helper->get_current_status(), 200 );
 	}
 }

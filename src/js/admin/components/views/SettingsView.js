@@ -82,25 +82,25 @@ export default function SettingsView() {
 					return;
 				}
 
-				const statusSettings = data?.status_settings || {};
+				const settings = data?.settings || {};
 				setProvider(
-					typeof statusSettings.provider === 'string'
-						? statusSettings.provider
+					typeof settings.provider === 'string'
+						? settings.provider
 						: ''
 				);
 				setModel(
-					typeof statusSettings.model === 'string'
-						? statusSettings.model
+					typeof settings.model === 'string'
+						? settings.model
 						: ''
 				);
 				setExecutionUserId(
-					Number.isFinite( Number( statusSettings.execution_user_id ) )
-						? Number( statusSettings.execution_user_id )
+					Number.isFinite( Number( settings.execution_user_id ) )
+						? Number( settings.execution_user_id )
 						: 0
 				);
-				setMemoryEnabled( Boolean( statusSettings.memory_enabled ) );
+				setMemoryEnabled( Boolean( settings.memory_enabled ) );
 				setOnboardingCompleted(
-					Boolean( statusSettings.onboarding_completed )
+					Boolean( settings.onboarding_completed )
 				);
 			} catch ( e ) {
 				if ( ! mounted ) {

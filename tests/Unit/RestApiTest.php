@@ -66,23 +66,29 @@ final class RestApiTest extends TestCase {
 
 	public function test_get_settings_returns_current_option_value(): void {
 		$settings_controller                        = new Settings_Controller();
-		WordPress_Stubs::$options['clawpress_settings'] = 'saved-value';
+		WordPress_Stubs::$options['clawpress_settings'] = array(
+			'provider' => 'openai',
+			'model'    => 'gpt-4.1-mini',
+		);
 
 		$response = $settings_controller->get_settings();
 		$data     = $response->get_data();
 
 		$this->assertInstanceOf( \WP_REST_Response::class, $response );
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( 'saved-value', $data['clawpress_settings'] );
-		$this->assertArrayHasKey( 'status_settings', $data );
-		$this->assertArrayHasKey( 'provider', $data['status_settings'] );
-		$this->assertArrayHasKey( 'model', $data['status_settings'] );
-		$this->assertArrayHasKey( 'execution_user_id', $data['status_settings'] );
-		$this->assertArrayHasKey( 'memory_enabled', $data['status_settings'] );
-		$this->assertArrayHasKey( 'onboarding_completed', $data['status_settings'] );
+		$this->assertSame(
+			array(
+				'provider'             => 'openai',
+				'model'                => 'gpt-4.1-mini',
+				'execution_user_id'    => 0,
+				'memory_enabled'       => false,
+				'onboarding_completed' => false,
+			),
+			$data['settings']
+		);
 	}
 
-	public function test_update_settings_rejects_unknown_option(): void {
+	public function test_update_settings_rejects_legacy_option_payload(): void {
 		$settings_controller = new Settings_Controller();
 		$response            = $settings_controller->update_settings(
 			new \WP_REST_Request(
@@ -95,35 +101,12 @@ final class RestApiTest extends TestCase {
 
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame(
-			array( 'error' => 'Invalid option name' ),
+			array( 'error' => 'No settings provided' ),
 			$response->get_data()
 		);
 	}
 
-	public function test_update_settings_updates_allowed_option(): void {
-		$settings_controller = new Settings_Controller();
-		$response            = $settings_controller->update_settings(
-			new \WP_REST_Request(
-				array(
-					'option_name'  => 'clawpress_settings',
-					'option_value' => 'new-value',
-				)
-			)
-		);
-
-		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( 'new-value', WordPress_Stubs::$options['clawpress_settings'] );
-		$this->assertSame(
-			array(
-				'success' => true,
-				'option'  => 'clawpress_settings',
-				'value'   => 'new-value',
-			),
-				$response->get_data()
-		);
-	}
-
-	public function test_update_settings_updates_status_dependent_fields(): void {
+	public function test_update_settings_updates_payload_fields(): void {
 		$settings_controller = new Settings_Controller();
 		$response            = $settings_controller->update_settings(
 			new \WP_REST_Request(
@@ -140,14 +123,18 @@ final class RestApiTest extends TestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( true, $data['success'] );
-		$this->assertSame( 'openai', $data['status_settings']['provider'] );
-		$this->assertSame( 'gpt-4.1-mini', $data['status_settings']['model'] );
-		$this->assertSame( 12, $data['status_settings']['execution_user_id'] );
-		$this->assertSame( true, $data['status_settings']['memory_enabled'] );
+		$this->assertSame( 'openai', $data['settings']['provider'] );
+		$this->assertSame( 'gpt-4.1-mini', $data['settings']['model'] );
+		$this->assertSame( 12, $data['settings']['execution_user_id'] );
+		$this->assertSame( true, $data['settings']['memory_enabled'] );
+		$this->assertSame( true, $data['settings']['onboarding_completed'] );
 		$this->assertSame( 'openai', WordPress_Stubs::$options['clawpress_settings']['provider'] );
-		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_execution_user_id'] );
-		$this->assertSame( true, WordPress_Stubs::$options['clawpress_memory_enabled'] );
-		$this->assertSame( '1', WordPress_Stubs::$user_meta[1]['clawpress_onboarding_completed'] );
+		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_settings']['execution_user_id'] );
+		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['memory_enabled'] );
+		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['onboarding_completed'] );
+		$this->assertArrayNotHasKey( 'clawpress_execution_user_id', WordPress_Stubs::$options );
+		$this->assertArrayNotHasKey( 'clawpress_memory_enabled', WordPress_Stubs::$options );
+		$this->assertArrayNotHasKey( 1, WordPress_Stubs::$user_meta );
 	}
 
 	public function test_update_settings_rejects_empty_payload(): void {
@@ -272,18 +259,25 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'clawpress_check_permissions', $status_routes[0]['args']['permission_callback'] );
 	}
 
-	public function test_status_endpoint_returns_required_envelope_keys(): void {
+	public function test_status_endpoint_returns_offline_by_default(): void {
 		$status_controller = new Status_Controller();
 		$response          = $status_controller->get_status();
 		$data              = $response->get_data();
 
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertArrayHasKey( 'mode', $data );
-		$this->assertArrayHasKey( 'provider', $data );
-		$this->assertArrayHasKey( 'model', $data );
-		$this->assertArrayHasKey( 'onboarding', $data );
-		$this->assertArrayHasKey( 'memory', $data );
-		$this->assertArrayHasKey( 'execution_user', $data );
+		$this->assertSame( array( 'mode' => 'offline' ), $data );
+	}
+
+	public function test_status_endpoint_returns_online_when_provider_and_model_configured(): void {
+		WordPress_Stubs::$options['clawpress_settings'] = array(
+			'provider' => 'openai',
+			'model'    => 'gpt-4.1-mini',
+		);
+		$status_controller = new Status_Controller();
+		$response          = $status_controller->get_status();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'mode' => 'online' ), $response->get_data() );
 	}
 
 	public function test_panel_state_routes_use_global_manage_options_permission_callback(): void {
