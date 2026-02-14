@@ -46,13 +46,22 @@ final class RestApiTest extends TestCase {
 		$this->assertContains( '/chat/history:GET', $routes );
 	}
 
-	public function test_settings_permissions_check_uses_manage_options_capability(): void {
-		$settings_controller                    = new Settings_Controller();
-		WordPress_Stubs::$can_manage_options = false;
-		$this->assertFalse( $settings_controller->permissions_check() );
+	public function test_settings_routes_use_global_manage_options_permission_callback(): void {
+		$settings_controller = new Settings_Controller();
+		$settings_controller->register_routes();
 
-		WordPress_Stubs::$can_manage_options = true;
-		$this->assertTrue( $settings_controller->permissions_check() );
+		$settings_routes = array_values(
+			array_filter(
+				WordPress_Stubs::$rest_routes,
+				static function ( array $route ): bool {
+					return '/settings' === $route['route'];
+				}
+			)
+		);
+
+		$this->assertCount( 2, $settings_routes );
+		$this->assertSame( 'clawpress_check_permissions', $settings_routes[0]['args']['permission_callback'] );
+		$this->assertSame( 'clawpress_check_permissions', $settings_routes[1]['args']['permission_callback'] );
 	}
 
 	public function test_get_settings_returns_current_option_value(): void {
@@ -149,13 +158,22 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( array( 'error' => 'No settings provided' ), $response->get_data() );
 	}
 
-	public function test_chat_permissions_check_uses_manage_options_capability(): void {
-		$chat_controller                        = new Chat_Controller();
-		WordPress_Stubs::$can_manage_options = false;
-		$this->assertFalse( $chat_controller->permissions_check() );
+	public function test_chat_routes_use_global_manage_options_permission_callback(): void {
+		$chat_controller = new Chat_Controller();
+		$chat_controller->register_routes();
 
-		WordPress_Stubs::$can_manage_options = true;
-		$this->assertTrue( $chat_controller->permissions_check() );
+		$chat_routes = array_values(
+			array_filter(
+				WordPress_Stubs::$rest_routes,
+				static function ( array $route ): bool {
+					return in_array( $route['route'], [ '/chat/message', '/chat/history' ], true );
+				}
+			)
+		);
+
+		$this->assertCount( 2, $chat_routes );
+		$this->assertSame( 'clawpress_check_permissions', $chat_routes[0]['args']['permission_callback'] );
+		$this->assertSame( 'clawpress_check_permissions', $chat_routes[1]['args']['permission_callback'] );
 	}
 
 	public function test_chat_send_message_returns_message_and_reply(): void {
@@ -237,13 +255,21 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'Echo: Persist me', $history_data['items'][1]['content'] );
 	}
 
-	public function test_status_permissions_check_uses_manage_options_capability(): void {
-		$status_controller                    = new Status_Controller();
-		WordPress_Stubs::$can_manage_options = false;
-		$this->assertFalse( $status_controller->permissions_check() );
+	public function test_status_route_uses_global_manage_options_permission_callback(): void {
+		$status_controller = new Status_Controller();
+		$status_controller->register_routes();
 
-		WordPress_Stubs::$can_manage_options = true;
-		$this->assertTrue( $status_controller->permissions_check() );
+		$status_routes = array_values(
+			array_filter(
+				WordPress_Stubs::$rest_routes,
+				static function ( array $route ): bool {
+					return '/status' === $route['route'];
+				}
+			)
+		);
+
+		$this->assertCount( 1, $status_routes );
+		$this->assertSame( 'clawpress_check_permissions', $status_routes[0]['args']['permission_callback'] );
 	}
 
 	public function test_status_endpoint_returns_required_envelope_keys(): void {
@@ -260,13 +286,22 @@ final class RestApiTest extends TestCase {
 		$this->assertArrayHasKey( 'execution_user', $data );
 	}
 
-	public function test_panel_state_permissions_check_uses_manage_options_capability(): void {
-		$panel_state_controller               = new Panel_State_Controller();
-		WordPress_Stubs::$can_manage_options = false;
-		$this->assertFalse( $panel_state_controller->permissions_check() );
+	public function test_panel_state_routes_use_global_manage_options_permission_callback(): void {
+		$panel_state_controller = new Panel_State_Controller();
+		$panel_state_controller->register_routes();
 
-		WordPress_Stubs::$can_manage_options = true;
-		$this->assertTrue( $panel_state_controller->permissions_check() );
+		$panel_routes = array_values(
+			array_filter(
+				WordPress_Stubs::$rest_routes,
+				static function ( array $route ): bool {
+					return '/panel/state' === $route['route'];
+				}
+			)
+		);
+
+		$this->assertCount( 2, $panel_routes );
+		$this->assertSame( 'clawpress_check_permissions', $panel_routes[0]['args']['permission_callback'] );
+		$this->assertSame( 'clawpress_check_permissions', $panel_routes[1]['args']['permission_callback'] );
 	}
 
 	public function test_panel_state_update_and_get_round_trip(): void {

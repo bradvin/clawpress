@@ -31,7 +31,7 @@ final class Panel {
 	public function enqueue_assets( string $hook_suffix ): void {
 		unset( $hook_suffix );
 
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! clawpress_check_permissions() ) {
 			return;
 		}
 
@@ -97,7 +97,7 @@ final class Panel {
 	 * @param \WP_Admin_Bar $wp_admin_bar Admin bar object.
 	 */
 	public function register_admin_bar_toggle( \WP_Admin_Bar $wp_admin_bar ): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! clawpress_check_permissions() ) {
 			return;
 		}
 

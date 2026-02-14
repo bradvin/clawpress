@@ -1,0 +1,133 @@
+<?php
+/**
+ * Chat history helper.
+ *
+ * @package ClawPress
+ */
+
+declare( strict_types=1 );
+
+namespace ClawPress\Helpers;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Per-user chat history helper.
+ */
+final class Chat_History_Helper {
+	/**
+	 * Maximum number of persisted history items.
+	 */
+	private const HISTORY_LIMIT = 50;
+
+	/**
+	 * Singleton instance.
+	 *
+	 * @var ?self
+	 */
+	private static ?self $instance = null;
+
+	/**
+	 * Constructor.
+	 */
+	private function __construct() {}
+
+	/**
+	 * Get singleton instance.
+	 */
+	public static function get_instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
+
+	/**
+	 * Get normalized history items for a user.
+	 *
+	 * @param int|null $user_id User ID.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function get_history_items( ?int $user_id = null ): array {
+		$items = get_option( $this->get_history_option_key( $user_id ), [] );
+		if ( ! is_array( $items ) ) {
+			return [];
+		}
+
+		$normalized = [];
+		foreach ( $items as $index => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$normalized[] = $this->normalize_history_item( $item, (int) $index );
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Append a message to a user's history.
+	 *
+	 * @param string   $role Message role.
+	 * @param string   $content Message content.
+	 * @param int|null $user_id User ID.
+	 */
+	public function append_history_message( string $role, string $content, ?int $user_id = null ): void {
+		$items      = $this->get_history_items( $user_id );
+		$created_at = (int) round( microtime( true ) * 1000 );
+
+		$items[] = [
+			'id'        => sprintf( 'msg-%d-%d', $created_at, count( $items ) + 1 ),
+			'role'      => $role,
+			'content'   => $content,
+			'createdAt' => $created_at,
+		];
+
+		if ( count( $items ) > self::HISTORY_LIMIT ) {
+			$items = array_slice( $items, -self::HISTORY_LIMIT );
+		}
+
+		update_option( $this->get_history_option_key( $user_id ), $items );
+	}
+
+	/**
+	 * Build the option key for a user's history.
+	 *
+	 * @param int|null $user_id User ID.
+	 */
+	private function get_history_option_key( ?int $user_id = null ): string {
+		$resolved_user_id = null === $user_id ? get_current_user_id() : $user_id;
+		return sprintf( 'clawpress_chat_history_%d', $resolved_user_id );
+	}
+
+	/**
+	 * Normalize one persisted history item.
+	 *
+	 * @param array<string,mixed> $item Raw item.
+	 * @param int                 $index Item index.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_history_item( array $item, int $index ): array {
+		$role = isset( $item['role'] ) && is_string( $item['role'] ) ? $item['role'] : 'system';
+		if ( ! in_array( $role, [ 'user', 'assistant', 'system' ], true ) ) {
+			$role = 'system';
+		}
+
+		$content = isset( $item['content'] ) ? (string) $item['content'] : '';
+		$created = isset( $item['createdAt'] ) && is_numeric( $item['createdAt'] )
+			? (int) $item['createdAt']
+			: $index + 1;
+		$id      = isset( $item['id'] ) && is_string( $item['id'] ) && '' !== $item['id']
+			? $item['id']
+			: sprintf( 'msg-%d-%d', $created, $index );
+
+		return [
+			'id'        => $id,
+			'role'      => $role,
+			'content'   => $content,
+			'createdAt' => $created,
+		];
+	}
+}

@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace ClawPress\RestAPI\Controllers;
 
+use ClawPress\Helpers\Panel_Helper;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -16,9 +18,18 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Panel_State_Controller implements Route_Controller {
 	/**
-	 * User meta key for persisted panel state.
+	 * Panel helper.
+	 *
+	 * @var Panel_Helper
 	 */
-	private const USER_META_KEY = 'clawpress_panel_state';
+	private Panel_Helper $panel_helper;
+
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		$this->panel_helper = Panel_Helper::get_instance();
+	}
 
 	/**
 	 * Register panel state endpoints.
@@ -30,7 +41,7 @@ final class Panel_State_Controller implements Route_Controller {
 			[
 				'methods'             => 'GET',
 				'callback'            => [ $this, 'get_panel_state' ],
-				'permission_callback' => [ $this, 'permissions_check' ],
+				'permission_callback' => 'clawpress_check_permissions',
 			]
 		);
 
@@ -40,11 +51,11 @@ final class Panel_State_Controller implements Route_Controller {
 			[
 				'methods'             => 'POST',
 				'callback'            => [ $this, 'update_panel_state' ],
-				'permission_callback' => [ $this, 'permissions_check' ],
+				'permission_callback' => 'clawpress_check_permissions',
 				'args'                => [
 					'open'            => [
 						'required'          => false,
-						'sanitize_callback' => [ $this, 'sanitize_boolean' ],
+						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
 					'width'           => [
 						'required'          => false,
@@ -61,21 +72,10 @@ final class Panel_State_Controller implements Route_Controller {
 	}
 
 	/**
-	 * Validate endpoint permissions.
-	 */
-	public function permissions_check(): bool {
-		return current_user_can( 'manage_options' );
-	}
-
-	/**
 	 * Return panel state for current user.
 	 */
 	public function get_panel_state(): \WP_REST_Response {
-		$state = $this->normalize_panel_state(
-			get_user_meta( get_current_user_id(), self::USER_META_KEY, true )
-		);
-
-		return new \WP_REST_Response( $state, 200 );
+		return new \WP_REST_Response( $this->panel_helper->get_panel_state(), 200 );
 	}
 
 	/**
@@ -84,26 +84,24 @@ final class Panel_State_Controller implements Route_Controller {
 	 * @param \WP_REST_Request $request Request object.
 	 */
 	public function update_panel_state( \WP_REST_Request $request ): \WP_REST_Response {
-		$state = $this->normalize_panel_state(
-			get_user_meta( get_current_user_id(), self::USER_META_KEY, true )
-		);
+		$state_updates = [];
 
 		$open = $request->get_param( 'open' );
 		if ( null !== $open ) {
-			$state['open'] = $this->sanitize_boolean( $open );
+			$state_updates['open'] = $open;
 		}
 
 		$width = $request->get_param( 'width' );
 		if ( null !== $width ) {
-			$state['width'] = $this->sanitize_width( $width );
+			$state_updates['width'] = $width;
 		}
 
 		$last_history_id = $request->get_param( 'last_history_id' );
 		if ( null !== $last_history_id ) {
-			$state['last_history_id'] = sanitize_text_field( (string) $last_history_id );
+			$state_updates['last_history_id'] = $last_history_id;
 		}
 
-		update_user_meta( get_current_user_id(), self::USER_META_KEY, $state );
+		$state = $this->panel_helper->update_panel_state( $state_updates );
 
 		return new \WP_REST_Response( $state, 200 );
 	}
@@ -114,25 +112,7 @@ final class Panel_State_Controller implements Route_Controller {
 	 * @param mixed $value Width value.
 	 */
 	public function validate_width( $value ): bool {
-		if ( ! is_numeric( $value ) ) {
-			return false;
-		}
-
-		$width = (int) $value;
-		return $width >= 280 && $width <= 1200;
-	}
-
-	/**
-	 * Sanitize boolean value.
-	 *
-	 * @param mixed $value Value.
-	 */
-	public function sanitize_boolean( $value ): bool {
-		if ( is_bool( $value ) ) {
-			return $value;
-		}
-
-		return in_array( strtolower( (string) $value ), [ '1', 'true', 'yes', 'on' ], true );
+		return $this->panel_helper->validate_width( $value );
 	}
 
 	/**
@@ -141,38 +121,6 @@ final class Panel_State_Controller implements Route_Controller {
 	 * @param mixed $value Width value.
 	 */
 	public function sanitize_width( $value ): int {
-		$width = (int) $value;
-		if ( $width < 320 ) {
-			return 320;
-		}
-		if ( $width > 960 ) {
-			return 960;
-		}
-
-		return $width;
-	}
-
-	/**
-	 * Normalize persisted state with defaults.
-	 *
-	 * @param mixed $state Raw state value.
-	 * @return array<string,mixed>
-	 */
-	private function normalize_panel_state( $state ): array {
-		$defaults = [
-			'open'            => false,
-			'width'           => 420,
-			'last_history_id' => '',
-		];
-
-		if ( ! is_array( $state ) ) {
-			return $defaults;
-		}
-
-		return [
-			'open'            => isset( $state['open'] ) ? $this->sanitize_boolean( $state['open'] ) : $defaults['open'],
-			'width'           => isset( $state['width'] ) ? $this->sanitize_width( $state['width'] ) : $defaults['width'],
-			'last_history_id' => isset( $state['last_history_id'] ) ? sanitize_text_field( (string) $state['last_history_id'] ) : '',
-		];
+		return $this->panel_helper->sanitize_width( $value );
 	}
 }

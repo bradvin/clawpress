@@ -19,6 +19,8 @@ define( 'CLAWPRESS_FILE', __FILE__ );
 define( 'CLAWPRESS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CLAWPRESS_URL', plugin_dir_url( __FILE__ ) );
 
+require_once CLAWPRESS_DIR . 'includes/functions.php';
+
 // Jetpack autoloader for Composer packages (preferred over default Composer loader).
 if ( file_exists( CLAWPRESS_DIR . 'vendor/autoload_packages.php' ) ) {
 	require_once CLAWPRESS_DIR . 'vendor/autoload_packages.php';

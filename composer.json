@@ -17,6 +17,9 @@
 	"autoload": {
 		"classmap": [
 			"includes/"
+		],
+		"files": [
+			"includes/functions.php"
 		]
 	},
 	"config": {
