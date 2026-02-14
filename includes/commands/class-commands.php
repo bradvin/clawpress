@@ -98,7 +98,7 @@ final class Commands {
 				false,
 				false,
 				[],
-				$this->get_help_suggestions()
+				[ '/help' ]
 			);
 		}
 
@@ -108,7 +108,7 @@ final class Commands {
 		}
 
 		return Command_Response::error(
-			trim( $response->get_text() ) . "\n\n" . $this->get_help_text(),
+			'🚨 ' . trim( $response->get_text() ),
 			$response->get_command(),
 			$response->is_destructive(),
 			$response->requires_confirmation(),
@@ -123,11 +123,6 @@ final class Commands {
 	 * Build help text fallback.
 	 */
 	private function get_help_text(): string {
-		$handler = $this->registry->get_handler( '/help' );
-		if ( $handler instanceof Help_Command_Handler ) {
-			return $handler->build_help_text();
-		}
-
 		return 'Use `/help` to view available commands.';
 	}
 

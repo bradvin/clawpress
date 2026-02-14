@@ -120,10 +120,11 @@ final class Chat_Controller implements Route_Controller {
 			? $reply_payload['command']
 			: [];
 		$clear_history_effect = isset( $command_meta['effects']['clear_history'] ) && true === $command_meta['effects']['clear_history'];
+		$is_command_response  = [] !== $command_meta;
 
 		if ( ! $clear_history_effect ) {
 			$this->history_helper->append_history_message( 'user', $message );
-			$this->history_helper->append_history_message( 'assistant', $reply );
+			$this->history_helper->append_history_message( $is_command_response ? 'system' : 'assistant', $reply );
 		}
 
 		return new \WP_REST_Response(

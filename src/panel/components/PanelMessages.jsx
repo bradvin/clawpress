@@ -1,3 +1,4 @@
+import { useEffect, useRef } from '@wordpress/element';
 import ToolDialog from './ToolDialog';
 import { getToolPolicy } from '../utils/toolDialogRenderers';
 const PanelMessages = ({
@@ -9,6 +10,14 @@ const PanelMessages = ({
   onRunToolDialog,
   onCancelToolDialog,
 }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [messages, toolDialogs, streaming, currentStreamText, waitingForResponse]);
+
   const serialCandidates = toolDialogs
     .filter(
       (dialog) =>
@@ -35,7 +44,7 @@ const PanelMessages = ({
   ].sort((a, b) => a.createdAt - b.createdAt);
 
   return (
-    <div className="clawpress-messages">
+    <div className="clawpress-messages" ref={containerRef}>
       {items.map((item) =>
         item.type === 'message' ? (() => {
           const isSystem = item.data.role === 'system';
@@ -51,6 +60,7 @@ const PanelMessages = ({
               key={item.data.id || item.data.content}
               className={`clawpress-msg clawpress-${item.data.role}`}
             >
+              {isSystem ? <div className="clawpress-msg-label">System</div> : null}
               <div
                 className={`clawpress-msg-content${showThinking ? ' clawpress-thinking' : ''}`}
               >

@@ -77,12 +77,12 @@ final class Status_Command_Handler implements Command_Handler {
 	public function handle( Command_Request $request ): Command_Response {
 		if ( '' !== $request->get_argument( 0 ) ) {
 			return Command_Response::error(
-				sprintf( 'Invalid usage. Expected: `%s`', $this->get_usage() ),
+				'Invalid usage. No arguments expected.',
 				$this->get_command(),
 				false,
 				false,
 				[],
-				[ '/status', '/help' ]
+				[ '/status' ]
 			);
 		}
 
@@ -94,9 +94,7 @@ final class Status_Command_Handler implements Command_Handler {
 			sprintf( '- Model: %s', (string) ( $status['model']['id'] ?? 'not configured' ) ),
 			sprintf( '- Memory enabled: %s', ! empty( $status['memory']['enabled'] ) ? 'yes' : 'no' ),
 			sprintf( '- Execution user configured: %s', ! empty( $status['execution_user']['configured'] ) ? 'yes' : 'no' ),
-			sprintf( '- Onboarding completed: %s', ! empty( $status['onboarding']['completed'] ) ? 'yes' : 'no' ),
-			sprintf( '- Permissions (manage_options): %s', ! empty( $status['permissions']['can_manage_options'] ) ? 'yes' : 'no' ),
-			sprintf( '- Plugin version: %s', (string) ( $status['plugin']['version'] ?? 'unknown' ) ),
+			sprintf( '- Onboarding completed: %s', ! empty( $status['onboarding']['completed'] ) ? 'yes' : 'no' )
 		];
 		$suggestions = 'offline' === (string) ( $status['mode'] ?? 'offline' )
 			? [ '/help', '/onboarding resume', '/site info', '/tools list', '/clear' ]

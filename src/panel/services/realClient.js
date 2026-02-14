@@ -91,8 +91,13 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
         const reply =
           typeof response?.reply === 'string' ? response.reply.trim() : '';
 
+        const isCommandResponse = Boolean(response?.meta?.command?.name);
+
         if (reply) {
-          onEvent('delta', { text: reply });
+          onEvent('response_message', {
+            text: reply,
+            role: isCommandResponse ? 'system' : 'assistant',
+          });
         }
 
         onDone?.({ aborted: false });

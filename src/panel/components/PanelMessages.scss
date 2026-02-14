@@ -24,6 +24,14 @@
   border: 1px solid var(--fp-border);
 }
 
+.clawpress-msg-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fp-muted);
+  margin-bottom: 4px;
+}
+
 .clawpress-msg.clawpress-user .clawpress-msg-content {
   background: var(--fp-user-bg);
 }
@@ -40,7 +48,18 @@
   padding-right: 0;
 }
 
-.clawpress-msg.clawpress-system .clawpress-msg-content,
+.clawpress-msg.clawpress-system {
+  align-self: stretch;
+}
+
+.clawpress-msg.clawpress-system .clawpress-msg-content {
+  background: var(--fp-system-bg);
+  border: 1px dashed var(--fp-border);
+  font-family: 'Courier New', Courier, monospace;
+  font-style: normal;
+  opacity: 1;
+}
+
 .clawpress-msg.clawpress-tool_planning .clawpress-msg-content {
   background: transparent;
   border: none;

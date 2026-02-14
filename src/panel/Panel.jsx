@@ -320,6 +320,14 @@ const Panel = () => {
           setCurrentStreamText(next);
         }
         break;
+      case 'response_message':
+        if (parsed?.text) {
+          appendMessage(
+            parsed?.role === 'system' ? 'system' : 'assistant',
+            parsed.text
+          );
+        }
+        break;
       case 'history_reset':
         setMessages([]);
         setToolDialogs([]);
@@ -421,11 +429,15 @@ const Panel = () => {
       const status = await buildClient().getStatus?.();
       if (status) {
         setStatusSnapshot(status);
-        setSuggestions(normalizeSuggestions(status?.suggestions));
+        setSuggestions((prev) => {
+          if (prev.length > 0) {
+            return prev;
+          }
+          return normalizeSuggestions(status?.suggestions);
+        });
       }
     } catch {
       setStatusSnapshot(null);
-      setSuggestions([]);
     } finally {
       setStatusLoading(false);
     }
@@ -457,11 +469,15 @@ const Panel = () => {
         if (!mounted) return;
 
         setStatusSnapshot(statusResponse || null);
-        setSuggestions(normalizeSuggestions(statusResponse?.suggestions));
+        setSuggestions((prev) => {
+          if (prev.length > 0) {
+            return prev;
+          }
+          return normalizeSuggestions(statusResponse?.suggestions);
+        });
       } catch {
         if (!mounted) return;
         setStatusSnapshot(null);
-        setSuggestions([]);
       } finally {
         if (mounted) {
           setStatusLoading(false);
