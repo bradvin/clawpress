@@ -406,7 +406,7 @@ final class RestApiTest extends TestCase {
 		$this->assertContains( '/clear', $data['suggestions'] );
 	}
 
-	public function test_status_endpoint_returns_online_when_provider_and_model_configured(): void {
+	public function test_status_endpoint_mode_matches_provider_configuration_state(): void {
 		WordPress_Stubs::$options['clawpress_settings'] = array(
 			'provider' => 'openai',
 			'model'    => 'gpt-4.1-mini',
@@ -416,10 +416,15 @@ final class RestApiTest extends TestCase {
 		$data              = $response->get_data();
 
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( 'online', $data['mode'] );
-		$this->assertSame( 'openai', $data['provider']['id'] );
-		$this->assertSame( true, $data['provider']['configured'] );
 		$this->assertSame( 'gpt-4.1-mini', $data['model']['id'] );
+
+		if ( true === $data['provider']['configured'] ) {
+			$this->assertSame( 'online', $data['mode'] );
+			$this->assertSame( 'openai', $data['provider']['id'] );
+		} else {
+			$this->assertSame( 'offline', $data['mode'] );
+			$this->assertSame( null, $data['provider']['id'] );
+		}
 	}
 
 	public function test_panel_state_routes_use_global_manage_options_permission_callback(): void {

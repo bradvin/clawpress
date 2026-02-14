@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use Throwable;
+use WordPress\AiClient\AiClient;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -32,6 +35,13 @@ final class Provider_Helper {
 	 * @var ?self
 	 */
 	private static ?self $instance = null;
+
+	/**
+	 * In-request provider configuration cache.
+	 *
+	 * @var array<string,bool>
+	 */
+	private array $provider_configuration_cache = [];
 
 	/**
 	 * Constructor.
@@ -69,7 +79,15 @@ final class Provider_Helper {
 		}
 
 		$provider = clawpress_sanitize_provider( $settings['provider'] );
-		return isset( self::PROVIDER_CREDENTIALS[ $provider ] ) ? $provider : '';
+		if ( '' === $provider || ! isset( self::PROVIDER_CREDENTIALS[ $provider ] ) ) {
+			return '';
+		}
+
+		if ( ! $this->has_provider_credentials( $provider ) ) {
+			return '';
+		}
+
+		return $this->is_provider_configured( $provider ) ? $provider : '';
 	}
 
 	/**
@@ -83,8 +101,12 @@ final class Provider_Helper {
 			return $provider;
 		}
 
-		foreach ( self::PROVIDER_CREDENTIALS as $candidate_provider => $credential_key ) {
-			if ( $this->has_credential( $credential_key ) ) {
+		foreach ( $this->get_registered_provider_ids() as $candidate_provider ) {
+			if ( ! $this->has_provider_credentials( $candidate_provider ) ) {
+				continue;
+			}
+
+			if ( $this->is_provider_configured( $candidate_provider ) ) {
 				return $candidate_provider;
 			}
 		}
@@ -111,11 +133,78 @@ final class Provider_Helper {
 	 * @param string $provider Provider ID.
 	 */
 	public function has_provider_credentials( string $provider ): bool {
+		$provider = clawpress_sanitize_provider( $provider );
+
 		if ( ! isset( self::PROVIDER_CREDENTIALS[ $provider ] ) ) {
 			return false;
 		}
 
 		return $this->has_credential( self::PROVIDER_CREDENTIALS[ $provider ] );
+	}
+
+	/**
+	 * Get registered provider IDs from AiClient.
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_registered_provider_ids(): array {
+		try {
+			$provider_ids = AiClient::defaultRegistry()->getRegisteredProviderIds();
+			if ( ! is_array( $provider_ids ) ) {
+				return array_keys( self::PROVIDER_CREDENTIALS );
+			}
+
+			$normalized_provider_ids = [];
+
+			foreach ( $provider_ids as $provider_id ) {
+				$normalized_provider_id = clawpress_sanitize_provider( $provider_id );
+				if ( '' === $normalized_provider_id ) {
+					continue;
+				}
+
+				$normalized_provider_ids[] = $normalized_provider_id;
+			}
+
+			return [] !== $normalized_provider_ids
+				? array_values( array_unique( $normalized_provider_ids ) )
+				: array_keys( self::PROVIDER_CREDENTIALS );
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return array_keys( self::PROVIDER_CREDENTIALS );
+		}
+	}
+
+	/**
+	 * Check whether a provider is configured through AiClient.
+	 *
+	 * @param string $provider Provider ID.
+	 */
+	private function is_provider_configured( string $provider ): bool {
+		if ( isset( $this->provider_configuration_cache[ $provider ] ) ) {
+			return $this->provider_configuration_cache[ $provider ];
+		}
+
+		if ( ! isset( self::PROVIDER_CREDENTIALS[ $provider ] ) ) {
+			$this->provider_configuration_cache[ $provider ] = false;
+			return false;
+		}
+
+		if ( ! $this->has_provider_credentials( $provider ) ) {
+			$this->provider_configuration_cache[ $provider ] = false;
+			return false;
+		}
+
+		$is_configured = false;
+
+		try {
+			$is_configured = AiClient::isConfigured( $provider );
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			$is_configured = false;
+		}
+
+		$this->provider_configuration_cache[ $provider ] = (bool) $is_configured;
+		return $this->provider_configuration_cache[ $provider ];
 	}
 
 	/**
