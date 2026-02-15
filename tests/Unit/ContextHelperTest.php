@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Tests\Unit;
 
+use ClawPress\Helpers\Agent_File_Helper;
 use ClawPress\Abilities\Abilities;
 use ClawPress\Helpers\Context_Helper;
 use ClawPress\Helpers\Memory_Helper;
@@ -94,5 +95,44 @@ final class ContextHelperTest extends TestCase {
 		$this->assertSame( 'model', $context['history_messages'][1]->getRole()->value );
 		$this->assertNotEmpty( $context['tool_declarations'] );
 		$this->assertInstanceOf( FunctionDeclaration::class, $context['tool_declarations'][0] );
+	}
+
+	public function test_build_messages_appends_bootstrap_requirement_before_first_assistant_response(): void {
+		update_option(
+			'clawpress_settings',
+			[
+				'setup_completed' => true,
+			]
+		);
+		Agent_File_Helper::get_instance()->upsert_file_by_logical_path(
+			'BOOTSTRAP.md',
+			'# BOOTSTRAP.md - First Run'
+		);
+
+		$helper = Context_Helper::get_instance();
+
+		$command_history = [
+			[
+				'role'    => 'user',
+				'content' => '/status',
+			],
+			[
+				'role'    => 'system',
+				'content' => 'Status output',
+			],
+		];
+
+		$messages = $helper->build_messages( $command_history, 'What now?' );
+		$this->assertStringContainsString( '## First-Run Requirement', (string) $messages[0]['content'] );
+
+		$assistant_history = [
+			[
+				'role'    => 'assistant',
+				'content' => 'Setup is complete.',
+			],
+		];
+
+		$messages = $helper->build_messages( $assistant_history, 'What now?' );
+		$this->assertStringNotContainsString( '## First-Run Requirement', (string) $messages[0]['content'] );
 	}
 }

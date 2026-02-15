@@ -167,6 +167,7 @@ final class Context_Helper {
 	): array {
 		$messages      = [];
 		$system_prompt = $this->build_system_prompt( $skill_names, $user_id );
+		$system_prompt = $this->append_first_run_bootstrap_requirement( $system_prompt, $history );
 
 		if ( null !== $channel && '' !== trim( $channel ) && null !== $chat_id && '' !== trim( $chat_id ) ) {
 			$system_prompt .= sprintf(
@@ -196,6 +197,51 @@ final class Context_Helper {
 		];
 
 		return $messages;
+	}
+
+	/**
+	 * Append an explicit bootstrap requirement before the first assistant response.
+	 *
+	 * Command/system history can exist before the first LLM turn, so this gate checks
+	 * for prior assistant responses instead of requiring an empty history.
+	 *
+	 * @param string                         $system_prompt System prompt text.
+	 * @param array<int,array<string,mixed>> $history Prior history rows.
+	 */
+	private function append_first_run_bootstrap_requirement( string $system_prompt, array $history ): string {
+		if ( $this->has_assistant_response_in_history( $history ) ) {
+			return $system_prompt;
+		}
+
+		$bootstrap_content = trim( $this->agent_file_helper->get_file_content_by_logical_path( 'BOOTSTRAP.md' ) );
+		if ( '' === $bootstrap_content ) {
+			return $system_prompt;
+		}
+
+		return $system_prompt . "\n\n## First-Run Requirement\n"
+			. 'No assistant response exists in this chat yet. Follow BOOTSTRAP.md first.'
+			. "\n"
+			. 'Continue setup steps before taking unrelated actions. If blocked, ask only for the next missing setup input.';
+	}
+
+	/**
+	 * Check whether history already contains an assistant/model response.
+	 *
+	 * @param array<int,array<string,mixed>> $history Prior history rows.
+	 */
+	private function has_assistant_response_in_history( array $history ): bool {
+		foreach ( $history as $history_item ) {
+			if ( ! is_array( $history_item ) ) {
+				continue;
+			}
+
+			$role = isset( $history_item['role'] ) ? strtolower( trim( (string) $history_item['role'] ) ) : '';
+			if ( in_array( $role, [ 'assistant', 'model' ], true ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
