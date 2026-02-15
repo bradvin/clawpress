@@ -5,8 +5,8 @@ This roadmap breaks `docs/clawpress-plugin-spec.md` and `docs/clawpress-agent-sp
 ## Order of Execution
 
 1. `docs/spec-1-foundation-chat-shell-and-status.md`
-2. `docs/spec-2-onboarding-execution-user-and-template-bootstrap.md`
-3. `docs/spec-3-offline-command-engine.md`
+2. `docs/spec-2-offline-command-engine.md`
+3. `docs/spec-3-setup.md`
 4. `docs/spec-4-provider-settings-and-online-agent-routing.md`
 5. `docs/spec-5-conversation-storage-and-memory.md`
 6. `docs/spec-6-abilities-tooling-and-action-execution.md`

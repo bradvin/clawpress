@@ -15,7 +15,7 @@ Provide deterministic chat commands with no external model dependency. Commands 
 - Offline command handlers:
   - `/help`
   - `/status`
-  - `/onboarding start|resume|reset`
+  - `/setup start|resume|reset`
   - `/memory list`
   - `/memory clear` (with confirmation)
   - `/site info`

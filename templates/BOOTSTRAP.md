@@ -2,12 +2,12 @@
 title: "BOOTSTRAP.md Template"
 summary: "First-run setup flow for ClawPress context files"
 read_when:
-  - Onboarding
+  - Setup
 ---
 
 # BOOTSTRAP.md - First Run
 
-Use this only during initial onboarding.
+Use this only during initial setup.
 
 ## Setup Steps
 
@@ -29,4 +29,4 @@ Use this only during initial onboarding.
 
 ## Completion
 
-When onboarding is complete, this file can be removed.
+When setup is complete, this file can be removed.

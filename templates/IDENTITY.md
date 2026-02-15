@@ -1,7 +1,7 @@
 ---
 summary: "Optional short identity profile"
 read_when:
-  - Onboarding (optional)
+  - Setup (optional)
 ---
 
 # IDENTITY.md - Short Identity Profile

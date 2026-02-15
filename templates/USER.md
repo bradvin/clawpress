@@ -1,7 +1,7 @@
 ---
 summary: "User profile record"
 read_when:
-  - Onboarding
+  - Setup
   - Session start
 ---
 

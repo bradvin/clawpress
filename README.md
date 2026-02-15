@@ -37,7 +37,7 @@ Current `wp-admin` MVP features implemented in this plugin:
   - `GET /wp-json/clawpress/v1/chat/history`
 - Status contract endpoint:
   - `GET /wp-json/clawpress/v1/status`
-  - Envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `agent_user`
+  - Envelope keys: `mode`, `provider`, `model`, `setup`, `memory`, `agent_user`
 - Panel state persistence endpoint (per-user):
   - `GET /wp-json/clawpress/v1/panel/state`
   - `POST /wp-json/clawpress/v1/panel/state`
@@ -177,4 +177,4 @@ export const fields = [
 
 - Spec 1 in-scope MVP work is implemented in code.
 - Unit-level coverage includes routes, status/controller permission checks, and panel-state round trip.
-- Remaining work is mostly from later specs (tool runtime depth, richer onboarding/memory workflows, and broader integration/manual verification).
+- Remaining work is mostly from later specs (tool runtime depth, richer setup/memory workflows, and broader integration/manual verification).

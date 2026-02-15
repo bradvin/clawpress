@@ -2,7 +2,7 @@
 title: "SOUL.md Template"
 summary: "Core behavior and boundaries for ClawPress"
 read_when:
-  - Onboarding
+  - Setup
   - Session start
 ---
 

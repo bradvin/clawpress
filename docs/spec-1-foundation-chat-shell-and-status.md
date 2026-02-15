@@ -20,7 +20,7 @@ Upgrade the existing floating chat panel implementation so it becomes the stable
 ## In Scope
 
 - Changes to the existing panel shell and interaction model (not a new shell).
-- `GET /clawpress/v1/status` endpoint with deterministic mode/provider/onboarding summary.
+- `GET /clawpress/v1/status` endpoint with deterministic mode/provider/setup summary.
 - API alignment between panel client and currently registered REST routes.
 - Persistent panel state for open/closed, width, and last-used thread/history pointer.
 - Capability-gated panel visibility on all admin pages.
@@ -41,7 +41,7 @@ Upgrade the existing floating chat panel implementation so it becomes the stable
 2. REST endpoint
 - Add `GET /status` through existing controller architecture (`includes/class-rest-api.php` + route controller class).
 - Add strict args and `permission_callback`.
-- Return stable envelope keys: `mode`, `provider`, `model`, `onboarding`, `memory`, `agent_user`.
+- Return stable envelope keys: `mode`, `provider`, `model`, `setup`, `memory`, `agent_user`.
 
 3. Existing panel API alignment
 - Decide one MVP transport path and align both sides:

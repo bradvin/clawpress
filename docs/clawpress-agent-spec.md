@@ -13,7 +13,7 @@ This document defines how ClawPress should implement an agent using the same ste
 
 Primary objective: ship a practical, secure, in-admin WordPress agent that is useful from day 1 and grows in capability by levels.
 
-Execution model requirement: all agent actions that read/write WordPress state must execute as a selected WordPress agent user (chosen during onboarding), not as the requesting chat user. This agent user should default to a dedicated low-permission account.
+Execution model requirement: all agent actions that read/write WordPress state must execute as a selected WordPress agent user (chosen during setup), not as the requesting chat user. This agent user should default to a dedicated low-permission account.
 
 File model requirement: all file lookups run through built-in `file_read` tool semantics: resolve `agent-file` CPT first, then fallback scan in the resolved workspace under uploads.
 
@@ -31,14 +31,14 @@ WordPress implementation:
 2. Support MVP commands from plugin spec:
    - `/help`
    - `/status`
-   - `/onboarding start|resume|reset`
+   - `/setup start|resume|reset`
    - `/memory list`
    - `/memory clear` (with confirmation)
    - `/site info`
    - `/tools list`
 3. Return deterministic responses generated locally (no API calls).
 4. Show clear `Offline` status in `StatusBadge`.
-5. Onboarding must include an execution-user selection step:
+5. Setup must include an execution-user selection step:
    - choose existing user or create/select dedicated service user
    - recommend lower-privilege role by default
    - block mutating agent actions until selection is completed
@@ -282,7 +282,7 @@ Definition of done:
 1. Message enters `POST /chat/message`.
 2. Policy gate checks capability + nonce + rate limit.
 3. Resolve agent user for site/thread context.
-4. If agent user is missing, allow read-only chat/status/onboarding and return setup-required for mutating requests.
+4. If agent user is missing, allow read-only chat/status/setup and return setup-required for mutating requests.
 5. Router selects mode:
    - Offline command engine (Level 0)
    - Online agent pipeline (Levels 1+)
@@ -307,7 +307,7 @@ Required modules:
 - `inc/workspace.php`: single workspace location resolver used by all file operations
 - `inc/memory.php`: retrieval, summarization, retention
 - `inc/security.php`: policy checks, confirmations, audit writer
-- `inc/onboarding.php`: onboarding state machine
+- `inc/setup.php`: setup state machine
 - `inc/heartbeat.php`: Action Scheduler registration and heartbeat wiring
 
 ### 3.3 Data Map
@@ -323,7 +323,7 @@ Required modules:
 
 ## 4) Phase Alignment to Existing Plugin Roadmap
 
-1. Phase 1 (Foundation): Level 0 + onboarding + status.
+1. Phase 1 (Foundation): Level 0 + setup + status.
 2. Phase 2 (Online AI): Levels 1-3 with provider integration and tools.
 3. Phase 3 (Safety + Memory hardening): Level 4 + Level 6 basics + diagnostics.
 4. Phase 4 (Advanced): Level 5 channel adapters + Level 7 orchestration.
@@ -337,7 +337,7 @@ Required modules:
 5. Memory is scoped, queryable, and deletable per policy.
 6. Scheduled jobs are observable and safe to retry through Action Scheduler.
 7. Orchestrated tasks are bounded by explicit execution budgets.
-8. Mutating actions are blocked until onboarding sets an agent user.
+8. Mutating actions are blocked until setup sets an agent user.
 9. Agent file lookups always resolve via built-in `file_read` semantics (CPT first, workspace fallback).
 10. Workspace paths are obtained only through a single resolver interface.
 11. Agent-created files are authored by agent user and isolated from other users' file/workspace scopes.

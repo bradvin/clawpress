@@ -2,7 +2,7 @@
 title: "AGENTS.md Template"
 summary: "Workspace operating guide for ClawPress"
 read_when:
-  - Onboarding
+  - Setup
   - Session start
 ---
 

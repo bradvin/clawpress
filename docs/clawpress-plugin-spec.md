@@ -23,7 +23,7 @@ ClawPress is meant to be helpful. It should feel like a helpful assistant, not a
 2. Provides persistent memory across sessions, users, and tasks (with privacy controls).
 3. Is secure by default with explicit capability checks, auditability, and safe action confirmation.
 4. Autonomous proactive agent that is useful from day 1.
-5. Delivers simple chat-led onboarding that works even when no LLM provider is configured.
+5. Delivers simple chat-led setup that works even when no LLM provider is configured.
 6. Uses modern WordPress best practices for architecture, APIs, and UI.
 7. Uses `wordpress/php-ai-client` as the core LLM abstraction layer.
 8. Uses the WordPress Abilities API for all ClawPress tool registration and execution authorization.
@@ -73,9 +73,9 @@ ClawPress will not ever be:
 - Full audit trail for agent actions (requesting actor + execution actor).
 - Input/output sanitization and escaped rendering across admin UI.
 
-### 4.5 Simple Onboarding
+### 4.5 Simple Setup
 
-- Chat-first onboarding wizard (inside chat) starts on first launch.
+- Chat-first setup wizard (inside chat) starts on first launch.
 - Detects provider setup state and shows online/offline status.
 - Offers built-in offline commands so plugin remains useful pre-LLM.
 - Bootstraps core agent context files from packaged templates into `agent-file` CPT.
@@ -89,7 +89,7 @@ ClawPress will not ever be:
 2. Launcher state persists per user (open/closed, last thread, size).
 3. Keyboard shortcut opens chat (configurable, default `Cmd/Ctrl + K`).
 
-### 5.2 First-Run Onboarding (in chat)
+### 5.2 First-Run Setup (in chat)
 
 1. Detect current setup:
    - LLM configured? yes/no
@@ -97,7 +97,7 @@ ClawPress will not ever be:
    - memory enabled?
    - agent user configured? yes/no
    - `SOUL.md` configured? yes/no
-   - core onboarding files provisioned? yes/no
+   - core setup files provisioned? yes/no
 2. If no LLM configured, show Offline status and guide user through:
    - provider selection
    - API key storage
@@ -107,7 +107,7 @@ ClawPress will not ever be:
    - persist selected agent user per site
    - selected agent user becomes the author for agent-created files
    - agent file access is isolated to that agent user's allowed files/workspace
-4. Provision onboarding files into `agent-file` CPT from `docs/templates/`:
+4. Provision setup files into `agent-file` CPT from `docs/templates/`:
    - `SOUL.md`
    - `AGENTS.md`
    - `USER.md`
@@ -117,8 +117,8 @@ ClawPress will not ever be:
    - do not overwrite existing file content unless user explicitly chooses reset
    - mark `SOUL.md` as protected
    - set file author to configured agent user
-6. If user skips provider setup, onboarding continues with offline command tutorial.
-7. Onboarding is resumable and persists progress.
+6. If user skips provider setup, setup continues with offline command tutorial.
+7. Setup is resumable and persists progress.
 
 ### 5.3 Offline Mode
 
@@ -128,7 +128,7 @@ Minimum command set for MVP:
 
 - `/help` -> list available commands.
 - `/status` -> show plugin, provider, memory, and permissions status.
-- `/onboarding start|resume|reset` -> manage onboarding.
+- `/setup start|resume|reset` -> manage setup.
 - `/memory list` -> list saved memory entries (if enabled).
 - `/memory clear` -> clear memory (with confirmation).
 - `/site info` -> show site name, URL, WP version, plugin version.
@@ -141,7 +141,7 @@ Command responses must be produced locally without external LLM calls.
 ### 6.1 Plugin Modules (PHP)
 
 - `inc/admin-page.php`: admin shell and script enqueue.
-- `inc/rest-api.php`: routes for chat, onboarding, memory, settings, status.
+- `inc/rest-api.php`: routes for chat, setup, memory, settings, status.
 - `inc/heartbeat.php`: heartbeat lifecycle wiring and Action Scheduler registrations.
 - New modules proposed:
   - `inc/abilities.php` (Abilities API tool registration and ability lookup helpers)
@@ -153,7 +153,7 @@ Command responses must be produced locally without external LLM calls.
   - `inc/commands.php` (offline command parser/handlers)
   - `inc/memory.php` (memory persistence and retrieval)
   - `inc/security.php` (policy checks, confirmations, audit logger)
-  - `inc/onboarding.php` (state machine, template file bootstrap, and step content)
+  - `inc/setup.php` (state machine, template file bootstrap, and step content)
 
 ### 6.2 JavaScript Admin App
 
@@ -165,7 +165,7 @@ Command responses must be produced locally without external LLM calls.
   - `MessageList`
   - `Composer`
   - `StatusBadge` (online/offline)
-  - `OnboardingFlow`
+  - `SetupFlow`
 
 ### 6.3 Data Storage
 
@@ -181,11 +181,11 @@ Use Option A (hybrid) for v1:
   - `agent-file`
 - Filesystem workspace for agent file operations, with secure randomized paths.
 - `wp_options` via `register_setting()` for plugin settings and retention defaults.
-- `user_meta` for per-user workspace mapping and per-user onboarding/chat UI state.
+- `user_meta` for per-user workspace mapping and per-user setup/chat UI state.
 - Additional options for agent behavior:
   - `clawpress_active_soul_file` (active `SOUL.md` file reference)
   - `clawpress_agent_user_id` (selected WP user for agent action execution)
-  - `clawpress_onboarding_templates_version` (tracks template bootstrap version applied)
+  - `clawpress_setup_templates_version` (tracks template bootstrap version applied)
 
 #### 6.3.1 Memory Storage (`clawpress_memory` CPT)
 
@@ -247,7 +247,7 @@ Authoring and isolation rules:
 - Agent reads/writes are restricted to that agent user's file/workspace scope.
 - Agent must not access files/workspaces owned by other users.
 
-Onboarding bootstrap files (created in `agent-file` CPT):
+Setup bootstrap files (created in `agent-file` CPT):
 
 1. `SOUL.md` (protected, required)
 2. `AGENTS.md` (required)
@@ -320,7 +320,7 @@ Namespace: `clawpress/v1`
 Required routes:
 
 1. `GET /status`
-   - Returns online/offline, provider state, memory state, onboarding completion.
+   - Returns online/offline, provider state, memory state, setup completion.
 2. `POST /chat/message`
    - Accepts message and thread id.
    - Routes to offline command engine or online LLM agent engine.
@@ -328,8 +328,8 @@ Required routes:
 4. `POST /chat/threads`
 5. `GET /memory`
 6. `DELETE /memory`
-7. `GET /onboarding`
-8. `POST /onboarding`
+7. `GET /setup`
+8. `POST /setup`
    - Handles state progression and template file bootstrap into `agent-file` CPT.
 9. `GET /tools`
 10. `POST /settings/provider`
@@ -378,7 +378,7 @@ Endpoint requirements:
    - canonicalize file paths and block traversal/symlink escapes before filesystem fallback.
 
 
-## 9) Onboarding State Machine
+## 9) Setup State Machine
 
 States:
 
@@ -396,9 +396,9 @@ Rules:
 
 - If provider not configured, `provider_setup` is required before online status.
 - `agent_user_setup` is required before mutating actions are allowed.
-- `agent_files_setup` creates required onboarding files in `agent-file` CPT using templates.
-- Onboarding cannot reach `ready` unless required onboarding files exist.
-- `offline_commands_tutorial` is always available and can complete onboarding even offline.
+- `agent_files_setup` creates required setup files in `agent-file` CPT using templates.
+- Setup cannot reach `ready` unless required setup files exist.
+- `offline_commands_tutorial` is always available and can complete setup even offline.
 - State persisted per site with per-user completion metadata.
 
 ## 10) Agent Behavior (MVP)
@@ -458,7 +458,7 @@ Rules:
 - Chat shell on all admin pages.
 - Status API + provider settings.
 - Offline command engine.
-- Chat-first onboarding v1.
+- Chat-first setup v1.
 
 ### Phase 2: Online AI
 
@@ -475,18 +475,18 @@ Rules:
 ## 15) MVP Acceptance Criteria
 
 1. User can open chat from any admin page.
-2. Fresh install shows onboarding in chat.
+2. Fresh install shows setup in chat.
 3. With no provider configured, status is Offline and offline commands work.
 4. User can configure provider and send a successful online prompt.
 5. Chat history persists across page reloads.
 6. Memory can be viewed and cleared from command or settings UX.
 7. Every mutating action is permission-checked and logged with requesting + execution actor IDs.
-8. Mutating actions are blocked until onboarding sets agent user.
+8. Mutating actions are blocked until setup sets agent user.
 9. Agent identity policy is sourced from editable protected `SOUL.md` file.
 10. Agent can create and reference user files; built-in file tools resolve `agent-file` CPT first and workspace second.
 11. All ClawPress tools are registered and authorized via Abilities API.
 12. Background jobs run through Action Scheduler and are observable/retry-safe.
-13. Onboarding creates `SOUL.md`, `AGENTS.md`, `USER.md`, and `HEARTBEAT.md` in `agent-file` CPT.
+13. Setup creates `SOUL.md`, `AGENTS.md`, `USER.md`, and `HEARTBEAT.md` in `agent-file` CPT.
 
 ## 16) Decision Log and Open Questions
 
@@ -502,9 +502,9 @@ Resolved for v1:
 9. File model: built-in file tools resolve `agent-file` CPT first, with workspace filesystem fallback.
 10. Tool model: all ClawPress tools are abilities (Abilities API).
 11. Background scheduling model: Action Scheduler (not WP-Cron).
-12. Onboarding file model: required context files are provisioned from `docs/templates/` into `agent-file` CPT.
+12. Setup file model: required context files are provisioned from `docs/templates/` into `agent-file` CPT.
 
 Still open:
 1. Which capabilities should map to non-admin chat users in v1?
-2. Which provider(s) are first-class in onboarding presets?
+2. Which provider(s) are first-class in setup presets?
 3. Is streaming response required in MVP or phase 2?
