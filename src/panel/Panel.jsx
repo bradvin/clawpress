@@ -562,9 +562,9 @@ const Panel = () => {
                 emoji: '👋',
                 actions: [
                   {
-                    id: 'start-onboarding',
-                    label: __('Start Onboarding', 'clawpress'),
-                    prompt: '/onboarding start',
+                    id: 'start-setup',
+                    label: __('Start Setup', 'clawpress'),
+                    prompt: '/setup start',
                   },
                 ],
               },

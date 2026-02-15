@@ -42,7 +42,7 @@ const formatMultilineText = (value) => {
   return value.replace(/\r\n/g, '\n').replace(/<br\s*\/?>/gi, '\n');
 };
 
-const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
+const SetupCard = ({ card, onSendAction, isBusy = false }) => {
   const data =
     card?.data && typeof card.data === 'object' && !Array.isArray(card.data)
       ? card.data
@@ -50,7 +50,7 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
   const title =
     typeof data.title === 'string' && data.title.trim()
       ? data.title
-      : __('Onboarding Wizard', 'clawpress');
+      : __('Setup Wizard', 'clawpress');
   const emoji =
     typeof data.emoji === 'string' && data.emoji.trim() ? data.emoji : '🧙';
   const message =
@@ -77,11 +77,11 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
   const stepItems = Array.isArray(data.steps) ? data.steps : [];
   const actions = normalizeCardActions(card);
   const providerChoiceActions = useMemo(
-    () => getChoiceActions(actions, '/onboarding provider '),
+    () => getChoiceActions(actions, '/setup provider '),
     [actions]
   );
   const modelChoiceActions = useMemo(
-    () => getChoiceActions(actions, '/onboarding model '),
+    () => getChoiceActions(actions, '/setup model '),
     [actions]
   );
 
@@ -99,7 +99,7 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
       (action) =>
         action?.type === 'send_prompt' &&
         typeof action.prompt === 'string' &&
-        action.prompt.trim() === '/onboarding back'
+        action.prompt.trim() === '/setup back'
     );
 
     if (step === 'provider' || hasBackAction) {
@@ -111,7 +111,7 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
         id: 'wizard-back-fallback',
         label: __('Back', 'clawpress'),
         type: 'send_prompt',
-        prompt: '/onboarding back',
+        prompt: '/setup back',
       },
       ...filteredActions,
     ];
@@ -226,11 +226,11 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
     showProviderPicker || showModelPicker || showActionButtons;
 
   return (
-    <div className="clawpress-card clawpress-card-onboarding">
+    <div className="clawpress-card clawpress-card-setup">
       <div className="clawpress-card-body">
         <div className="clawpress-card-section-title">
-          <div className="clawpress-card-onboarding-title-line">
-            <span className="clawpress-card-onboarding-emoji" aria-hidden="true">
+          <div className="clawpress-card-setup-title-line">
+            <span className="clawpress-card-setup-emoji" aria-hidden="true">
               {emoji}
             </span>
             <div className="clawpress-card-title">{title}</div>
@@ -239,12 +239,12 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
         {stepHeaderText || stepItems.length > 0 ? (
           <div className="clawpress-card-section-subtitle">
             {stepHeaderText ? (
-              <div className="clawpress-card-subtitle clawpress-card-onboarding-step-line">
+              <div className="clawpress-card-subtitle clawpress-card-setup-step-line">
                 {stepHeaderText}
               </div>
             ) : null}
             {stepItems.length > 0 ? (
-              <div className="clawpress-card-onboarding-progress" aria-hidden="true">
+              <div className="clawpress-card-setup-progress" aria-hidden="true">
                 {stepItems.map((item, index) => {
                   const status =
                     typeof item?.status === 'string' ? item.status : 'pending';
@@ -252,13 +252,13 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
                   return (
                     <div
                       key={`${item?.id || index}`}
-                      className={`clawpress-card-onboarding-progress-item clawpress-card-onboarding-progress-${status}`}
+                      className={`clawpress-card-setup-progress-item clawpress-card-setup-progress-${status}`}
                     >
-                      <span className="clawpress-card-onboarding-progress-dot">
+                      <span className="clawpress-card-setup-progress-dot">
                         {index + 1}
                       </span>
                       {index < stepItems.length - 1 ? (
-                        <span className="clawpress-card-onboarding-progress-line" />
+                        <span className="clawpress-card-setup-progress-line" />
                       ) : null}
                     </div>
                   );
@@ -270,23 +270,23 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
         <div className="clawpress-card-section-content">
           <div className="clawpress-card-text">{message}</div>
           {workspacePathValue || workspaceExistsValue ? (
-            <div className="clawpress-card-onboarding-field-list">
+            <div className="clawpress-card-setup-field-list">
               {workspacePathValue ? (
-                <div className="clawpress-card-onboarding-field-row">
-                  <span className="clawpress-card-onboarding-field-label">
+                <div className="clawpress-card-setup-field-row">
+                  <span className="clawpress-card-setup-field-label">
                     {__('Path', 'clawpress')} :
                   </span>
-				  <span className="clawpress-card-onboarding-field-value">
+				  <span className="clawpress-card-setup-field-value">
 					{workspacePathValue}
 				  </span>
                 </div>
               ) : null}
               {workspaceExistsValue ? (
-                <div className="clawpress-card-onboarding-field-row">
-                  <span className="clawpress-card-onboarding-field-label">
+                <div className="clawpress-card-setup-field-row">
+                  <span className="clawpress-card-setup-field-label">
                     {__('Exists', 'clawpress')} :
                   </span>
-				  <span className="clawpress-card-onboarding-field-value">
+				  <span className="clawpress-card-setup-field-value">
 					{workspaceExistsValue}
 				  </span>
                 </div>
@@ -294,10 +294,10 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
             </div>
           ) : null}
           {detailText ? (
-            <div className="clawpress-card-onboarding-detail">{detailText}</div>
+            <div className="clawpress-card-setup-detail">{detailText}</div>
           ) : null}
           {onProviderSettingsPage && step === 'provider' ? (
-            <div className="clawpress-card-onboarding-detail">
+            <div className="clawpress-card-setup-detail">
               {__(
                 'Provider settings page detected. After saving credentials, click Refresh Providers here.',
                 'clawpress'
@@ -305,17 +305,17 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
             </div>
           ) : null}
           {errorText ? (
-            <div className="clawpress-card-onboarding-error">{errorText}</div>
+            <div className="clawpress-card-setup-error">{errorText}</div>
           ) : null}
         </div>
 
         {hasButtonsSection ? (
-          <div className="clawpress-card-section-buttons clawpress-card-onboarding-buttons">
+          <div className="clawpress-card-section-buttons clawpress-card-setup-buttons">
             {showProviderPicker || showModelPicker ? (
-              <div className="clawpress-card-onboarding-inline-controls">
+              <div className="clawpress-card-setup-inline-controls">
                 {showProviderPicker ? (
                   <select
-                    className="clawpress-card-onboarding-select"
+                    className="clawpress-card-setup-select"
                     value={selectedProviderId}
                     onChange={(event) => setSelectedProviderId(event.target.value)}
                     disabled={isBusy}
@@ -329,7 +329,7 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
                 ) : null}
                 {showModelPicker ? (
                   <select
-                    className="clawpress-card-onboarding-select"
+                    className="clawpress-card-setup-select"
                     value={selectedModelId}
                     onChange={(event) => setSelectedModelId(event.target.value)}
                     disabled={isBusy}
@@ -406,4 +406,4 @@ const OnboardingCard = ({ card, onSendAction, isBusy = false }) => {
   );
 };
 
-export default OnboardingCard;
+export default SetupCard;

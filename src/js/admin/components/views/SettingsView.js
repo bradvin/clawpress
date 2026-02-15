@@ -68,7 +68,7 @@ export default function SettingsView() {
 	const [ model, setModel ] = useState( '' );
 	const [ agentUserId, setAgentUserId ] = useState( 0 );
 	const [ memoryEnabled, setMemoryEnabled ] = useState( false );
-	const [ onboardingCompleted, setOnboardingCompleted ] = useState( false );
+	const [ setupCompleted, setSetupCompleted ] = useState( false );
 
 	useEffect( () => {
 		let mounted = true;
@@ -99,8 +99,8 @@ export default function SettingsView() {
 						: 0
 				);
 				setMemoryEnabled( Boolean( settings.memory_enabled ) );
-				setOnboardingCompleted(
-					Boolean( settings.onboarding_completed )
+				setSetupCompleted(
+					Boolean( settings.setup_completed )
 				);
 			} catch ( e ) {
 				if ( ! mounted ) {
@@ -141,7 +141,7 @@ export default function SettingsView() {
 							? Number( agentUserId )
 							: 0,
 					memory_enabled: memoryEnabled,
-					onboarding_completed: onboardingCompleted,
+					setup_completed: setupCompleted,
 				},
 			} );
 
@@ -255,11 +255,11 @@ export default function SettingsView() {
 							/>
 							<ToggleControl
 								label={ __(
-									'Onboarding Completed',
+									'Setup Completed',
 									'clawpress'
 								) }
-								checked={ onboardingCompleted }
-								onChange={ setOnboardingCompleted }
+								checked={ setupCompleted }
+								onChange={ setSetupCompleted }
 								__nextHasNoMarginBottom
 							/>
 							<Button

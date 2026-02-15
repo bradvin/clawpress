@@ -1,23 +1,23 @@
-.clawpress-card-onboarding {
+.clawpress-card-setup {
   width: 100%;
 }
 
-.clawpress-card-onboarding-title-line {
+.clawpress-card-setup-title-line {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.clawpress-card-onboarding-emoji {
+.clawpress-card-setup-emoji {
   font-size: 16px;
   line-height: 1;
 }
 
-.clawpress-card-onboarding-step-line {
+.clawpress-card-setup-step-line {
   margin: 0;
 }
 
-.clawpress-card-onboarding-progress {
+.clawpress-card-setup-progress {
   margin-top: 6px;
   display: flex;
   align-items: center;
@@ -25,14 +25,14 @@
   max-width: 100%;
 }
 
-.clawpress-card-onboarding-progress-item {
+.clawpress-card-setup-progress-item {
   display: flex;
   align-items: center;
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.clawpress-card-onboarding-progress-dot {
+.clawpress-card-setup-progress-dot {
   width: 18px;
   height: 18px;
   border-radius: 999px;
@@ -49,42 +49,42 @@
   color: var(--fp-muted);
 }
 
-.clawpress-card-onboarding-progress-line {
+.clawpress-card-setup-progress-line {
   height: 2px;
   background: var(--fp-border);
   flex: 1 1 auto;
 }
 
-.clawpress-card-onboarding-progress-done .clawpress-card-onboarding-progress-dot {
+.clawpress-card-setup-progress-done .clawpress-card-setup-progress-dot {
   border-color: var(--fp-accent);
   background: var(--fp-accent);
   color: #fff;
 }
 
-.clawpress-card-onboarding-progress-done .clawpress-card-onboarding-progress-line {
+.clawpress-card-setup-progress-done .clawpress-card-setup-progress-line {
   background: var(--fp-accent);
 }
 
-.clawpress-card-onboarding-progress-current .clawpress-card-onboarding-progress-dot {
+.clawpress-card-setup-progress-current .clawpress-card-setup-progress-dot {
   border-color: var(--fp-accent);
   background: var(--fp-bg);
   color: var(--fp-accent);
 }
 
-.clawpress-card-onboarding-field-list {
+.clawpress-card-setup-field-list {
   margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.clawpress-card-onboarding-field-row {
+.clawpress-card-setup-field-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.clawpress-card-onboarding-field-label {
+.clawpress-card-setup-field-label {
   color: var(--fp-muted);
   font-size: 12px;
   line-height: 1.4;
@@ -92,7 +92,7 @@
   padding-top: 8px;
 }
 
-.clawpress-card-onboarding-field-value {
+.clawpress-card-setup-field-value {
   margin: 0;
   padding: 4px 8px;
   background: var(--fp-surface);
@@ -105,33 +105,33 @@
   word-break: break-word;
 }
 
-.clawpress-card-onboarding-detail {
+.clawpress-card-setup-detail {
   margin-top: 8px;
   color: var(--fp-muted);
   font-size: 12px;
   white-space: pre-line;
 }
 
-.clawpress-card-onboarding-error {
+.clawpress-card-setup-error {
   margin-top: 8px;
   color: var(--fp-danger);
   font-size: 12px;
   white-space: pre-line;
 }
 
-.clawpress-card-onboarding-buttons {
+.clawpress-card-setup-buttons {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.clawpress-card-onboarding-inline-controls {
+.clawpress-card-setup-inline-controls {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.clawpress-card-onboarding-select {
+.clawpress-card-setup-select {
   min-width: 180px;
   max-width: 100%;
 }
