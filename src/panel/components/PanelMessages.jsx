@@ -3,6 +3,29 @@ import { __ } from '@wordpress/i18n';
 import ToolDialog from './ToolDialog';
 import PanelCard from './PanelCard';
 import { getToolPolicy } from '../utils/toolDialogRenderers';
+
+const renderSimpleMarkdown = (text) => {
+  if (typeof text !== 'string' || !text) {
+    return text || '';
+  }
+
+  const tokens = text.split(/(`[^`\n]+`|\*\*[^*\n]+?\*\*)/g);
+
+  return tokens.map((token, index) => {
+    const strongMatch = token.match(/^\*\*([^*\n]+?)\*\*$/);
+    if (strongMatch) {
+      return <strong key={`strong-${index}`}>{strongMatch[1]}</strong>;
+    }
+
+    const codeMatch = token.match(/^`([^`\n]+)`$/);
+    if (codeMatch) {
+      return <code key={`code-${index}`}>{codeMatch[1]}</code>;
+    }
+
+    return token;
+  });
+};
+
 const PanelMessages = ({
   messages,
   streaming,
@@ -90,7 +113,7 @@ const PanelMessages = ({
                 <div
                   className={`clawpress-msg-content${showThinking ? ' clawpress-thinking' : ''}`}
                 >
-                  {displayContent}
+                  {renderSimpleMarkdown(displayContent)}
                 </div>
               )}
             </div>
@@ -115,7 +138,9 @@ const PanelMessages = ({
       {streaming && currentStreamText ? (
         <div className="clawpress-msg clawpress-assistant">
           <div className="clawpress-msg-label">{__('AGENT', 'clawpress')}</div>
-          <div className="clawpress-msg-content">{currentStreamText || '...'}</div>
+          <div className="clawpress-msg-content">
+            {renderSimpleMarkdown(currentStreamText || '...')}
+          </div>
         </div>
       ) : null}
     </div>
