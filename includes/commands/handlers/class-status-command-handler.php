@@ -120,13 +120,13 @@ final class Status_Command_Handler implements Command_Handler {
 				! empty( $status['agent_user']['configured'] ) ? $yes : $no
 			),
 			sprintf(
-				/* translators: %s: yes/no onboarding completion state */
-				__( '- Onboarding completed: %s', 'clawpress' ),
-				! empty( $status['onboarding']['completed'] ) ? $yes : $no
+				/* translators: %s: yes/no setup completion state */
+				__( '- Setup completed: %s', 'clawpress' ),
+				! empty( $status['setup']['completed'] ) ? $yes : $no
 			),
 		];
 		$suggestions = 'offline' === (string) ( $status['mode'] ?? 'offline' )
-			? [ '/help', '/onboarding resume', '/site info', '/tools list', '/clear' ]
+			? [ '/help', '/setup resume', '/site info', '/tools list', '/clear' ]
 			: [ '/help', '/site info', '/tools list' ];
 
 		return Command_Response::success(

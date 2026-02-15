@@ -82,7 +82,7 @@ final class RestApiTest extends TestCase {
 				'model'                => 'gpt-4.1-mini',
 				'agent_user_id'        => 0,
 				'memory_enabled'       => false,
-				'onboarding_completed' => false,
+				'setup_completed' => false,
 			),
 			$data['settings']
 		);
@@ -115,7 +115,7 @@ final class RestApiTest extends TestCase {
 					'model'                => 'gpt-4.1-mini',
 					'agent_user_id'        => 12,
 					'memory_enabled'       => true,
-					'onboarding_completed' => true,
+					'setup_completed' => true,
 				)
 			)
 		);
@@ -127,11 +127,11 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'gpt-4.1-mini', $data['settings']['model'] );
 		$this->assertSame( 12, $data['settings']['agent_user_id'] );
 		$this->assertSame( true, $data['settings']['memory_enabled'] );
-		$this->assertSame( true, $data['settings']['onboarding_completed'] );
+		$this->assertSame( true, $data['settings']['setup_completed'] );
 		$this->assertSame( 'openai', WordPress_Stubs::$options['clawpress_settings']['provider'] );
 		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_settings']['agent_user_id'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['memory_enabled'] );
-		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['onboarding_completed'] );
+		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['setup_completed'] );
 		$this->assertArrayNotHasKey( 'clawpress_agent_user_id', WordPress_Stubs::$options );
 		$this->assertArrayNotHasKey( 'clawpress_memory_enabled', WordPress_Stubs::$options );
 		$this->assertArrayNotHasKey( 1, WordPress_Stubs::$user_meta );

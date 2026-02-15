@@ -1,6 +1,6 @@
 <?php
 /**
- * /onboarding command handler.
+ * /setup command handler.
  *
  * @package ClawPress
  */
@@ -25,13 +25,13 @@ use WordPress\AiClient\AiClient;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Onboarding command.
+ * Setup command.
  */
-final class Onboarding_Command_Handler implements Command_Handler {
+final class Setup_Command_Handler implements Command_Handler {
 	/**
-	 * Onboarding option key.
+	 * Setup option key.
 	 */
-	private const ONBOARDING_STATE_OPTION = 'clawpress_onboarding_state';
+	private const SETUP_STATE_OPTION = 'clawpress_setup_state';
 
 	/**
 	 * Provider setup admin path.
@@ -130,21 +130,21 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_command(): string {
-		return '/onboarding';
+		return '/setup';
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	public function get_description(): string {
-		return __( 'Run the setup wizard and manage onboarding progress.', 'clawpress' );
+		return __( 'Run the setup wizard and manage setup progress.', 'clawpress' );
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	public function get_usage(): string {
-		return '/onboarding <action>';
+		return '/setup <action>';
 	}
 
 	/**
@@ -158,7 +158,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	 * {@inheritDoc}
 	 */
 	public function get_default_suggestions(): array {
-		return [ '/onboarding resume' ];
+		return [ '/setup resume' ];
 	}
 
 	/**
@@ -175,13 +175,13 @@ final class Onboarding_Command_Handler implements Command_Handler {
 
 		switch ( $action ) {
 			case 'start':
-				return $this->start_onboarding();
+				return $this->start_setup();
 			case 'resume':
-				return $this->resume_onboarding();
+				return $this->resume_setup();
 			case 'reset':
-				return $this->reset_onboarding();
+				return $this->reset_setup();
 			case 'refresh':
-				return $this->resume_onboarding();
+				return $this->resume_setup();
 			case 'back':
 				return $this->go_back_step();
 			case 'provider':
@@ -202,7 +202,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				return $this->build_error_response(
 					sprintf(
 						/* translators: %s: expected command usage */
-						__( 'Invalid onboarding action. Expected: `%s`', 'clawpress' ),
+						__( 'Invalid setup action. Expected: `%s`', 'clawpress' ),
 						$this->get_usage()
 					)
 				);
@@ -210,32 +210,32 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	}
 
 	/**
-	 * Start onboarding flow.
+	 * Start setup flow.
 	 */
-	private function start_onboarding(): Command_Response {
-		$this->persist_onboarding_state(
+	private function start_setup(): Command_Response {
+		$this->persist_setup_state(
 			[
 				'connection_tested' => false,
 				'step'              => 'provider',
 			]
 		);
-		$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+		$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 
-		return $this->resume_with_notice( __( 'Onboarding started.', 'clawpress' ) );
+		return $this->resume_with_notice( __( 'Setup started.', 'clawpress' ) );
 	}
 
 	/**
-	 * Resume onboarding flow.
+	 * Resume setup flow.
 	 */
-	private function resume_onboarding(): Command_Response {
-		return $this->resume_with_notice( __( 'Onboarding resumed.', 'clawpress' ) );
+	private function resume_setup(): Command_Response {
+		return $this->resume_with_notice( __( 'Setup resumed.', 'clawpress' ) );
 	}
 
 	/**
-	 * Reset onboarding flow.
+	 * Reset setup flow.
 	 */
-	private function reset_onboarding(): Command_Response {
-		$this->persist_onboarding_state(
+	private function reset_setup(): Command_Response {
+		$this->persist_setup_state(
 			[
 				'connection_tested' => false,
 				'step'              => 'provider',
@@ -245,27 +245,27 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			[
 				'provider'             => '',
 				'model'                => '',
-				'onboarding_completed' => false,
+				'setup_completed' => false,
 			]
 		);
 
-		return $this->resume_with_notice( __( 'Onboarding reset.', 'clawpress' ) );
+		return $this->resume_with_notice( __( 'Setup reset.', 'clawpress' ) );
 	}
 
 	/**
-	 * Move onboarding to the previous wizard step.
+	 * Move setup to the previous wizard step.
 	 */
 	private function go_back_step(): Command_Response {
 		$settings     = $this->settings_helper->get_settings();
-		$current_step = $this->resolve_onboarding_step( $settings );
+		$current_step = $this->resolve_setup_step( $settings );
 		$target_step  = $this->get_previous_step( $current_step );
 
 		if ( $target_step === $current_step ) {
 			return $this->resume_with_notice( __( 'Already at the first step.', 'clawpress' ) );
 		}
 
-		$this->persist_onboarding_state( [ 'step' => $target_step ] );
-		$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+		$this->persist_setup_state( [ 'step' => $target_step ] );
+		$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -295,11 +295,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			[
 				'provider'             => $provider,
 				'model'                => '',
-				'onboarding_completed' => false,
+				'setup_completed' => false,
 			]
 		);
-		$this->persist_onboarding_state( [ 'connection_tested' => false ] );
-		$this->persist_onboarding_state( [ 'step' => 'model' ] );
+		$this->persist_setup_state( [ 'connection_tested' => false ] );
+		$this->persist_setup_state( [ 'step' => 'model' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -336,11 +336,11 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$this->settings_helper->update_settings(
 			[
 				'model'                => $model,
-				'onboarding_completed' => false,
+				'setup_completed' => false,
 			]
 		);
-		$this->persist_onboarding_state( [ 'connection_tested' => false ] );
-		$this->persist_onboarding_state( [ 'step' => 'test_connection' ] );
+		$this->persist_setup_state( [ 'connection_tested' => false ] );
+		$this->persist_setup_state( [ 'step' => 'test_connection' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -394,7 +394,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$this->persist_onboarding_state(
+		$this->persist_setup_state(
 			[
 				'connection_tested' => true,
 				'step'              => 'agent_user',
@@ -431,10 +431,10 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$this->settings_helper->update_settings(
 			[
 				'agent_user_id'        => $user_id,
-				'onboarding_completed' => false,
+				'setup_completed' => false,
 			]
 		);
-		$this->persist_onboarding_state( [ 'step' => 'workspace' ] );
+		$this->persist_setup_state( [ 'step' => 'workspace' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -469,10 +469,10 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		$this->settings_helper->update_settings(
 			[
 				'agent_user_id'        => $user_id,
-				'onboarding_completed' => false,
+				'setup_completed' => false,
 			]
 		);
-		$this->persist_onboarding_state( [ 'step' => 'workspace' ] );
+		$this->persist_setup_state( [ 'step' => 'workspace' ] );
 
 		return $this->resume_with_notice(
 			sprintf(
@@ -509,7 +509,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				)
 			);
 		}
-		$this->persist_onboarding_state( [ 'step' => 'agent_files' ] );
+		$this->persist_setup_state( [ 'step' => 'agent_files' ] );
 
 		return $this->resume_with_notice( __( 'Workspace created.', 'clawpress' ) );
 	}
@@ -530,79 +530,79 @@ final class Onboarding_Command_Handler implements Command_Handler {
 				)
 			);
 		}
-		$this->persist_onboarding_state( [ 'step' => 'ready' ] );
+		$this->persist_setup_state( [ 'step' => 'ready' ] );
 
 		return $this->resume_with_notice( __( 'Agent files created.', 'clawpress' ) );
 	}
 
 	/**
-	 * Resolve current onboarding step from settings + persisted state.
+	 * Resolve current setup step from settings + persisted state.
 	 *
 	 * @param array<string,mixed> $settings Settings.
 	 */
-	private function resolve_onboarding_step( array $settings ): string {
-		$state             = $this->get_onboarding_state();
+	private function resolve_setup_step( array $settings ): string {
+		$state             = $this->get_setup_state();
 		$configured        = $this->provider_helper->get_configured_provider_ids();
 		$selected_provider = clawpress_sanitize_provider( $settings['provider'] ?? '' );
 		$requested_step    = isset( $state['step'] ) ? $this->normalize_step( $state['step'] ) : 'agent_user';
 
 		if ( [] === $configured || '' === $selected_provider || ! in_array( $selected_provider, $configured, true ) ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'provider';
 		}
 
 		if ( 'provider' === $requested_step ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'provider';
 		}
 
 		$selected_model = trim( (string) ( $settings['model'] ?? '' ) );
 		$model_ids      = $this->get_model_ids_for_provider( $selected_provider );
 		if ( '' === $selected_model || ! in_array( $selected_model, $model_ids, true ) ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'model';
 		}
 
 		if ( 'model' === $requested_step ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'model';
 		}
 
 		$connection_tested = isset( $state['connection_tested'] ) && true === $state['connection_tested'];
 		if ( ! $connection_tested && ! in_array( $requested_step, [ 'provider', 'model', 'test_connection' ], true ) ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'test_connection';
 		}
 		if ( 'test_connection' === $requested_step ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'test_connection';
 		}
 
 		$agent_user_id = $this->settings_helper->resolve_agent_user_id( $settings );
 		if ( $agent_user_id <= 0 ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'agent_user';
 		}
 
 		if ( in_array( $requested_step, [ 'workspace', 'agent_files', 'ready' ], true ) && $agent_user_id <= 0 ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'agent_user';
 		}
 
 		$workspace_ready = $this->is_workspace_ready( $agent_user_id );
 		if ( in_array( $requested_step, [ 'agent_files', 'ready' ], true ) && ! $workspace_ready ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'workspace';
 		}
 
 		$agent_files_ready = $this->agent_file_helper->has_default_agent_files_from_templates();
 		if ( 'ready' === $requested_step && ! $agent_files_ready ) {
-			$this->settings_helper->update_settings( [ 'onboarding_completed' => false ] );
+			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'agent_files';
 		}
 
 		$is_fully_ready = $agent_user_id > 0 && $workspace_ready && $agent_files_ready;
-		$this->settings_helper->update_settings( [ 'onboarding_completed' => $is_fully_ready && 'ready' === $requested_step ] );
+		$this->settings_helper->update_settings( [ 'setup_completed' => $is_fully_ready && 'ready' === $requested_step ] );
 
 		return $requested_step;
 	}
@@ -614,9 +614,9 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	 */
 	private function resume_with_notice( string $message ): Command_Response {
 		$settings = $this->settings_helper->get_settings();
-		$step     = $this->resolve_onboarding_step( $settings );
+		$step     = $this->resolve_setup_step( $settings );
 
-		$this->persist_onboarding_state( [ 'step' => $step ] );
+		$this->persist_setup_state( [ 'step' => $step ] );
 
 		return Command_Response::success(
 			$message,
@@ -624,8 +624,8 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			false,
 			false,
 			[],
-			[ '/onboarding resume', '/status', '/help' ],
-			$this->build_onboarding_card( $step, $settings )
+			[ '/setup resume', '/status', '/help' ],
+			$this->build_setup_card( $step, $settings )
 		);
 	}
 
@@ -636,7 +636,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	 */
 	private function build_error_response( string $message ): Command_Response {
 		$settings = $this->settings_helper->get_settings();
-		$step     = $this->resolve_onboarding_step( $settings );
+		$step     = $this->resolve_setup_step( $settings );
 
 		return Command_Response::error(
 			$message,
@@ -644,20 +644,20 @@ final class Onboarding_Command_Handler implements Command_Handler {
 			false,
 			false,
 			[],
-			[ '/onboarding resume', '/status', '/help' ],
-			$this->build_onboarding_card( $step, $settings, $message )
+			[ '/setup resume', '/status', '/help' ],
+			$this->build_setup_card( $step, $settings, $message )
 		);
 	}
 
 	/**
-	 * Build onboarding card payload.
+	 * Build setup card payload.
 	 *
 	 * @param string              $step Current step.
 	 * @param array<string,mixed> $settings Settings.
 	 * @param string              $error Optional error.
 	 * @return array<string,mixed>
 	 */
-	private function build_onboarding_card( string $step, array $settings, string $error = '' ): array {
+	private function build_setup_card( string $step, array $settings, string $error = '' ): array {
 		$labels = [
 			'provider'        => __( 'Provider', 'clawpress' ),
 			'model'           => __( 'Model', 'clawpress' ),
@@ -690,7 +690,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 		}
 
 		$data = [
-			'title'        => __( 'Onboarding Wizard', 'clawpress' ),
+			'title'        => __( 'Setup Wizard', 'clawpress' ),
 			'step'         => self::STEP_ORDER[ $step_index ],
 			'step_label'   => $labels[ self::STEP_ORDER[ $step_index ] ],
 			'step_index'   => min( $step_index + 1, count( self::STEP_ORDER ) ),
@@ -721,7 +721,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 							'id'     => 'refresh-providers',
 							'label'  => __( 'Refresh Providers', 'clawpress' ),
 							'type'   => 'send_prompt',
-							'prompt' => '/onboarding refresh',
+							'prompt' => '/setup refresh',
 						],
 					];
 					break;
@@ -734,7 +734,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						/* translators: %s: provider display label */
 						'label'  => sprintf( __( 'Use %s', 'clawpress' ), $this->get_provider_label( $provider_id ) ),
 						'type'   => 'send_prompt',
-						'prompt' => sprintf( '/onboarding provider %s', $provider_id ),
+						'prompt' => sprintf( '/setup provider %s', $provider_id ),
 					];
 				}
 				$data['actions'][] = [
@@ -760,14 +760,14 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						/* translators: %s: model identifier */
 						'label'  => sprintf( __( 'Use %s', 'clawpress' ), $model_id ),
 						'type'   => 'send_prompt',
-						'prompt' => sprintf( '/onboarding model %s', $model_id ),
+						'prompt' => sprintf( '/setup model %s', $model_id ),
 					];
 				}
 				$data['actions'][] = [
 					'id'     => 'refresh-model-step',
 					'label'  => __( 'Refresh', 'clawpress' ),
 					'type'   => 'send_prompt',
-					'prompt' => '/onboarding refresh',
+					'prompt' => '/setup refresh',
 				];
 				break;
 
@@ -778,13 +778,13 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						'id'     => 'test-connection',
 						'label'  => __( 'Test Connection', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '/onboarding test',
+						'prompt' => '/setup test',
 					],
 					[
 						'id'     => 'retry-test-step',
 						'label'  => __( 'Retry', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '/onboarding refresh',
+						'prompt' => '/setup refresh',
 					],
 				];
 				break;
@@ -798,7 +798,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						'id'     => 'create-agent-user',
 						'label'  => __( 'Create Agent User', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '/onboarding create-agent-user',
+						'prompt' => '/setup create-agent-user',
 					],
 				];
 
@@ -807,7 +807,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						'id'     => 'use-current-user',
 						'label'  => __( 'Use Current User', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => sprintf( '/onboarding agent-user %d', $current_user_id ),
+						'prompt' => sprintf( '/setup agent-user %d', $current_user_id ),
 					];
 				}
 
@@ -826,7 +826,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						/* translators: %s: user login */
 						'label'  => sprintf( __( 'Use Existing (%s)', 'clawpress' ), $existing_user->user_login ),
 						'type'   => 'send_prompt',
-						'prompt' => sprintf( '/onboarding agent-user %d', $existing_user_id ),
+						'prompt' => sprintf( '/setup agent-user %d', $existing_user_id ),
 					];
 				}
 				break;
@@ -852,7 +852,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 							? __( 'Use Workspace', 'clawpress' )
 							: __( 'Create Workspace', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '/onboarding create-workspace',
+						'prompt' => '/setup create-workspace',
 					],
 				];
 				break;
@@ -874,14 +874,14 @@ final class Onboarding_Command_Handler implements Command_Handler {
 						'id'     => 'create-agent-files',
 						'label'  => __( 'Create Agent Files', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '/onboarding create-agent-files',
+						'prompt' => '/setup create-agent-files',
 					],
 				];
 				break;
 
 			case 'ready':
 			default:
-				$data['message'] = __( 'Onboarding is complete. ClawPress is ready to use.', 'clawpress' );
+				$data['message'] = __( 'Setup is complete. ClawPress is ready to use.', 'clawpress' );
 				$data['actions'] = [
 					[
 						'id'    => 'view-clawpress-settings',
@@ -912,13 +912,13 @@ final class Onboarding_Command_Handler implements Command_Handler {
 					'id'     => 'back-step',
 					'label'  => __( 'Back', 'clawpress' ),
 					'type'   => 'send_prompt',
-					'prompt' => '/onboarding back',
+					'prompt' => '/setup back',
 				]
 			);
 		}
 
 		return [
-			'type' => 'onboarding',
+			'type' => 'setup',
 			'data' => $data,
 		];
 	}
@@ -984,12 +984,12 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	}
 
 	/**
-	 * Get onboarding state from option.
+	 * Get setup state from option.
 	 *
 	 * @return array<string,mixed>
 	 */
-	private function get_onboarding_state(): array {
-		$state = get_option( self::ONBOARDING_STATE_OPTION, [] );
+	private function get_setup_state(): array {
+		$state = get_option( self::SETUP_STATE_OPTION, [] );
 		if ( ! is_array( $state ) ) {
 			return [];
 		}
@@ -998,7 +998,7 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	}
 
 	/**
-	 * Normalize a raw step value to a valid onboarding step.
+	 * Normalize a raw step value to a valid setup step.
 	 *
 	 * @param mixed $step Raw step value.
 	 */
@@ -1059,12 +1059,12 @@ final class Onboarding_Command_Handler implements Command_Handler {
 	}
 
 	/**
-	 * Persist onboarding state updates.
+	 * Persist setup state updates.
 	 *
 	 * @param array<string,mixed> $updates State updates.
 	 */
-	private function persist_onboarding_state( array $updates ): void {
-		$state = $this->get_onboarding_state();
+	private function persist_setup_state( array $updates ): void {
+		$state = $this->get_setup_state();
 
 		foreach ( $updates as $key => $value ) {
 			$state[ $key ] = $value;
@@ -1072,6 +1072,6 @@ final class Onboarding_Command_Handler implements Command_Handler {
 
 		$state['updated_at'] = time();
 
-		update_option( self::ONBOARDING_STATE_OPTION, $state );
+		update_option( self::SETUP_STATE_OPTION, $state );
 	}
 }

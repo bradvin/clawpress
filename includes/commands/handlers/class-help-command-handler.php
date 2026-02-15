@@ -100,7 +100,7 @@ final class Help_Command_Handler implements Command_Handler {
 		return [
 			'/status',
 			'/clear',
-			'/onboarding resume',
+			'/setup resume',
 			'/memory list',
 			'/site info',
 			'/tools list',

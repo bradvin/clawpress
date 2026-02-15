@@ -90,7 +90,7 @@ final class CommandsTest extends TestCase {
 		$this->assertContains( '/help', $suggestions );
 		$this->assertContains( '/clear', $suggestions );
 		$this->assertContains( '/status', $suggestions );
-		$this->assertContains( '/onboarding resume', $suggestions );
+		$this->assertContains( '/setup resume', $suggestions );
 		$this->assertContains( '/memory list', $suggestions );
 		$this->assertContains( '/site info', $suggestions );
 		$this->assertContains( '/test', $suggestions );

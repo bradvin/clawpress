@@ -70,7 +70,7 @@ final class Settings_Controller implements Route_Controller {
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
-					'onboarding_completed' => [
+					'setup_completed' => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
@@ -107,7 +107,7 @@ final class Settings_Controller implements Route_Controller {
 				'model'                => $request->get_param( 'model' ),
 				'agent_user_id'        => $agent_user_id,
 				'memory_enabled'       => $request->get_param( 'memory_enabled' ),
-				'onboarding_completed' => $request->get_param( 'onboarding_completed' ),
+				'setup_completed' => $request->get_param( 'setup_completed' ),
 			]
 		);
 

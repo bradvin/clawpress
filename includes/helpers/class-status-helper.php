@@ -83,8 +83,8 @@ final class Status_Helper {
 			'memory' => [
 				'enabled' => $this->settings_helper->get_memory_enabled( $settings ),
 			],
-			'onboarding' => [
-				'completed' => $this->settings_helper->get_onboarding_completed( $settings ),
+			'setup' => [
+				'completed' => $this->settings_helper->get_setup_completed( $settings ),
 			],
 			'agent_user' => [
 				'id'         => $agent_user > 0 ? $agent_user : null,

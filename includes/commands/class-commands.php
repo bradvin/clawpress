@@ -15,7 +15,7 @@ use ClawPress\Commands\Handlers\Create_Agent_User_Command_Handler;
 use ClawPress\Commands\Handlers\Create_Workspace_Command_Handler;
 use ClawPress\Commands\Handlers\Help_Command_Handler;
 use ClawPress\Commands\Handlers\Memory_Command_Handler;
-use ClawPress\Commands\Handlers\Onboarding_Command_Handler;
+use ClawPress\Commands\Handlers\Setup_Command_Handler;
 use ClawPress\Commands\Handlers\Reset_Command_Handler;
 use ClawPress\Commands\Handlers\Settings_Command_Handler;
 use ClawPress\Commands\Handlers\Site_Command_Handler;
@@ -62,7 +62,7 @@ final class Commands {
 
 		$this->registry->register( new Help_Command_Handler( $this->registry ), false );
 		$this->registry->register( new Status_Command_Handler( $status_helper ), false );
-		$this->registry->register( new Onboarding_Command_Handler( $settings_helper, $provider_helper, $model_helper, $user_helper, $workspace_helper, $agent_file_helper ), false );
+		$this->registry->register( new Setup_Command_Handler( $settings_helper, $provider_helper, $model_helper, $user_helper, $workspace_helper, $agent_file_helper ), false );
 		$this->registry->register( new Memory_Command_Handler( $settings_helper, $confirmation_store ), true );
 		$this->registry->register( new Clear_Command_Handler( $history_helper ), true );
 		$this->registry->register( new Site_Command_Handler(), false );

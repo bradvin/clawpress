@@ -212,7 +212,7 @@ final class Memory_Command_Handler implements Command_Handler {
 				$this->is_destructive(),
 				false,
 				[],
-				[ '/onboarding resume', '/status', '/help' ]
+				[ '/setup resume', '/status', '/help' ]
 			);
 		}
 

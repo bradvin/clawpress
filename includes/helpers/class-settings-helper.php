@@ -42,7 +42,7 @@ final class Settings_Helper {
 			'default'  => false,
 			'sanitize' => 'clawpress_sanitize_boolean',
 		],
-		'onboarding_completed' => [
+		'setup_completed' => [
 			'default'  => false,
 			'sanitize' => 'clawpress_sanitize_boolean',
 		],
@@ -149,13 +149,13 @@ final class Settings_Helper {
 	}
 
 	/**
-	 * Get onboarding completed flag.
+	 * Get setup completed flag.
 	 *
 	 * @param array<string,mixed>|null $settings Optional settings array.
 	 */
-	public function get_onboarding_completed( ?array $settings = null ): bool {
+	public function get_setup_completed( ?array $settings = null ): bool {
 		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
-		return (bool) $settings['onboarding_completed'];
+		return (bool) $settings['setup_completed'];
 	}
 
 	/**
