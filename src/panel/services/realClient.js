@@ -114,6 +114,32 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
           onEvent('suggestions', { items: response.meta.suggestions });
         }
 
+        const responseError =
+          response?.meta?.error && typeof response.meta.error === 'object'
+            ? response.meta.error
+            : null;
+        const responseCard =
+          response?.meta?.card && typeof response.meta.card === 'object'
+            ? normalizeCard(response.meta.card)
+            : null;
+
+        if (responseError) {
+          const errorMessage =
+            typeof responseError.message === 'string' && responseError.message.trim()
+              ? responseError.message.trim()
+              : __('Chat request failed.', 'clawpress');
+          onEvent('error', {
+            error: errorMessage,
+            type:
+              typeof responseError.type === 'string' && responseError.type.trim()
+                ? responseError.type.trim()
+                : 'provider',
+            card: responseCard,
+          });
+          onDone?.({ aborted: false });
+          return;
+        }
+
         const reply =
           typeof response?.reply === 'string' ? response.reply.trim() : '';
 
@@ -139,7 +165,10 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
           onDone?.({ aborted: true });
           return;
         }
-        onError?.({ error: err?.message || __('Chat request failed.', 'clawpress') });
+        onError?.({
+          error: err?.message || __('Chat request failed.', 'clawpress'),
+          type: 'request',
+        });
         onDone?.({ aborted: false });
       }
     })();

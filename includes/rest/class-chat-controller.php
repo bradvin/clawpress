@@ -122,12 +122,20 @@ final class Chat_Controller implements Route_Controller {
 		$card_meta            = isset( $reply_payload['card'] ) && is_array( $reply_payload['card'] )
 			? $reply_payload['card']
 			: null;
+		$error_meta           = isset( $reply_payload['error'] ) && is_array( $reply_payload['error'] )
+			? $reply_payload['error']
+			: null;
 		$clear_history_effect = isset( $command_meta['effects']['clear_history'] ) && true === $command_meta['effects']['clear_history'];
 		$is_command_response  = [] !== $command_meta;
+		$is_error_response    = null !== $error_meta;
 
 		if ( ! $clear_history_effect ) {
 			$this->history_helper->append_history_message( 'user', $message );
-			$this->history_helper->append_history_message( $is_command_response ? 'system' : 'assistant', $reply, $card_meta );
+			$this->history_helper->append_history_message(
+				( $is_command_response || $is_error_response ) ? 'system' : 'assistant',
+				$reply,
+				$card_meta
+			);
 		}
 
 		return new \WP_REST_Response(
@@ -150,6 +158,9 @@ final class Chat_Controller implements Route_Controller {
 						: null,
 					'command'     => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 						? $reply_payload['command']
+						: null,
+					'error'       => isset( $reply_payload['error'] ) && is_array( $reply_payload['error'] )
+						? $reply_payload['error']
 						: null,
 				],
 			],

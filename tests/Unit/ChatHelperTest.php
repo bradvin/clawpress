@@ -89,4 +89,27 @@ final class ChatHelperTest extends TestCase {
 		$this->assertNull( $payload['model'] );
 		$this->assertStringContainsString( 'Offline mode', $payload['reply'] );
 	}
+
+	public function test_generate_ai_reply_returns_structured_error_payload_on_exception(): void {
+		$chat_helper = Chat_Helper::create_for_testing(
+			null,
+			static function (): string {
+				throw new \RuntimeException( 'cURL error 28: Operation timed out' );
+			},
+			static fn( array $settings ): array => [
+				'provider' => 'openai',
+				'model'    => 'gpt-4.1-mini',
+			]
+		);
+
+		$payload = $chat_helper->generate_ai_reply( 'hello' );
+
+		$this->assertSame( 'error', $payload['mode'] );
+		$this->assertSame( 'openai', $payload['provider'] );
+		$this->assertSame( 'gpt-4.1-mini', $payload['model'] );
+		$this->assertSame( 'timeout', $payload['error']['type'] );
+		$this->assertSame( true, $payload['error']['retryable'] );
+		$this->assertSame( 'error', $payload['card']['type'] );
+		$this->assertStringContainsString( 'AI request failed', $payload['reply'] );
+	}
 }

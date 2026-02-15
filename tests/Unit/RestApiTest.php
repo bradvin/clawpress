@@ -196,6 +196,7 @@ final class RestApiTest extends TestCase {
 					'suggestions' => null,
 					'card'     => null,
 					'command'  => null,
+					'error'    => null,
 				),
 			),
 			$response->get_data()
@@ -251,6 +252,47 @@ final class RestApiTest extends TestCase {
 		$this->assertNotEmpty( $data['meta']['suggestions'] );
 		$this->assertStringContainsString( 'Unknown command', $data['reply'] );
 		$this->assertStringContainsString( '/help', $data['reply'] );
+	}
+
+	public function test_chat_send_message_returns_structured_error_meta(): void {
+		$chat_controller = new Chat_Controller(
+			static function ( string $message ): array {
+				unset( $message );
+				return array(
+					'reply'    => 'AI request failed: timed out',
+					'mode'     => 'error',
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+					'error'    => array(
+						'type'    => 'timeout',
+						'message' => 'timed out',
+						'code'    => 28,
+					),
+					'card'     => array(
+						'type' => 'error',
+						'data' => array(
+							'title'   => 'Request Error',
+							'message' => 'timed out',
+						),
+					),
+				);
+			}
+		);
+
+		$response = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => 'trigger error',
+				)
+			)
+		);
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'error', $data['meta']['mode'] );
+		$this->assertSame( 'timeout', $data['meta']['error']['type'] );
+		$this->assertSame( 'timed out', $data['meta']['error']['message'] );
+		$this->assertSame( 'error', $data['meta']['card']['type'] );
 	}
 
 	public function test_memory_clear_requires_confirmation_and_clears_on_second_call(): void {

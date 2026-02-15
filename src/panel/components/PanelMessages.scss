@@ -31,6 +31,23 @@
   overflow: hidden;
 }
 
+.clawpress-card.clawpress-card-error {
+  background: #fff4f4;
+  border: 1px solid #d63638;
+}
+
+.clawpress-card.clawpress-card-error .clawpress-card-title {
+  color: #8a1f1f;
+}
+
+.clawpress-card.clawpress-card-error .clawpress-card-subtitle {
+  color: #a13939;
+}
+
+.clawpress-card.clawpress-card-error .clawpress-card-text {
+  color: #7f1d1d;
+}
+
 .clawpress-card-emoji {
   font-size: 20px;
   line-height: 1;

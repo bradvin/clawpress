@@ -158,15 +158,7 @@ final class Chat_Helper {
 				'suggestions' => $this->get_online_suggestions( $reply, $provider, $model ),
 			];
 		} catch ( Throwable $throwable ) {
-			unset( $throwable );
-
-			return [
-				'reply'       => $this->build_offline_reply( $message ),
-				'mode'        => 'offline',
-				'provider'    => $provider,
-				'model'       => '' !== $model ? $model : null,
-				'suggestions' => $this->get_default_offline_suggestions(),
-			];
+			return $this->build_error_reply_payload( $throwable, $provider, $model );
 		}
 	}
 
@@ -275,5 +267,83 @@ final class Chat_Helper {
 		);
 
 		return array_slice( $normalized, 0, 8 );
+	}
+
+	/**
+	 * Build error payload for model/transport failures.
+	 *
+	 * @param Throwable $throwable Thrown exception.
+	 * @param string    $provider Provider identifier.
+	 * @param string    $model Model identifier.
+	 * @return array<string,mixed>
+	 */
+	private function build_error_reply_payload( Throwable $throwable, string $provider, string $model ): array {
+		$error_message = trim( sanitize_text_field( $throwable->getMessage() ) );
+		if ( '' === $error_message ) {
+			$error_message = __( 'Unknown provider error.', 'clawpress' );
+		}
+
+		$error_type = $this->classify_error_type( $throwable, $error_message );
+		$reply      = sprintf(
+			/* translators: %s: provider/transport error message */
+			__( 'AI request failed: %s', 'clawpress' ),
+			$error_message
+		);
+
+		$card_subtitle = 'timeout' === $error_type
+			? __( 'Request timed out', 'clawpress' )
+			: __( 'Provider error', 'clawpress' );
+
+		$error_code = $throwable->getCode();
+		if ( ! is_int( $error_code ) && ! is_string( $error_code ) ) {
+			$error_code = 0;
+		}
+
+		return [
+			'reply'       => $reply,
+			'mode'        => 'error',
+			'provider'    => '' !== $provider ? $provider : null,
+			'model'       => '' !== $model ? $model : null,
+			'suggestions' => $this->get_default_offline_suggestions(),
+			'error'       => [
+				'type'      => $error_type,
+				'message'   => $error_message,
+				'code'      => $error_code,
+				'retryable' => 'timeout' === $error_type,
+			],
+			'card'        => [
+				'type' => 'error',
+				'data' => [
+					'title'    => __( 'Request Error', 'clawpress' ),
+					'subtitle' => $card_subtitle,
+					'message'  => $error_message,
+				],
+			],
+		];
+	}
+
+	/**
+	 * Classify known provider error patterns.
+	 *
+	 * @param Throwable $throwable Thrown exception.
+	 * @param string    $error_message Sanitized error message.
+	 */
+	private function classify_error_type( Throwable $throwable, string $error_message ): string {
+		$message  = strtolower( $error_message . ' ' . $throwable->getMessage() );
+		$patterns = [
+			'timed out',
+			'timeout',
+			'curl error 28',
+			'deadline exceeded',
+			'operation timed out',
+		];
+
+		foreach ( $patterns as $pattern ) {
+			if ( false !== strpos( $message, $pattern ) ) {
+				return 'timeout';
+			}
+		}
+
+		return 'provider';
 	}
 }

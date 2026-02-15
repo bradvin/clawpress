@@ -103,6 +103,29 @@ const Panel = () => {
       },
     ]);
 
+  const buildErrorCard = (message, type = '') => {
+    const subtitleByType = {
+      timeout: __('Request timed out', 'clawpress'),
+      request: __('Network or API request error', 'clawpress'),
+      provider: __('Provider error', 'clawpress'),
+    };
+
+    const subtitle =
+      typeof type === 'string' && subtitleByType[type] ? subtitleByType[type] : __('Error', 'clawpress');
+
+    return {
+      type: 'error',
+      data: {
+        title: __('Request Error', 'clawpress'),
+        subtitle,
+        message:
+          typeof message === 'string' && message.trim()
+            ? message
+            : __('Chat request failed.', 'clawpress'),
+      },
+    };
+  };
+
   const normalizeHistoryItems = (items) => {
     if (!Array.isArray(items)) {
       return [];
@@ -404,7 +427,11 @@ const Panel = () => {
         setToolPlanningShown(false);
         break;
       case 'error':
-        appendMessage('system', parsed.error || __('Stream error.', 'clawpress'));
+        appendMessage(
+          'system',
+          parsed?.error || __('Stream error.', 'clawpress'),
+          parsed?.card || buildErrorCard(parsed?.error, parsed?.type)
+        );
         break;
       case 'done':
         finishStream();
