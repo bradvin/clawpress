@@ -34,6 +34,10 @@ final class Settings_Helper {
 			'default'  => '',
 			'sanitize' => 'sanitize_text_field',
 		],
+		'request_timeout'      => [
+			'default'  => 30,
+			'sanitize' => 'clawpress_sanitize_request_timeout',
+		],
 		'agent_user_id'        => [
 			'default'  => 0,
 			'sanitize' => 'clawpress_sanitize_int',
@@ -156,6 +160,16 @@ final class Settings_Helper {
 	public function get_setup_completed( ?array $settings = null ): bool {
 		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
 		return (bool) $settings['setup_completed'];
+	}
+
+	/**
+	 * Get request timeout in seconds.
+	 *
+	 * @param array<string,mixed>|null $settings Optional settings array.
+	 */
+	public function get_request_timeout( ?array $settings = null ): int {
+		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
+		return (int) $settings['request_timeout'];
 	}
 
 	/**

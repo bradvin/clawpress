@@ -21,6 +21,7 @@ use ClawPress\Helpers\Workspace_Helper;
 use ClawPress\PostTypes\Post_Types;
 use Throwable;
 use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -359,6 +360,7 @@ final class Setup_Command_Handler implements Command_Handler {
 		$provider       = clawpress_sanitize_provider( $settings['provider'] ?? '' );
 		$model          = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
 		$model_is_valid = $this->is_model_valid_for_provider( $provider, $model );
+		$request_timeout = $this->settings_helper->get_request_timeout( $settings );
 
 		if ( '' === $provider || '' === $model || ! $model_is_valid ) {
 			return $this->build_error_response(
@@ -367,10 +369,14 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		try {
+			$request_options = new RequestOptions();
+			$request_options->setTimeout( (float) $request_timeout );
+
 			$reply = trim(
 				AiClient::prompt( 'Reply with exactly: OK' )
 					->usingProvider( $provider )
 					->usingModelPreference( [ $provider, $model ] )
+					->usingRequestOptions( $request_options )
 					->generateText()
 			);
 

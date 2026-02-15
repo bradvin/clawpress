@@ -61,6 +61,11 @@ final class Settings_Controller implements Route_Controller {
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
 					],
+					'request_timeout'      => [
+						'required'          => false,
+						'validate_callback' => 'clawpress_validate_request_timeout',
+						'sanitize_callback' => 'clawpress_sanitize_request_timeout',
+					],
 					'agent_user_id'        => [
 						'required'          => false,
 						'validate_callback' => 'clawpress_validate_int',
@@ -105,6 +110,7 @@ final class Settings_Controller implements Route_Controller {
 			[
 				'provider'             => $request->get_param( 'provider' ),
 				'model'                => $request->get_param( 'model' ),
+				'request_timeout'      => $request->get_param( 'request_timeout' ),
 				'agent_user_id'        => $agent_user_id,
 				'memory_enabled'       => $request->get_param( 'memory_enabled' ),
 				'setup_completed' => $request->get_param( 'setup_completed' ),

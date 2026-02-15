@@ -158,6 +158,16 @@ final class CommandsTest extends TestCase {
 		$this->assertTrue( WordPress_Stubs::$options['clawpress_settings']['memory_enabled'] );
 	}
 
+	public function test_settings_command_updates_request_timeout_setting(): void {
+		$commands = new Commands();
+		$payload  = $commands->maybe_dispatch( '/settings request_timeout 90' );
+
+		$this->assertIsArray( $payload );
+		$this->assertSame( '/settings', $payload['command']['name'] );
+		$this->assertSame( false, $payload['command']['error'] );
+		$this->assertSame( 90, WordPress_Stubs::$options['clawpress_settings']['request_timeout'] );
+	}
+
 	public function test_test_command_requires_saved_provider_and_model(): void {
 		$commands  = new Commands();
 		$payload_1 = $commands->maybe_dispatch( '/test' );

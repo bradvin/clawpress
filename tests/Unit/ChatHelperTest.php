@@ -65,6 +65,7 @@ final class ChatHelperTest extends TestCase {
 		$this->assertSame( 'openai', $calls[0]['provider'] );
 		$this->assertSame( 'gpt-4.1-mini', $calls[0]['model'] );
 		$this->assertSame( 'Current request', $calls[0]['context']['message'] );
+		$this->assertSame( 30, $calls[0]['context']['request_timeout'] );
 		$this->assertStringContainsString( '# ClawPress', $calls[0]['context']['system_prompt'] );
 		$this->assertStringContainsString( '# Memory', $calls[0]['context']['system_prompt'] );
 		$this->assertCount( 2, $calls[0]['context']['history_messages'] );

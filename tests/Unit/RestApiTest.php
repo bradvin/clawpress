@@ -81,6 +81,7 @@ final class RestApiTest extends TestCase {
 			array(
 				'provider'             => 'openai',
 				'model'                => 'gpt-4.1-mini',
+				'request_timeout'      => 30,
 				'agent_user_id'        => 0,
 				'memory_enabled'       => false,
 				'setup_completed' => false,
@@ -114,6 +115,7 @@ final class RestApiTest extends TestCase {
 				array(
 					'provider'             => 'openai',
 					'model'                => 'gpt-4.1-mini',
+					'request_timeout'      => 45,
 					'agent_user_id'        => 12,
 					'memory_enabled'       => true,
 					'setup_completed' => true,
@@ -126,10 +128,12 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( true, $data['success'] );
 		$this->assertSame( 'openai', $data['settings']['provider'] );
 		$this->assertSame( 'gpt-4.1-mini', $data['settings']['model'] );
+		$this->assertSame( 45, $data['settings']['request_timeout'] );
 		$this->assertSame( 12, $data['settings']['agent_user_id'] );
 		$this->assertSame( true, $data['settings']['memory_enabled'] );
 		$this->assertSame( true, $data['settings']['setup_completed'] );
 		$this->assertSame( 'openai', WordPress_Stubs::$options['clawpress_settings']['provider'] );
+		$this->assertSame( 45, WordPress_Stubs::$options['clawpress_settings']['request_timeout'] );
 		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_settings']['agent_user_id'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['memory_enabled'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['setup_completed'] );

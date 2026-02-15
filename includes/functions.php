@@ -45,6 +45,30 @@ if ( ! function_exists( 'clawpress_validate_int' ) ) {
 	}
 }
 
+if ( ! function_exists( 'clawpress_sanitize_request_timeout' ) ) {
+	/**
+	 * Sanitize LLM request timeout in seconds.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_sanitize_request_timeout( $value ): int {
+		$timeout = (int) $value;
+
+		return $timeout > 0 ? $timeout : 30;
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_request_timeout' ) ) {
+	/**
+	 * Validate LLM request timeout.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_request_timeout( $value ): bool {
+		return is_numeric( $value ) && (int) $value > 0;
+	}
+}
+
 if ( ! function_exists( 'clawpress_sanitize_provider' ) ) {
 	/**
 	 * Sanitize a provider identifier.
@@ -68,7 +92,7 @@ if ( ! function_exists( 'clawpress_check_permissions' ) ) {
 	function clawpress_check_permissions(): bool {
 		$capability = apply_filters( 'clawpress_permissions_capability', 'manage_options' );
 
-		if ( empty ( $capability ) ) {
+		if ( empty( $capability ) ) {
 			$capability = 'manage_options';
 		}
 

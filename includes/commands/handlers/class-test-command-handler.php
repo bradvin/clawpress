@@ -16,6 +16,7 @@ use ClawPress\Helpers\Provider_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use Throwable;
 use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -85,6 +86,8 @@ final class Test_Command_Handler implements Command_Handler {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @param Command_Request $request Parsed request.
 	 */
 	public function handle( Command_Request $request ): Command_Response {
 		if ( '' !== $request->get_argument( 0 ) ) {
@@ -102,6 +105,7 @@ final class Test_Command_Handler implements Command_Handler {
 		$saved_provider        = isset( $settings['provider'] ) ? clawpress_sanitize_provider( $settings['provider'] ) : '';
 		$saved_model           = $this->provider_helper->resolve_model( $settings );
 		$configured_provider   = $this->provider_helper->resolve_provider_from_settings( $settings );
+		$request_timeout       = $this->settings_helper->get_request_timeout( $settings );
 
 		if ( '' === $saved_provider ) {
 			return Command_Response::error(
@@ -141,10 +145,14 @@ final class Test_Command_Handler implements Command_Handler {
 		}
 
 		try {
+			$request_options = new RequestOptions();
+			$request_options->setTimeout( (float) $request_timeout );
+
 			$reply = trim(
 				AiClient::prompt( 'Reply with exactly: OK' )
 					->usingProvider( $configured_provider )
 					->usingModelPreference( [ $configured_provider, $saved_model ] )
+					->usingRequestOptions( $request_options )
 					->generateText()
 			);
 

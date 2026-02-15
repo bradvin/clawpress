@@ -13,6 +13,7 @@ use ClawPress\Commands\Commands;
 use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Messages\DTO\Message;
+use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -130,7 +131,8 @@ final class Chat_Helper {
 		}
 
 		try {
-			$context = $this->context_helper->build_model_context( $message );
+			$context                    = $this->context_helper->build_model_context( $message );
+			$context['request_timeout'] = $this->settings_helper->get_request_timeout( $settings );
 			$reply   = trim(
 				(string) call_user_func(
 					$this->online_reply_generator,
@@ -194,6 +196,11 @@ final class Chat_Helper {
 		if ( '' !== $model ) {
 			$builder = $builder->usingModelPreference( [ $provider, $model ] );
 		}
+
+		$request_timeout = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 30;
+		$request_options = new RequestOptions();
+		$request_options->setTimeout( (float) $request_timeout );
+		$builder = $builder->usingRequestOptions( $request_options );
 
 		return (string) $builder->generateText();
 	}

@@ -66,6 +66,7 @@ export default function SettingsView() {
 	const [ success, setSuccess ] = useState( '' );
 	const [ provider, setProvider ] = useState( '' );
 	const [ model, setModel ] = useState( '' );
+	const [ requestTimeout, setRequestTimeout ] = useState( 30 );
 	const [ agentUserId, setAgentUserId ] = useState( 0 );
 	const [ memoryEnabled, setMemoryEnabled ] = useState( false );
 	const [ setupCompleted, setSetupCompleted ] = useState( false );
@@ -92,6 +93,12 @@ export default function SettingsView() {
 					typeof settings.model === 'string'
 						? settings.model
 						: ''
+				);
+				setRequestTimeout(
+					Number.isFinite( Number( settings.request_timeout ) ) &&
+						Number( settings.request_timeout ) > 0
+						? Number( settings.request_timeout )
+						: 30
 				);
 				setAgentUserId(
 					Number.isFinite( Number( settings.agent_user_id ) )
@@ -135,6 +142,11 @@ export default function SettingsView() {
 				body: {
 					provider,
 					model,
+					request_timeout:
+						Number.isFinite( Number( requestTimeout ) ) &&
+						Number( requestTimeout ) > 0
+							? Number( requestTimeout )
+							: 30,
 					agent_user_id:
 						Number.isFinite( Number( agentUserId ) ) &&
 						Number( agentUserId ) > 0
@@ -219,6 +231,28 @@ export default function SettingsView() {
 								onChange={ setModel }
 								help={ __(
 									'Example: gpt-4.1-mini',
+									'clawpress'
+								) }
+								__nextHasNoMarginBottom
+							/>
+							<TextControl
+								label={ __(
+									'Request Timeout (seconds)',
+									'clawpress'
+								) }
+								type="number"
+								min={ 1 }
+								value={ String( requestTimeout ) }
+								onChange={ ( value ) =>
+									setRequestTimeout(
+										Number.isFinite( Number( value ) ) &&
+											Number( value ) > 0
+											? Number( value )
+											: 30
+									)
+								}
+								help={ __(
+									'Maximum time to wait for an AI response. Default is 30 seconds.',
 									'clawpress'
 								) }
 								__nextHasNoMarginBottom
