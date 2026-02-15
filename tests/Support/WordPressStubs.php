@@ -43,6 +43,14 @@ final class WordPress_Stubs {
 	/** @var array<int,array<string,mixed>> */
 	public static array $user_meta = array();
 
+	/** @var array<int,array<string,mixed>> */
+	public static array $posts = array();
+
+	/** @var array<int,array<string,mixed>> */
+	public static array $post_meta = array();
+
+	public static int $next_post_id = 1;
+
 	public static bool $can_manage_options = true;
 
 	public static bool $is_rtl = false;
@@ -69,6 +77,9 @@ final class WordPress_Stubs {
 		self::$triggered_actions    = array();
 		self::$options              = array();
 		self::$user_meta            = array();
+		self::$posts                = array();
+		self::$post_meta            = array();
+		self::$next_post_id         = 1;
 		self::$can_manage_options   = true;
 		self::$is_rtl               = false;
 		self::$has_scheduled_action = false;
@@ -131,6 +142,35 @@ namespace {
 	if ( ! function_exists( 'sanitize_text_field' ) ) {
 		function sanitize_text_field( $text ): string {
 			return trim( (string) $text );
+		}
+	}
+
+	if ( ! function_exists( 'sanitize_title' ) ) {
+		function sanitize_title( string $title ): string {
+			$title = strtolower( trim( $title ) );
+			$title = preg_replace( '/[^a-z0-9\-]+/', '-', $title );
+			$title = preg_replace( '/-+/', '-', (string) $title );
+			return trim( (string) $title, '-' );
+		}
+	}
+
+	if ( ! function_exists( 'wp_json_encode' ) ) {
+		function wp_json_encode( $value, int $flags = 0, int $depth = 512 ) {
+			return json_encode( $value, $flags, $depth );
+		}
+	}
+
+	if ( ! function_exists( 'wp_date' ) ) {
+		function wp_date( string $format, ?int $timestamp = null, ?\DateTimeZone $timezone = null ): string {
+			unset( $timezone );
+			$resolved_timestamp = null === $timestamp ? time() : $timestamp;
+			return gmdate( $format, $resolved_timestamp );
+		}
+	}
+
+	if ( ! function_exists( 'is_wp_error' ) ) {
+		function is_wp_error( $thing ): bool {
+			return $thing instanceof \WP_Error;
 		}
 	}
 
@@ -227,6 +267,196 @@ namespace {
 			unset( $autoload );
 			WordPress_Stubs::$options[ $option ] = $value;
 			return true;
+		}
+	}
+
+	if ( ! function_exists( 'wp_insert_post' ) ) {
+		function wp_insert_post( array $postarr, bool $wp_error = false ) {
+			unset( $wp_error );
+
+			$post_id = isset( $postarr['ID'] ) ? (int) $postarr['ID'] : 0;
+			if ( $post_id <= 0 ) {
+				$post_id = WordPress_Stubs::$next_post_id++;
+			}
+
+			$existing = WordPress_Stubs::$posts[ $post_id ] ?? array();
+			$post     = array_merge(
+				array(
+					'ID'           => $post_id,
+					'post_type'    => 'post',
+					'post_status'  => 'publish',
+					'post_title'   => '',
+					'post_name'    => '',
+					'post_content' => '',
+					'post_author'  => 0,
+					'post_date'    => gmdate( 'Y-m-d H:i:s' ),
+				),
+				$existing,
+				$postarr
+			);
+
+			$post['ID'] = $post_id;
+			WordPress_Stubs::$posts[ $post_id ] = $post;
+
+			return $post_id;
+		}
+	}
+
+	if ( ! function_exists( 'wp_delete_post' ) ) {
+		function wp_delete_post( int $post_id, bool $force_delete = false ) {
+			unset( $force_delete );
+			if ( ! isset( WordPress_Stubs::$posts[ $post_id ] ) ) {
+				return false;
+			}
+
+			$post_data = WordPress_Stubs::$posts[ $post_id ];
+			unset( WordPress_Stubs::$posts[ $post_id ], WordPress_Stubs::$post_meta[ $post_id ] );
+
+			return new \WP_Post( $post_data );
+		}
+	}
+
+	if ( ! function_exists( 'get_post' ) ) {
+		function get_post( $post ) {
+			$post_id = is_numeric( $post ) ? (int) $post : 0;
+			if ( $post instanceof \WP_Post ) {
+				$post_id = (int) $post->ID;
+			}
+
+			if ( $post_id <= 0 || ! isset( WordPress_Stubs::$posts[ $post_id ] ) ) {
+				return null;
+			}
+
+			return new \WP_Post( WordPress_Stubs::$posts[ $post_id ] );
+		}
+	}
+
+	if ( ! function_exists( 'get_posts' ) ) {
+		function get_posts( array $args = array() ): array {
+			$posts = array_values( WordPress_Stubs::$posts );
+
+			if ( isset( $args['post_type'] ) ) {
+				$post_type = (string) $args['post_type'];
+				$posts     = array_values(
+					array_filter(
+						$posts,
+						static fn( array $post ): bool => $post_type === (string) ( $post['post_type'] ?? '' )
+					)
+				);
+			}
+
+			if ( isset( $args['post_status'] ) && 'any' !== $args['post_status'] ) {
+				$post_status = (string) $args['post_status'];
+				$posts       = array_values(
+					array_filter(
+						$posts,
+						static fn( array $post ): bool => $post_status === (string) ( $post['post_status'] ?? '' )
+					)
+				);
+			}
+
+			if ( isset( $args['name'] ) && '' !== (string) $args['name'] ) {
+				$name  = (string) $args['name'];
+				$posts = array_values(
+					array_filter(
+						$posts,
+						static fn( array $post ): bool => $name === (string) ( $post['post_name'] ?? '' )
+					)
+				);
+			}
+
+			if ( isset( $args['meta_key'], $args['meta_value'] ) ) {
+				$meta_key   = (string) $args['meta_key'];
+				$meta_value = $args['meta_value'];
+				$posts      = array_values(
+					array_filter(
+						$posts,
+						static function ( array $post ) use ( $meta_key, $meta_value ): bool {
+							$post_id = (int) ( $post['ID'] ?? 0 );
+							if ( $post_id <= 0 ) {
+								return false;
+							}
+
+							$stored_value = WordPress_Stubs::$post_meta[ $post_id ][ $meta_key ] ?? null;
+							return $stored_value === $meta_value;
+						}
+					)
+				);
+			}
+
+			$orderby = isset( $args['orderby'] ) ? (string) $args['orderby'] : 'ID';
+			$order   = isset( $args['order'] ) ? strtoupper( (string) $args['order'] ) : 'DESC';
+
+			usort(
+				$posts,
+				static function ( array $left, array $right ) use ( $orderby, $order ): int {
+					if ( 'date' === strtolower( $orderby ) ) {
+						$left_value  = strtotime( (string) ( $left['post_date'] ?? '' ) ) ?: 0;
+						$right_value = strtotime( (string) ( $right['post_date'] ?? '' ) ) ?: 0;
+					} else {
+						$left_value  = (int) ( $left['ID'] ?? 0 );
+						$right_value = (int) ( $right['ID'] ?? 0 );
+					}
+
+					$comparison = $left_value <=> $right_value;
+					return 'ASC' === $order ? $comparison : -$comparison;
+				}
+			);
+
+			$posts_per_page = isset( $args['posts_per_page'] ) ? (int) $args['posts_per_page'] : 5;
+			if ( $posts_per_page > -1 ) {
+				$posts = array_slice( $posts, 0, $posts_per_page );
+			}
+
+			$fields = isset( $args['fields'] ) ? (string) $args['fields'] : '';
+			if ( 'ids' === $fields ) {
+				return array_values(
+					array_map(
+						static fn( array $post ): int => (int) $post['ID'],
+						$posts
+					)
+				);
+			}
+
+			return array_values(
+				array_map(
+					static fn( array $post ): \WP_Post => new \WP_Post( $post ),
+					$posts
+				)
+			);
+		}
+	}
+
+	if ( ! function_exists( 'update_post_meta' ) ) {
+		function update_post_meta( int $post_id, string $meta_key, $meta_value, $prev_value = '' ): bool {
+			unset( $prev_value );
+			if ( $post_id <= 0 ) {
+				return false;
+			}
+
+			if ( ! isset( WordPress_Stubs::$post_meta[ $post_id ] ) ) {
+				WordPress_Stubs::$post_meta[ $post_id ] = array();
+			}
+
+			WordPress_Stubs::$post_meta[ $post_id ][ $meta_key ] = $meta_value;
+			return true;
+		}
+	}
+
+	if ( ! function_exists( 'get_post_meta' ) ) {
+		function get_post_meta( int $post_id, string $key = '', bool $single = false ) {
+			$meta = WordPress_Stubs::$post_meta[ $post_id ] ?? array();
+
+			if ( '' === $key ) {
+				return $meta;
+			}
+
+			$value = $meta[ $key ] ?? null;
+			if ( $single ) {
+				return null === $value ? '' : $value;
+			}
+
+			return null === $value ? array() : array( $value );
 		}
 	}
 
@@ -351,6 +581,56 @@ namespace {
 	if ( ! function_exists( 'get_current_user_id' ) ) {
 		function get_current_user_id(): int {
 			return WordPress_Stubs::$current_user_id;
+		}
+	}
+
+	if ( ! class_exists( 'WP_Error' ) ) {
+		class WP_Error {
+			private string $error_code;
+
+			private string $error_message;
+
+			public function __construct( string $error_code = '', string $error_message = '' ) {
+				$this->error_code    = $error_code;
+				$this->error_message = $error_message;
+			}
+
+			public function get_error_code(): string {
+				return $this->error_code;
+			}
+
+			public function get_error_message(): string {
+				return $this->error_message;
+			}
+		}
+	}
+
+	if ( ! class_exists( 'WP_Post' ) ) {
+		class WP_Post {
+			public int $ID = 0;
+
+			public string $post_type = '';
+
+			public string $post_status = '';
+
+			public string $post_title = '';
+
+			public string $post_name = '';
+
+			public string $post_content = '';
+
+			public int $post_author = 0;
+
+			public string $post_date = '';
+
+			/**
+			 * @param array<string,mixed> $data Post payload.
+			 */
+			public function __construct( array $data = array() ) {
+				foreach ( $data as $key => $value ) {
+					$this->$key = $value;
+				}
+			}
 		}
 	}
 

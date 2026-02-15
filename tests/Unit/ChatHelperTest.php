@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\Helpers\Chat_Helper;
+use ClawPress\Helpers\Memory_Helper;
 use ClawPress\Tests\Support\TestCase;
 
 final class ChatHelperTest extends TestCase {
@@ -20,7 +21,7 @@ final class ChatHelperTest extends TestCase {
 				'memory_enabled' => true,
 			]
 		);
-		update_option( 'clawpress_memory_entries', [ 'User prefers concise replies.' ] );
+		Memory_Helper::get_instance()->save_long_term_memory( 'User prefers concise replies.' );
 		update_option( 'clawpress_chat_history_1', [
 			[
 				'id'        => 'msg-1',

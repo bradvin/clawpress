@@ -13,6 +13,7 @@ use ClawPress\Commands\Command_Confirmation_Store;
 use ClawPress\Commands\Command_Handler;
 use ClawPress\Commands\Command_Request;
 use ClawPress\Commands\Command_Response;
+use ClawPress\Helpers\Memory_Helper;
 use ClawPress\Helpers\Settings_Helper;
 
 defined( 'ABSPATH' ) || exit;
@@ -21,11 +22,6 @@ defined( 'ABSPATH' ) || exit;
  * Memory command.
  */
 final class Memory_Command_Handler implements Command_Handler {
-	/**
-	 * Memory option key.
-	 */
-	private const MEMORY_OPTION = 'clawpress_memory_entries';
-
 	/**
 	 * Maximum number of items shown in list output.
 	 */
@@ -46,14 +42,27 @@ final class Memory_Command_Handler implements Command_Handler {
 	private Command_Confirmation_Store $confirmation_store;
 
 	/**
+	 * Memory helper.
+	 *
+	 * @var Memory_Helper
+	 */
+	private Memory_Helper $memory_helper;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Settings_Helper            $settings_helper Settings helper.
 	 * @param Command_Confirmation_Store $confirmation_store Confirmation store.
+	 * @param Memory_Helper              $memory_helper Memory helper.
 	 */
-	public function __construct( Settings_Helper $settings_helper, Command_Confirmation_Store $confirmation_store ) {
+	public function __construct(
+		Settings_Helper $settings_helper,
+		Command_Confirmation_Store $confirmation_store,
+		Memory_Helper $memory_helper
+	) {
 		$this->settings_helper    = $settings_helper;
 		$this->confirmation_store = $confirmation_store;
+		$this->memory_helper      = $memory_helper;
 	}
 
 	/**
@@ -92,7 +101,9 @@ final class Memory_Command_Handler implements Command_Handler {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * Dispatch a memory command action.
+	 *
+	 * @param Command_Request $request Parsed command request.
 	 */
 	public function handle( Command_Request $request ): Command_Response {
 		$action = strtolower( $request->get_argument( 0 ) );
@@ -148,13 +159,8 @@ final class Memory_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$entries = get_option( self::MEMORY_OPTION, [] );
-		if ( ! is_array( $entries ) ) {
-			$entries = [];
-		}
-
-		$normalized_entries = $this->normalize_entries( $entries );
-		if ( [] === $normalized_entries ) {
+		$memory_rows = $this->memory_helper->list_memories( self::MEMORY_LIST_LIMIT );
+		if ( [] === $memory_rows ) {
 			return Command_Response::success(
 				__( 'No memory entries found.', 'clawpress' ),
 				$this->get_command(),
@@ -169,12 +175,24 @@ final class Memory_Command_Handler implements Command_Handler {
 			sprintf(
 				/* translators: %d: number of memory entries */
 				__( 'Memory entries (%d):', 'clawpress' ),
-				count( $normalized_entries )
+				count( $memory_rows )
 			),
 		];
 
-		foreach ( array_slice( $normalized_entries, 0, self::MEMORY_LIST_LIMIT ) as $index => $entry ) {
-			$lines[] = sprintf( '%d. %s', $index + 1, $entry );
+		foreach ( $memory_rows as $index => $memory_row ) {
+			$filename = isset( $memory_row['filename'] ) ? (string) $memory_row['filename'] : '';
+			$content  = isset( $memory_row['content'] ) ? trim( (string) $memory_row['content'] ) : '';
+			$content  = str_replace( [ "\r\n", "\r", "\n" ], ' ', $content );
+			if ( strlen( $content ) > 120 ) {
+				$content = substr( $content, 0, 117 ) . '...';
+			}
+
+			if ( '' === $filename ) {
+				$lines[] = sprintf( '%d. %s', $index + 1, $content );
+				continue;
+			}
+
+			$lines[] = sprintf( '%d. %s: %s', $index + 1, $filename, $content );
 		}
 
 		return Command_Response::success(
@@ -220,25 +238,25 @@ final class Memory_Command_Handler implements Command_Handler {
 		if ( ! $this->confirmation_store->consume_confirmation( 'memory.clear', $confirmation_token ) ) {
 			$issued_confirmation = $this->confirmation_store->issue_confirmation( 'memory.clear' );
 
-				return Command_Response::success(
-					sprintf(
-						/* translators: %s: confirmation command to rerun */
-						__( 'Confirmation required. Re-run `%s` within 5 minutes to clear memory.', 'clawpress' ),
-						'/memory clear --confirm=' . $issued_confirmation['token']
-					),
-					$this->get_command(),
-					$this->is_destructive(),
-					true,
-					[],
-					[
-						'/memory clear --confirm=' . $issued_confirmation['token'],
-						'/memory list',
-						'/help',
-					]
-				);
+			return Command_Response::success(
+				sprintf(
+					/* translators: %s: confirmation command to rerun */
+					__( 'Confirmation required. Re-run `%s` within 5 minutes to clear memory.', 'clawpress' ),
+					'/memory clear --confirm=' . $issued_confirmation['token']
+				),
+				$this->get_command(),
+				$this->is_destructive(),
+				true,
+				[],
+				[
+					'/memory clear --confirm=' . $issued_confirmation['token'],
+					'/memory list',
+					'/help',
+				]
+			);
 		}
 
-		update_option( self::MEMORY_OPTION, [] );
+		$this->memory_helper->clear_memories();
 
 		return Command_Response::success(
 			__( 'Memory cleared.', 'clawpress' ),
@@ -248,34 +266,6 @@ final class Memory_Command_Handler implements Command_Handler {
 			[],
 			[ '/memory list', '/status', '/help' ]
 		);
-	}
-
-	/**
-	 * Normalize option rows into plain strings.
-	 *
-	 * @param array<int,mixed> $entries Raw entries.
-	 * @return array<int,string>
-	 */
-	private function normalize_entries( array $entries ): array {
-		$normalized_entries = [];
-
-		foreach ( $entries as $entry ) {
-			if ( is_scalar( $entry ) ) {
-				$text = trim( (string) $entry );
-			} elseif ( is_array( $entry ) && isset( $entry['content'] ) ) {
-				$text = trim( (string) $entry['content'] );
-			} else {
-				$text = '';
-			}
-
-			if ( '' === $text ) {
-				continue;
-			}
-
-			$normalized_entries[] = $text;
-		}
-
-		return $normalized_entries;
 	}
 
 	/**

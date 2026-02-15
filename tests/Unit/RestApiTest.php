@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Tests\Unit;
 
+use ClawPress\Helpers\Memory_Helper;
 use ClawPress\RestAPI\Rest_API;
 use ClawPress\RestAPI\Controllers\Chat_Controller;
 use ClawPress\RestAPI\Controllers\Panel_State_Controller;
@@ -257,10 +258,9 @@ final class RestApiTest extends TestCase {
 			'memory_enabled'    => true,
 			'agent_user_id' => 9,
 		);
-		WordPress_Stubs::$options['clawpress_memory_entries'] = array(
-			'Entry A',
-			'Entry B',
-		);
+		$memory_helper = Memory_Helper::get_instance();
+		$memory_helper->save_long_term_memory( 'Entry A' );
+		$memory_helper->save_daily_memory( 'Entry B', strtotime( '2026-02-15 10:00:00 UTC' ) );
 
 		$chat_controller = new Chat_Controller();
 		$first_response  = $chat_controller->send_message(
@@ -290,7 +290,7 @@ final class RestApiTest extends TestCase {
 
 		$this->assertSame( 200, $second_response->get_status() );
 		$this->assertStringContainsString( 'Memory cleared.', $second_data['reply'] );
-		$this->assertSame( array(), WordPress_Stubs::$options['clawpress_memory_entries'] );
+		$this->assertSame( array(), $memory_helper->list_memories( 0 ) );
 	}
 
 	public function test_clear_command_clears_history_and_is_not_repersisted(): void {

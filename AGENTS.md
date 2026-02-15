@@ -60,6 +60,34 @@ When adding features:
 | Update floating panel UI | `src/panel/` and `includes/class-panel.php` |
 | Add PHP heartbeat/scheduler hook | `includes/class-heartbeat.php` |
 
+## Helper Class Reference
+
+Use helpers in `includes/helpers/` as the primary integration surface for shared logic.
+
+| Helper | File | Responsibility | Usage Rule |
+|------|------|------|------|
+| `Agent_File_Helper` | `includes/helpers/class-agent-file-helper.php` | Bootstrap and resolve agent files from `clawpress_agent_file` | Resolve logical files through this helper; do not bypass with ad-hoc lookups. |
+| `Chat_Helper` | `includes/helpers/class-chat-helper.php` | Online/offline reply orchestration and AI-call integration | Route model replies through this helper from chat flows. |
+| `Chat_History_Helper` | `includes/helpers/class-chat-history-helper.php` | Per-user chat transcript persistence | Use for chat history reads/writes and clears. |
+| `Context_Helper` | `includes/helpers/class-context-helper.php` | Builds system prompt + message arrays from bootstrap/memory/skills/history | Use this as the central context builder for LLM calls. |
+| `Memory_Helper` | `includes/helpers/class-memory-helper.php` | Memory persistence/retrieval in `clawpress_agent_mem` (`memory.md` + `memory-ddmmyyyy.md`) | All memory save/read/clear operations must use this helper only. |
+| `Model_Helper` | `includes/helpers/class-model-helper.php` | Provider-specific model option lists and defaults | Use for model option resolution in UI/commands. |
+| `Panel_Helper` | `includes/helpers/class-panel-helper.php` | Floating panel state normalization and defaults | Use for panel state storage and hydration. |
+| `Provider_Helper` | `includes/helpers/class-provider-helper.php` | Provider availability/configuration/model resolution | Use for provider detection and configured-provider fallback logic. |
+| `Settings_Helper` | `includes/helpers/class-settings-helper.php` | Typed plugin settings read/write and sanitization | Use for plugin setting access instead of direct option mutation. |
+| `Status_Helper` | `includes/helpers/class-status-helper.php` | Canonical status payload for REST/UI | Use for `/status` payload generation. |
+| `User_Helper` | `includes/helpers/class-user-helper.php` | Agent user creation and validation | Use for agent-user setup and verification. |
+| `Workspace_Helper` | `includes/helpers/class-workspace-helper.php` | Agent workspace path/hash creation and structure | Use for workspace creation/path resolution. |
+
+### Helper Guardrails
+
+- Do not duplicate helper logic in controllers/commands.
+- Do not add new direct memory storage access in commands/controllers/options.
+- Memory data model is:
+  - Daily memory files: `memory-ddmmyyyy.md`
+  - Long-term memory file: `memory.md`
+- Context assembly must read memory via `Memory_Helper` and not from legacy options.
+
 ## Data Flow
 
 The demo uses the WordPress Data Layer (`@wordpress/core-data`):

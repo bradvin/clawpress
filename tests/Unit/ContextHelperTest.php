@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\Helpers\Context_Helper;
+use ClawPress\Helpers\Memory_Helper;
 use ClawPress\Tests\Support\TestCase;
 use WordPress\AiClient\Messages\DTO\Message;
 
@@ -21,7 +22,7 @@ final class ContextHelperTest extends TestCase {
 				'memory_enabled' => true,
 			]
 		);
-		update_option( 'clawpress_memory_entries', [ 'Remember the release deadline.' ] );
+		Memory_Helper::get_instance()->save_long_term_memory( 'Remember the release deadline.' );
 		update_option(
 			'clawpress_context_skills',
 			[

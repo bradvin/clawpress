@@ -34,19 +34,9 @@ final class Context_Helper {
 	];
 
 	/**
-	 * Option key used by legacy memory commands.
-	 */
-	private const MEMORY_OPTION = 'clawpress_memory_entries';
-
-	/**
 	 * Option key for optional skill context metadata.
 	 */
 	private const SKILLS_OPTION = 'clawpress_context_skills';
-
-	/**
-	 * Maximum memory entries included in prompt context.
-	 */
-	private const MEMORY_LIMIT = 20;
 
 	/**
 	 * Maximum history messages included in model history.
@@ -82,6 +72,13 @@ final class Context_Helper {
 	private Settings_Helper $settings_helper;
 
 	/**
+	 * Memory helper.
+	 *
+	 * @var Memory_Helper
+	 */
+	private Memory_Helper $memory_helper;
+
+	/**
 	 * Workspace helper.
 	 *
 	 * @var Workspace_Helper
@@ -95,6 +92,7 @@ final class Context_Helper {
 		$this->agent_file_helper   = Agent_File_Helper::get_instance();
 		$this->chat_history_helper = Chat_History_Helper::get_instance();
 		$this->settings_helper     = Settings_Helper::get_instance();
+		$this->memory_helper       = Memory_Helper::get_instance();
 		$this->workspace_helper    = Workspace_Helper::get_instance();
 	}
 
@@ -338,33 +336,7 @@ final class Context_Helper {
 			return '';
 		}
 
-		$entries = get_option( self::MEMORY_OPTION, [] );
-		if ( ! is_array( $entries ) ) {
-			return '';
-		}
-
-		$normalized_entries = [];
-		foreach ( $entries as $entry ) {
-			if ( is_scalar( $entry ) ) {
-				$text = trim( (string) $entry );
-			} elseif ( is_array( $entry ) && isset( $entry['content'] ) ) {
-				$text = trim( (string) $entry['content'] );
-			} else {
-				$text = '';
-			}
-
-			if ( '' === $text ) {
-				continue;
-			}
-
-			$normalized_entries[] = '- ' . $text;
-		}
-
-		if ( [] === $normalized_entries ) {
-			return '';
-		}
-
-		return implode( "\n", array_slice( $normalized_entries, 0, self::MEMORY_LIMIT ) );
+		return $this->memory_helper->build_memory_context();
 	}
 
 	/**
