@@ -121,6 +121,95 @@ final class Memory_Helper {
 	}
 
 	/**
+	 * Add one short-term memory entry to a daily file.
+	 *
+	 * @param string   $entry Entry content.
+	 * @param int|null $timestamp Optional timestamp.
+	 * @return array<string,mixed>
+	 */
+	public function add_short_term_memory( string $entry, ?int $timestamp = null ): array {
+		return $this->append_daily_memory_entry( $entry, $timestamp );
+	}
+
+	/**
+	 * Replace a short-term memory daily file with new content.
+	 *
+	 * @param string   $content Memory content.
+	 * @param int|null $timestamp Optional timestamp.
+	 * @return array<string,mixed>
+	 */
+	public function update_short_term_memory( string $content, ?int $timestamp = null ): array {
+		$content = trim( $content );
+		if ( '' === $content ) {
+			return [
+				'success' => false,
+				'error'   => 'empty_content',
+			];
+		}
+
+		return $this->save_daily_memory( $content, $timestamp );
+	}
+
+	/**
+	 * Delete a short-term daily memory file.
+	 *
+	 * @param int|null $timestamp Optional timestamp.
+	 * @return array<string,mixed>
+	 */
+	public function delete_short_term_memory( ?int $timestamp = null ): array {
+		$filename = $this->build_daily_memory_filename( $timestamp );
+		return $this->delete_memory_file( $filename );
+	}
+
+	/**
+	 * Add an entry to long-term memory.
+	 *
+	 * @param string $entry Entry content.
+	 * @return array<string,mixed>
+	 */
+	public function add_long_term_memory( string $entry ): array {
+		$entry = trim( $entry );
+		if ( '' === $entry ) {
+			return [
+				'success' => false,
+				'error'   => 'empty_entry',
+			];
+		}
+
+		$existing = trim( $this->get_long_term_memory_content() );
+		$content  = '' === $existing ? $entry : $existing . "\n\n" . $entry;
+
+		return $this->save_long_term_memory( $content );
+	}
+
+	/**
+	 * Replace long-term memory content.
+	 *
+	 * @param string $content Memory content.
+	 * @return array<string,mixed>
+	 */
+	public function update_long_term_memory( string $content ): array {
+		$content = trim( $content );
+		if ( '' === $content ) {
+			return [
+				'success' => false,
+				'error'   => 'empty_content',
+			];
+		}
+
+		return $this->save_long_term_memory( $content );
+	}
+
+	/**
+	 * Delete long-term memory file.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function delete_long_term_memory(): array {
+		return $this->delete_memory_file( self::LONG_TERM_MEMORY_FILENAME );
+	}
+
+	/**
 	 * Get content for `memory.md`.
 	 */
 	public function get_long_term_memory_content(): string {
@@ -454,5 +543,50 @@ final class Memory_Helper {
 		}
 
 		return 'memory-' . substr( md5( $filename ), 0, 8 );
+	}
+
+	/**
+	 * Delete one memory file by filename.
+	 *
+	 * @param string $filename Memory filename.
+	 * @return array<string,mixed>
+	 */
+	private function delete_memory_file( string $filename ): array {
+		$filename = $this->normalize_filename( $filename );
+		if ( ! $this->is_valid_filename( $filename ) ) {
+			return [
+				'success' => false,
+				'error'   => 'invalid_filename',
+			];
+		}
+
+		$post = $this->find_memory_post_by_filename( $filename );
+		if ( ! $post instanceof \WP_Post ) {
+			return [
+				'success' => false,
+				'error'   => 'memory_not_found',
+			];
+		}
+
+		if ( ! function_exists( 'wp_delete_post' ) ) {
+			return [
+				'success' => false,
+				'error'   => 'wp_delete_post_unavailable',
+			];
+		}
+
+		$deleted = wp_delete_post( (int) $post->ID, true );
+		if ( false === $deleted || null === $deleted ) {
+			return [
+				'success' => false,
+				'error'   => 'delete_failed',
+			];
+		}
+
+		return [
+			'success'  => true,
+			'post_id'  => (int) $post->ID,
+			'filename' => $filename,
+		];
 	}
 }

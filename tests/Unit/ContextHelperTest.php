@@ -9,10 +9,12 @@ declare( strict_types=1 );
 
 namespace ClawPress\Tests\Unit;
 
+use ClawPress\Abilities\Abilities;
 use ClawPress\Helpers\Context_Helper;
 use ClawPress\Helpers\Memory_Helper;
 use ClawPress\Tests\Support\TestCase;
 use WordPress\AiClient\Messages\DTO\Message;
+use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 
 final class ContextHelperTest extends TestCase {
 	public function test_build_messages_includes_system_history_and_current_message(): void {
@@ -59,6 +61,10 @@ final class ContextHelperTest extends TestCase {
 	}
 
 	public function test_build_model_context_converts_history_to_model_messages(): void {
+		( new Abilities() );
+		do_action( 'wp_abilities_api_categories_init' );
+		do_action( 'wp_abilities_api_init' );
+
 		update_option( 'clawpress_chat_history_1', [
 			[
 				'id'        => 'msg-1',
@@ -80,10 +86,13 @@ final class ContextHelperTest extends TestCase {
 		$this->assertArrayHasKey( 'system_prompt', $context );
 		$this->assertArrayHasKey( 'history_messages', $context );
 		$this->assertArrayHasKey( 'messages', $context );
+		$this->assertArrayHasKey( 'tool_declarations', $context );
 		$this->assertSame( 'Second question', $context['message'] );
 		$this->assertCount( 2, $context['history_messages'] );
 		$this->assertInstanceOf( Message::class, $context['history_messages'][0] );
 		$this->assertSame( 'user', $context['history_messages'][0]->getRole()->value );
 		$this->assertSame( 'model', $context['history_messages'][1]->getRole()->value );
+		$this->assertNotEmpty( $context['tool_declarations'] );
+		$this->assertInstanceOf( FunctionDeclaration::class, $context['tool_declarations'][0] );
 	}
 }

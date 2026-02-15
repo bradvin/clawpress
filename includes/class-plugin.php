@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress;
 
+use ClawPress\Abilities\Abilities;
 use ClawPress\AdminPage\Admin_Page;
 use ClawPress\Heartbeat\Heartbeat;
 use ClawPress\Helpers\Action_Log_Helper;
@@ -34,6 +35,7 @@ final class Plugin {
 	 */
 	private function __construct() {
 		new Post_Types();
+		new Abilities();
 		new Rest_API();
 		new Admin_Page();
 		new Panel();

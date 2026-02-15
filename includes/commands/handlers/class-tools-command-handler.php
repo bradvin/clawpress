@@ -12,6 +12,7 @@ namespace ClawPress\Commands\Handlers;
 use ClawPress\Commands\Command_Handler;
 use ClawPress\Commands\Command_Request;
 use ClawPress\Commands\Command_Response;
+use ClawPress\Helpers\Abilities_Helper;
 use ClawPress\Helpers\Status_Helper;
 
 defined( 'ABSPATH' ) || exit;
@@ -28,12 +29,21 @@ final class Tools_Command_Handler implements Command_Handler {
 	private Status_Helper $status_helper;
 
 	/**
+	 * Abilities helper.
+	 *
+	 * @var Abilities_Helper
+	 */
+	private Abilities_Helper $abilities_helper;
+
+	/**
 	 * Constructor.
 	 *
-	 * @param Status_Helper $status_helper Status helper.
+	 * @param Status_Helper    $status_helper Status helper.
+	 * @param Abilities_Helper $abilities_helper Abilities helper.
 	 */
-	public function __construct( Status_Helper $status_helper ) {
-		$this->status_helper = $status_helper;
+	public function __construct( Status_Helper $status_helper, Abilities_Helper $abilities_helper ) {
+		$this->status_helper    = $status_helper;
+		$this->abilities_helper = $abilities_helper;
 	}
 
 	/**
@@ -73,6 +83,8 @@ final class Tools_Command_Handler implements Command_Handler {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @param Command_Request $request Command request.
 	 */
 	public function handle( Command_Request $request ): Command_Response {
 		$subcommand = strtolower( $request->get_argument( 0 ) );
@@ -97,7 +109,7 @@ final class Tools_Command_Handler implements Command_Handler {
 			? __( 'enabled', 'clawpress' )
 			: __( 'disabled (provider/model not configured)', 'clawpress' );
 
-		$lines = [
+		$lines         = [
 			__( 'Available tools/actions:', 'clawpress' ),
 			__( '- offline_commands: enabled', 'clawpress' ),
 			sprintf(
@@ -105,8 +117,27 @@ final class Tools_Command_Handler implements Command_Handler {
 				__( '- online_chat: %s', 'clawpress' ),
 				$online_chat_status
 			),
-			__( '- tool_execution: disabled (planned in a later level)', 'clawpress' ),
 		];
+		$tool_rows     = $this->abilities_helper->get_tool_status_list();
+		$enabled_count = 0;
+
+		foreach ( $tool_rows as $row ) {
+			if ( empty( $row['registered'] ) ) {
+				continue;
+			}
+
+			++$enabled_count;
+			$lines[] = sprintf(
+				/* translators: 1: tool name, 2: safety class */
+				__( '- %1$s: enabled (%2$s)', 'clawpress' ),
+				(string) $row['tool_name'],
+				(string) $row['safety_class']
+			);
+		}
+
+		if ( 0 === $enabled_count ) {
+			$lines[] = __( '- tool_execution: unavailable (no registered abilities)', 'clawpress' );
+		}
 
 		return Command_Response::success(
 			implode( "\n", $lines ),

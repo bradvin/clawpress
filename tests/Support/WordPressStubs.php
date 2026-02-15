@@ -13,6 +13,12 @@ final class WordPress_Stubs {
 	/** @var array<int,array<string,mixed>> */
 	public static array $actions = array();
 
+	/** @var array<string,int> */
+	public static array $did_actions = array();
+
+	/** @var array<int,string> */
+	public static array $doing_actions = array();
+
 	/** @var array<int,array<string,mixed>> */
 	public static array $menu_pages = array();
 
@@ -30,6 +36,12 @@ final class WordPress_Stubs {
 
 	/** @var array<int,array<string,mixed>> */
 	public static array $rest_routes = array();
+
+	/** @var array<string,mixed> */
+	public static array $abilities = array();
+
+	/** @var array<string,mixed> */
+	public static array $ability_categories = array();
 
 	/** @var array<int,array<string,mixed>> */
 	public static array $scheduled_actions = array();
@@ -67,12 +79,16 @@ final class WordPress_Stubs {
 
 	public static function reset(): void {
 		self::$actions              = array();
+		self::$did_actions          = array();
+		self::$doing_actions        = array();
 		self::$menu_pages           = array();
 		self::$enqueued_scripts     = array();
 		self::$enqueued_styles      = array();
 		self::$localized_scripts    = array();
 		self::$registered_post_types = array();
 		self::$rest_routes          = array();
+		self::$abilities            = array();
+		self::$ability_categories   = array();
 		self::$scheduled_actions    = array();
 		self::$triggered_actions    = array();
 		self::$options              = array();
@@ -109,19 +125,59 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'add_filter' ) ) {
+		function add_filter( $hook, $callback, $priority = 10, $accepted_args = 1 ): bool {
+			return add_action( $hook, $callback, $priority, $accepted_args );
+		}
+	}
+
 	if ( ! function_exists( 'apply_filters' ) ) {
-		function apply_filters( string $hook, $value ) {
+		function apply_filters( string $hook, $value, ...$args ) {
 			unset( $hook );
+			unset( $args );
 			return $value;
 		}
 	}
 
 	if ( ! function_exists( 'do_action' ) ) {
 		function do_action( $hook, ...$args ): void {
+			WordPress_Stubs::$doing_actions[] = (string) $hook;
+
+			foreach ( WordPress_Stubs::$actions as $action ) {
+				if ( ! isset( $action['hook'], $action['callback'] ) || $hook !== $action['hook'] ) {
+					continue;
+				}
+
+				if ( ! is_callable( $action['callback'] ) ) {
+					continue;
+				}
+
+				call_user_func_array( $action['callback'], $args );
+			}
+
+			array_pop( WordPress_Stubs::$doing_actions );
+			WordPress_Stubs::$did_actions[ (string) $hook ] = ( WordPress_Stubs::$did_actions[ (string) $hook ] ?? 0 ) + 1;
+
 			WordPress_Stubs::$triggered_actions[] = array(
 				'hook' => $hook,
 				'args' => $args,
 			);
+		}
+	}
+
+	if ( ! function_exists( 'doing_action' ) ) {
+		function doing_action( ?string $hook = null ): bool {
+			if ( null === $hook || '' === $hook ) {
+				return [] !== WordPress_Stubs::$doing_actions;
+			}
+
+			return in_array( $hook, WordPress_Stubs::$doing_actions, true );
+		}
+	}
+
+	if ( ! function_exists( 'did_action' ) ) {
+		function did_action( string $hook ): int {
+			return (int) ( WordPress_Stubs::$did_actions[ $hook ] ?? 0 );
 		}
 	}
 
@@ -231,6 +287,13 @@ namespace {
 			}
 
 			return true;
+		}
+	}
+
+	if ( ! function_exists( 'user_can' ) ) {
+		function user_can( int $user_id, string $capability ): bool {
+			unset( $user_id );
+			return current_user_can( $capability );
 		}
 	}
 
@@ -566,6 +629,36 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'wp_upload_dir' ) ) {
+		function wp_upload_dir( ?string $time = null, bool $create_dir = true, bool $refresh_cache = false ): array {
+			unset( $time, $refresh_cache );
+
+			$base_dir = sys_get_temp_dir() . '/clawpress-uploads';
+			if ( $create_dir && ! is_dir( $base_dir ) ) {
+				mkdir( $base_dir, 0777, true );
+			}
+
+			return [
+				'basedir' => $base_dir,
+				'baseurl' => 'https://example.test/wp-content/uploads',
+			];
+		}
+	}
+
+	if ( ! function_exists( 'wp_mkdir_p' ) ) {
+		function wp_mkdir_p( string $target ): bool {
+			if ( '' === $target ) {
+				return false;
+			}
+
+			if ( is_dir( $target ) ) {
+				return true;
+			}
+
+			return mkdir( $target, 0777, true );
+		}
+	}
+
 	if ( ! function_exists( 'esc_url_raw' ) ) {
 		function esc_url_raw( string $url ): string {
 			return $url;
@@ -581,6 +674,181 @@ namespace {
 	if ( ! function_exists( 'get_current_user_id' ) ) {
 		function get_current_user_id(): int {
 			return WordPress_Stubs::$current_user_id;
+		}
+	}
+
+	if ( ! function_exists( 'wp_set_current_user' ) ) {
+		function wp_set_current_user( int $user_id ): int {
+			WordPress_Stubs::$current_user_id = $user_id;
+			return $user_id;
+		}
+	}
+
+	if ( ! class_exists( 'WP_Ability' ) ) {
+		class WP_Ability {
+			private string $name;
+			/** @var array<string,mixed> */
+			private array $args;
+
+			/**
+			 * @param string               $name Ability name.
+			 * @param array<string,mixed>  $args Ability args.
+			 */
+			public function __construct( string $name, array $args ) {
+				$this->name = $name;
+				$this->args = $args;
+			}
+
+			public function get_name(): string {
+				return $this->name;
+			}
+
+			public function get_label(): string {
+				return (string) ( $this->args['label'] ?? '' );
+			}
+
+			public function get_description(): string {
+				return (string) ( $this->args['description'] ?? '' );
+			}
+
+			/**
+			 * @return array<string,mixed>
+			 */
+			public function get_input_schema(): array {
+				return isset( $this->args['input_schema'] ) && is_array( $this->args['input_schema'] )
+					? $this->args['input_schema']
+					: [];
+			}
+
+			/**
+			 * @return array<string,mixed>
+			 */
+			public function get_output_schema(): array {
+				return isset( $this->args['output_schema'] ) && is_array( $this->args['output_schema'] )
+					? $this->args['output_schema']
+					: [];
+			}
+
+			/**
+			 * @return array<string,mixed>
+			 */
+			public function get_meta(): array {
+				return isset( $this->args['meta'] ) && is_array( $this->args['meta'] )
+					? $this->args['meta']
+					: [];
+			}
+
+			/**
+			 * @param mixed $default_value Default value.
+			 * @return mixed
+			 */
+			public function get_meta_item( string $key, $default_value = null ) {
+				$meta = $this->get_meta();
+				return array_key_exists( $key, $meta ) ? $meta[ $key ] : $default_value;
+			}
+
+			/**
+			 * @param mixed $input Optional input.
+			 * @return mixed
+			 */
+			public function execute( $input = null ) {
+				$permission_callback = $this->args['permission_callback'] ?? null;
+				if ( ! is_callable( $permission_callback ) ) {
+					return new \WP_Error( 'ability_invalid_permission_callback', 'Invalid permission callback.' );
+				}
+
+				$has_permissions = [] === $this->get_input_schema()
+					? call_user_func( $permission_callback )
+					: call_user_func( $permission_callback, $input );
+				if ( true !== $has_permissions ) {
+					if ( is_wp_error( $has_permissions ) ) {
+						return $has_permissions;
+					}
+					return new \WP_Error( 'ability_invalid_permissions', 'Ability permission denied.' );
+				}
+
+				$execute_callback = $this->args['execute_callback'] ?? null;
+				if ( ! is_callable( $execute_callback ) ) {
+					return new \WP_Error( 'ability_invalid_execute_callback', 'Invalid execute callback.' );
+				}
+
+				return [] === $this->get_input_schema()
+					? call_user_func( $execute_callback )
+					: call_user_func( $execute_callback, $input );
+			}
+		}
+	}
+
+	if ( ! class_exists( 'WP_Ability_Category' ) ) {
+		class WP_Ability_Category {
+			private string $slug;
+			/** @var array<string,mixed> */
+			private array $args;
+
+			/**
+			 * @param string              $slug Category slug.
+			 * @param array<string,mixed> $args Category args.
+			 */
+			public function __construct( string $slug, array $args ) {
+				$this->slug = $slug;
+				$this->args = $args;
+			}
+
+			public function get_slug(): string {
+				return $this->slug;
+			}
+		}
+	}
+
+	if ( ! function_exists( 'wp_register_ability' ) ) {
+		/**
+		 * @param string              $name Ability name.
+		 * @param array<string,mixed> $args Ability args.
+		 */
+		function wp_register_ability( string $name, array $args ): ?\WP_Ability {
+			$ability = new \WP_Ability( $name, $args );
+			WordPress_Stubs::$abilities[ $name ] = $ability;
+			return $ability;
+		}
+	}
+
+	if ( ! function_exists( 'wp_get_ability' ) ) {
+		function wp_get_ability( string $name ): ?\WP_Ability {
+			$ability = WordPress_Stubs::$abilities[ $name ] ?? null;
+			return $ability instanceof \WP_Ability ? $ability : null;
+		}
+	}
+
+	if ( ! function_exists( 'wp_get_abilities' ) ) {
+		/**
+		 * @return array<string,\WP_Ability>
+		 */
+		function wp_get_abilities(): array {
+			return WordPress_Stubs::$abilities;
+		}
+	}
+
+	if ( ! function_exists( 'wp_has_ability' ) ) {
+		function wp_has_ability( string $name ): bool {
+			return isset( WordPress_Stubs::$abilities[ $name ] );
+		}
+	}
+
+	if ( ! function_exists( 'wp_register_ability_category' ) ) {
+		/**
+		 * @param string              $slug Category slug.
+		 * @param array<string,mixed> $args Category args.
+		 */
+		function wp_register_ability_category( string $slug, array $args ): ?\WP_Ability_Category {
+			$category = new \WP_Ability_Category( $slug, $args );
+			WordPress_Stubs::$ability_categories[ $slug ] = $category;
+			return $category;
+		}
+	}
+
+	if ( ! function_exists( 'wp_has_ability_category' ) ) {
+		function wp_has_ability_category( string $slug ): bool {
+			return isset( WordPress_Stubs::$ability_categories[ $slug ] );
 		}
 	}
 

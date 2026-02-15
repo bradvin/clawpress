@@ -12,8 +12,12 @@ namespace ClawPress\Helpers;
 use ClawPress\Commands\Commands;
 use Throwable;
 use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Builders\MessageBuilder;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
+use WordPress\AiClient\Tools\DTO\FunctionCall;
+use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
+use WordPress\AiClient\Tools\DTO\FunctionResponse;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,6 +25,16 @@ defined( 'ABSPATH' ) || exit;
  * Reply generation helper.
  */
 final class Chat_Helper {
+	/**
+	 * Maximum tool-calling rounds per user message.
+	 */
+	private const MAX_TOOL_ROUNDS = 4;
+
+	/**
+	 * Maximum tool calls executed in one assistant turn.
+	 */
+	private const MAX_TOOL_CALLS_PER_ROUND = 6;
+
 	/**
 	 * Singleton instance.
 	 *
@@ -48,6 +62,13 @@ final class Chat_Helper {
 	 * @var Context_Helper
 	 */
 	private Context_Helper $context_helper;
+
+	/**
+	 * Abilities helper.
+	 *
+	 * @var Abilities_Helper
+	 */
+	private Abilities_Helper $abilities_helper;
 
 	/**
 	 * LLM reply generator.
@@ -78,6 +99,7 @@ final class Chat_Helper {
 		$this->settings_helper         = Settings_Helper::get_instance();
 		$this->provider_helper         = Provider_Helper::get_instance();
 		$this->context_helper          = $context_helper ?? Context_Helper::get_instance();
+		$this->abilities_helper        = Abilities_Helper::get_instance();
 		$this->online_reply_generator  = $online_reply_generator ?? [ $this, 'generate_online_reply' ];
 		$this->provider_model_resolver = $provider_model_resolver ?? [ $this, 'resolve_provider_and_model' ];
 	}
@@ -133,7 +155,7 @@ final class Chat_Helper {
 		try {
 			$context                    = $this->context_helper->build_model_context( $message );
 			$context['request_timeout'] = $this->settings_helper->get_request_timeout( $settings );
-			$reply   = trim(
+			$reply                      = trim(
 				(string) call_user_func(
 					$this->online_reply_generator,
 					$context,
@@ -172,37 +194,182 @@ final class Chat_Helper {
 	 * @param string              $model Model identifier.
 	 */
 	private function generate_online_reply( array $context, string $provider, string $model ): string {
-		$current_message = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
-		$builder         = AiClient::prompt( $current_message )->usingProvider( $provider );
+		$current_message    = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
+		$system_prompt      = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
+		$request_timeout    = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 30;
+		$history_messages   = $this->normalize_history_messages( $context );
+		$tool_declarations  = $this->normalize_tool_declarations( $context );
+		$requesting_user_id = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
+		$execution_user_id  = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
 
-		$system_prompt = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
-		if ( '' !== $system_prompt ) {
-			$builder = $builder->usingSystemInstruction( $system_prompt );
+		$conversation = $history_messages;
+		if ( '' !== $current_message ) {
+			$conversation[] = ( new MessageBuilder( $current_message ) )
+				->usingUserRole()
+				->get();
 		}
 
-		$history_messages = [];
-		if ( isset( $context['history_messages'] ) && is_array( $context['history_messages'] ) ) {
-			foreach ( $context['history_messages'] as $history_message ) {
-				if ( $history_message instanceof Message ) {
-					$history_messages[] = $history_message;
+		$latest_assistant_text = '';
+
+		for ( $round = 0; $round < self::MAX_TOOL_ROUNDS; ++$round ) {
+			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
+			if ( '' !== $system_prompt ) {
+				$builder = $builder->usingSystemInstruction( $system_prompt );
+			}
+
+			if ( '' !== $model ) {
+				$builder = $builder->usingModelPreference( [ $provider, $model ] );
+			}
+
+			$builder = $builder->usingRequestOptions( $this->build_request_options( $request_timeout ) );
+			if ( [] !== $tool_declarations ) {
+				$builder = $builder->usingFunctionDeclarations( ...$tool_declarations );
+			}
+
+			$result                = $builder->generateResult();
+			$assistant_message     = $result->toMessage();
+			$conversation[]        = $assistant_message;
+			$latest_assistant_text = $this->extract_text_from_message( $assistant_message );
+
+			$function_calls = $this->extract_function_calls( $assistant_message );
+			if ( [] === $function_calls ) {
+				break;
+			}
+
+			$function_responses = [];
+			foreach ( array_slice( $function_calls, 0, self::MAX_TOOL_CALLS_PER_ROUND ) as $index => $function_call ) {
+				$tool_name = trim( (string) $function_call->getName() );
+				if ( '' === $tool_name ) {
+					continue;
 				}
+
+				$function_response_id = trim( (string) $function_call->getId() );
+				if ( '' === $function_response_id ) {
+					$function_response_id = sprintf( 'tool-call-%d-%d', $round + 1, $index + 1 );
+				}
+
+				$tool_result = $this->abilities_helper->execute_tool_call(
+					$tool_name,
+					$function_call->getArgs(),
+					[
+						'requesting_user_id' => $requesting_user_id,
+						'execution_user_id'  => $execution_user_id,
+					]
+				);
+
+				$function_responses[] = new FunctionResponse(
+					$function_response_id,
+					$tool_name,
+					$tool_result
+				);
+			}
+
+			if ( [] === $function_responses ) {
+				break;
+			}
+
+			$tool_response_message_builder = new MessageBuilder();
+			$tool_response_message_builder->usingUserRole();
+			foreach ( $function_responses as $function_response ) {
+				$tool_response_message_builder->withFunctionResponse( $function_response );
+			}
+
+			$conversation[] = $tool_response_message_builder->get();
+		}
+
+		return $latest_assistant_text;
+	}
+
+	/**
+	 * Normalize history message list.
+	 *
+	 * @param array<string,mixed> $context Model context payload.
+	 * @return array<int,Message>
+	 */
+	private function normalize_history_messages( array $context ): array {
+		$history_messages = [];
+		if ( ! isset( $context['history_messages'] ) || ! is_array( $context['history_messages'] ) ) {
+			return $history_messages;
+		}
+
+		foreach ( $context['history_messages'] as $history_message ) {
+			if ( $history_message instanceof Message ) {
+				$history_messages[] = $history_message;
 			}
 		}
 
-		if ( [] !== $history_messages ) {
-			$builder = $builder->withHistory( ...$history_messages );
+		return $history_messages;
+	}
+
+	/**
+	 * Normalize function declarations from context payload.
+	 *
+	 * @param array<string,mixed> $context Model context payload.
+	 * @return array<int,FunctionDeclaration>
+	 */
+	private function normalize_tool_declarations( array $context ): array {
+		$declarations = [];
+		if ( ! isset( $context['tool_declarations'] ) || ! is_array( $context['tool_declarations'] ) ) {
+			return $declarations;
 		}
 
-		if ( '' !== $model ) {
-			$builder = $builder->usingModelPreference( [ $provider, $model ] );
+		foreach ( $context['tool_declarations'] as $declaration ) {
+			if ( $declaration instanceof FunctionDeclaration ) {
+				$declarations[] = $declaration;
+			}
 		}
 
-		$request_timeout = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 30;
+		return $declarations;
+	}
+
+	/**
+	 * Build request options object.
+	 *
+	 * @param int $request_timeout Request timeout in seconds.
+	 */
+	private function build_request_options( int $request_timeout ): RequestOptions {
 		$request_options = new RequestOptions();
-		$request_options->setTimeout( (float) $request_timeout );
-		$builder = $builder->usingRequestOptions( $request_options );
+		$request_options->setTimeout( (float) max( 1, $request_timeout ) );
+		return $request_options;
+	}
 
-		return (string) $builder->generateText();
+	/**
+	 * Extract function calls from an assistant/model message.
+	 *
+	 * @param Message $message Model message.
+	 * @return array<int,FunctionCall>
+	 */
+	private function extract_function_calls( Message $message ): array {
+		$function_calls = [];
+
+		foreach ( $message->getParts() as $part ) {
+			$function_call = $part->getFunctionCall();
+			if ( $function_call instanceof FunctionCall ) {
+				$function_calls[] = $function_call;
+			}
+		}
+
+		return $function_calls;
+	}
+
+	/**
+	 * Extract text content from an assistant/model message.
+	 *
+	 * @param Message $message Model message.
+	 */
+	private function extract_text_from_message( Message $message ): string {
+		$chunks = [];
+
+		foreach ( $message->getParts() as $part ) {
+			$text = $part->getText();
+			if ( null === $text || '' === trim( $text ) ) {
+				continue;
+			}
+
+			$chunks[] = trim( $text );
+		}
+
+		return trim( implode( "\n", $chunks ) );
 	}
 
 	/**

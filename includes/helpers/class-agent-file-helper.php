@@ -176,6 +176,198 @@ final class Agent_File_Helper {
 	}
 
 	/**
+	 * Resolve one agent file entry by logical path.
+	 *
+	 * @param string $logical_path Logical file path.
+	 * @return array<string,mixed>|null
+	 */
+	public function get_file_entry_by_logical_path( string $logical_path ): ?array {
+		$normalized_path = $this->normalize_logical_path( $logical_path );
+		if ( '' === $normalized_path || ! $this->is_safe_logical_path( $normalized_path ) ) {
+			return null;
+		}
+
+		$slug    = $this->build_slug_from_template_path( $normalized_path );
+		$post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
+		if ( $post_id <= 0 || ! function_exists( 'get_post' ) ) {
+			return null;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post instanceof \WP_Post ) {
+			return null;
+		}
+
+		$stored_path = get_post_meta( (int) $post->ID, self::META_LOGICAL_PATH, true );
+		$stored_path = $this->normalize_logical_path( (string) $stored_path );
+		if ( '' === $stored_path ) {
+			$stored_path = $normalized_path;
+		}
+
+		return [
+			'post_id'      => (int) $post->ID,
+			'logical_path' => $stored_path,
+			'title'        => (string) $post->post_title,
+			'content'      => (string) $post->post_content,
+		];
+	}
+
+	/**
+	 * Upsert one agent-file by logical path.
+	 *
+	 * @param string   $logical_path Logical file path.
+	 * @param string   $content File content.
+	 * @param int|null $author_id Optional author ID.
+	 * @return array<string,mixed>
+	 */
+	public function upsert_file_by_logical_path( string $logical_path, string $content, ?int $author_id = null ): array {
+		$normalized_path = $this->normalize_logical_path( $logical_path );
+		if ( '' === $normalized_path || ! $this->is_safe_logical_path( $normalized_path ) ) {
+			return [
+				'success' => false,
+				'error'   => 'invalid_logical_path',
+			];
+		}
+
+		if ( ! function_exists( 'wp_insert_post' ) || ! function_exists( 'is_wp_error' ) ) {
+			return [
+				'success' => false,
+				'error'   => 'wp_insert_post_unavailable',
+			];
+		}
+
+		$slug             = $this->build_slug_from_template_path( $normalized_path );
+		$existing_post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
+		$resolved_author  = null === $author_id || $author_id <= 0
+			? ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 )
+			: $author_id;
+
+		$post_payload = [
+			'post_type'    => Post_Types::AGENT_FILE_POST_TYPE,
+			'post_status'  => 'publish',
+			'post_title'   => basename( $normalized_path ),
+			'post_name'    => $slug,
+			'post_content' => $content,
+			'post_author'  => $resolved_author,
+		];
+
+		if ( $existing_post_id > 0 ) {
+			$post_payload['ID'] = $existing_post_id;
+		}
+
+		$post_id = wp_insert_post( $post_payload, true );
+		if ( is_wp_error( $post_id ) ) {
+			return [
+				'success' => false,
+				'error'   => $post_id->get_error_message(),
+			];
+		}
+
+		$post_id = (int) $post_id;
+		update_post_meta( $post_id, self::META_LOGICAL_PATH, $normalized_path );
+
+		return [
+			'success'      => true,
+			'post_id'      => $post_id,
+			'logical_path' => $normalized_path,
+			'source'       => 'agent-file',
+		];
+	}
+
+	/**
+	 * Delete one agent-file by logical path.
+	 *
+	 * @param string $logical_path Logical file path.
+	 * @return array<string,mixed>
+	 */
+	public function delete_file_by_logical_path( string $logical_path ): array {
+		$normalized_path = $this->normalize_logical_path( $logical_path );
+		if ( '' === $normalized_path || ! $this->is_safe_logical_path( $normalized_path ) ) {
+			return [
+				'success' => false,
+				'error'   => 'invalid_logical_path',
+			];
+		}
+
+		$slug             = $this->build_slug_from_template_path( $normalized_path );
+		$existing_post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
+		if ( $existing_post_id <= 0 ) {
+			return [
+				'success' => false,
+				'error'   => 'file_not_found',
+			];
+		}
+
+		$deleted = function_exists( 'wp_delete_post' )
+			? wp_delete_post( $existing_post_id, true )
+			: false;
+		if ( false === $deleted || null === $deleted ) {
+			return [
+				'success' => false,
+				'error'   => 'delete_failed',
+			];
+		}
+
+		return [
+			'success'      => true,
+			'post_id'      => $existing_post_id,
+			'logical_path' => $normalized_path,
+			'source'       => 'agent-file',
+		];
+	}
+
+	/**
+	 * List available agent-file records.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function list_files(): array {
+		if ( ! function_exists( 'get_posts' ) ) {
+			return [];
+		}
+
+		$posts = get_posts(
+			[
+				'post_type'      => Post_Types::AGENT_FILE_POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			]
+		);
+
+		if ( ! is_array( $posts ) ) {
+			return [];
+		}
+
+		$entries = [];
+		foreach ( $posts as $post ) {
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
+
+			$logical_path = get_post_meta( (int) $post->ID, self::META_LOGICAL_PATH, true );
+			$logical_path = $this->normalize_logical_path( (string) $logical_path );
+			if ( '' === $logical_path ) {
+				$logical_path = $this->normalize_logical_path( (string) $post->post_title );
+			}
+
+			if ( '' === $logical_path || ! $this->is_safe_logical_path( $logical_path ) ) {
+				continue;
+			}
+
+			$entries[] = [
+				'post_id'      => (int) $post->ID,
+				'logical_path' => $logical_path,
+				'title'        => (string) $post->post_title,
+				'source'       => 'agent-file',
+			];
+		}
+
+		return $entries;
+	}
+
+	/**
 	 * Resolve all template files in templates directory.
 	 *
 	 * @return array<string,string> Relative path => absolute path.
@@ -311,5 +503,24 @@ final class Agent_File_Helper {
 		$normalized_path = ltrim( $normalized_path, '/' );
 		$normalized_path = (string) preg_replace( '#/+#', '/', $normalized_path );
 		return trim( $normalized_path );
+	}
+
+	/**
+	 * Check whether the logical path is safe.
+	 *
+	 * @param string $logical_path Normalized logical path.
+	 */
+	private function is_safe_logical_path( string $logical_path ): bool {
+		if ( '' === $logical_path ) {
+			return false;
+		}
+
+		foreach ( explode( '/', $logical_path ) as $segment ) {
+			if ( '' === $segment || '.' === $segment || '..' === $segment ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }

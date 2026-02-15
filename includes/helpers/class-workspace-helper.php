@@ -156,6 +156,197 @@ final class Workspace_Helper {
 	}
 
 	/**
+	 * Read one workspace file for a user.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $logical_path Workspace-relative path.
+	 * @return array<string,mixed>
+	 */
+	public function read_workspace_file( int $user_id, string $logical_path ): array {
+		$resolved_file = $this->resolve_workspace_file_path( $user_id, $logical_path, false );
+		if ( isset( $resolved_file['error'] ) ) {
+			return [
+				'success' => false,
+				'error'   => $resolved_file['error'],
+			];
+		}
+
+		$file_path = isset( $resolved_file['file_path'] ) ? (string) $resolved_file['file_path'] : '';
+		if ( '' === $file_path || ! is_file( $file_path ) ) {
+			return [
+				'success' => false,
+				'error'   => 'file_not_found',
+			];
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Workspace file read operation.
+		$bytes = file_get_contents( $file_path );
+		if ( false === $bytes ) {
+			return [
+				'success' => false,
+				'error'   => 'read_failed',
+			];
+		}
+
+		return [
+			'success'      => true,
+			'logical_path' => (string) $resolved_file['logical_path'],
+			'content'      => (string) $bytes,
+			'source'       => 'workspace',
+		];
+	}
+
+	/**
+	 * Write one workspace file for a user.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $logical_path Workspace-relative path.
+	 * @param string $content File content.
+	 * @return array<string,mixed>
+	 */
+	public function write_workspace_file( int $user_id, string $logical_path, string $content ): array {
+		$resolved_file = $this->resolve_workspace_file_path( $user_id, $logical_path, true );
+		if ( isset( $resolved_file['error'] ) ) {
+			return [
+				'success' => false,
+				'error'   => $resolved_file['error'],
+			];
+		}
+
+		$file_path = isset( $resolved_file['file_path'] ) ? (string) $resolved_file['file_path'] : '';
+		if ( '' === $file_path ) {
+			return [
+				'success' => false,
+				'error'   => 'invalid_file_path',
+			];
+		}
+
+		$directory = dirname( $file_path );
+		if ( '' === $directory || ! is_dir( $directory ) ) {
+			if ( ! wp_mkdir_p( $directory ) ) {
+				return [
+					'success' => false,
+					'error'   => 'mkdir_failed',
+				];
+			}
+		}
+
+		$written = file_put_contents( $file_path, $content );
+		if ( false === $written ) {
+			return [
+				'success' => false,
+				'error'   => 'write_failed',
+			];
+		}
+
+		$this->apply_permissions( $file_path, self::FILE_PERMISSIONS );
+
+		return [
+			'success'      => true,
+			'logical_path' => (string) $resolved_file['logical_path'],
+			'bytes'        => (int) $written,
+			'source'       => 'workspace',
+		];
+	}
+
+	/**
+	 * Delete one workspace file for a user.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $logical_path Workspace-relative path.
+	 * @return array<string,mixed>
+	 */
+	public function delete_workspace_file( int $user_id, string $logical_path ): array {
+		$resolved_file = $this->resolve_workspace_file_path( $user_id, $logical_path, false );
+		if ( isset( $resolved_file['error'] ) ) {
+			return [
+				'success' => false,
+				'error'   => $resolved_file['error'],
+			];
+		}
+
+		$file_path = isset( $resolved_file['file_path'] ) ? (string) $resolved_file['file_path'] : '';
+		if ( '' === $file_path || ! file_exists( $file_path ) ) {
+			return [
+				'success' => false,
+				'error'   => 'file_not_found',
+			];
+		}
+
+		$deleted = is_dir( $file_path )
+			? $this->delete_directory_recursively( $file_path )
+			: @unlink( $file_path );
+		if ( ! $deleted ) {
+			return [
+				'success' => false,
+				'error'   => 'delete_failed',
+			];
+		}
+
+		return [
+			'success'      => true,
+			'logical_path' => (string) $resolved_file['logical_path'],
+			'source'       => 'workspace',
+		];
+	}
+
+	/**
+	 * List workspace files for a user.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function list_workspace_files( int $user_id ): array {
+		$workspace_path = $this->get_workspace_path_for_agent_user( $user_id );
+		if ( '' === $workspace_path || ! is_dir( $workspace_path ) ) {
+			return [];
+		}
+
+		$entries = [];
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator(
+					$workspace_path,
+					\FilesystemIterator::SKIP_DOTS
+				)
+			);
+
+			foreach ( $iterator as $file_info ) {
+				if ( ! $file_info instanceof \SplFileInfo || ! $file_info->isFile() ) {
+					continue;
+				}
+
+				$path = (string) $file_info->getPathname();
+				if ( '' === $path ) {
+					continue;
+				}
+
+				$logical_path = ltrim( str_replace( [ $workspace_path, '\\' ], [ '', '/' ], $path ), '/' );
+				$logical_path = $this->normalize_workspace_relative_path( $logical_path );
+				if ( '' === $logical_path || ! $this->is_listable_workspace_file( $logical_path ) ) {
+					continue;
+				}
+
+				$entries[] = [
+					'logical_path' => $logical_path,
+					'size'         => (int) $file_info->getSize(),
+					'source'       => 'workspace',
+				];
+			}
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return [];
+		}
+
+		usort(
+			$entries,
+			static fn ( array $left, array $right ): int => strcmp( (string) $left['logical_path'], (string) $right['logical_path'] )
+		);
+
+		return $entries;
+	}
+
+	/**
 	 * Return stored workspace hash for a user when valid.
 	 *
 	 * @param int $user_id User ID.
@@ -255,6 +446,129 @@ final class Workspace_Helper {
 		}
 
 		@chmod( $path, $permissions );
+	}
+
+	/**
+	 * Resolve absolute file path for a workspace-relative path.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $logical_path Workspace-relative logical path.
+	 * @param bool   $ensure_workspace Whether to ensure workspace directories exist.
+	 * @return array<string,mixed>
+	 */
+	private function resolve_workspace_file_path( int $user_id, string $logical_path, bool $ensure_workspace ): array {
+		if ( $user_id <= 0 ) {
+			return [ 'error' => 'invalid_user' ];
+		}
+
+		$normalized_relative_path = $this->normalize_workspace_relative_path( $logical_path );
+		if ( '' === $normalized_relative_path ) {
+			return [ 'error' => 'invalid_logical_path' ];
+		}
+
+		if ( $ensure_workspace ) {
+			$workspace_result = $this->create_workspace_for_agent_user( $user_id );
+			if ( empty( $workspace_result['success'] ) ) {
+				return [ 'error' => 'workspace_unavailable' ];
+			}
+		}
+
+		$workspace_path = $this->get_workspace_path_for_agent_user( $user_id );
+		if ( '' === $workspace_path ) {
+			return [ 'error' => 'workspace_unavailable' ];
+		}
+
+		$file_path = $workspace_path . DIRECTORY_SEPARATOR . str_replace( '/', DIRECTORY_SEPARATOR, $normalized_relative_path );
+		if ( '' === $file_path ) {
+			return [ 'error' => 'invalid_file_path' ];
+		}
+
+		$workspace_realpath = realpath( $workspace_path );
+		if ( false !== $workspace_realpath ) {
+			$file_path_directory = dirname( $file_path );
+			$directory_realpath  = realpath( $file_path_directory );
+			if ( false !== $directory_realpath && 0 !== strpos( $directory_realpath, $workspace_realpath ) ) {
+				return [ 'error' => 'path_outside_workspace' ];
+			}
+		}
+
+		return [
+			'file_path'    => $file_path,
+			'logical_path' => $normalized_relative_path,
+		];
+	}
+
+	/**
+	 * Normalize workspace-relative path.
+	 *
+	 * @param string $logical_path Workspace-relative path.
+	 */
+	private function normalize_workspace_relative_path( string $logical_path ): string {
+		$logical_path = str_replace( '\\', '/', trim( $logical_path ) );
+		$logical_path = ltrim( $logical_path, '/' );
+		$logical_path = (string) preg_replace( '#/+#', '/', $logical_path );
+
+		if ( '' === $logical_path ) {
+			return '';
+		}
+
+		$segments = explode( '/', $logical_path );
+		foreach ( $segments as $segment ) {
+			if ( '' === $segment || '.' === $segment || '..' === $segment ) {
+				return '';
+			}
+		}
+
+		return $logical_path;
+	}
+
+	/**
+	 * Determine whether a workspace file should appear in file listings.
+	 *
+	 * @param string $logical_path Workspace-relative logical path.
+	 */
+	private function is_listable_workspace_file( string $logical_path ): bool {
+		$basename = basename( $logical_path );
+		return ! in_array( $basename, [ 'index.html', '.htaccess' ], true );
+	}
+
+	/**
+	 * Delete a directory recursively.
+	 *
+	 * @param string $directory Absolute directory path.
+	 */
+	private function delete_directory_recursively( string $directory ): bool {
+		if ( '' === $directory || ! is_dir( $directory ) ) {
+			return false;
+		}
+
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator(
+					$directory,
+					\FilesystemIterator::SKIP_DOTS
+				),
+				\RecursiveIteratorIterator::CHILD_FIRST
+			);
+
+			foreach ( $iterator as $item ) {
+				if ( $item->isDir() ) {
+					if ( ! @rmdir( (string) $item->getPathname() ) ) {
+						return false;
+					}
+					continue;
+				}
+
+				if ( ! @unlink( (string) $item->getPathname() ) ) {
+					return false;
+				}
+			}
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+
+		return @rmdir( $directory );
 	}
 
 	/**

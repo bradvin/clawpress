@@ -17,8 +17,12 @@ final class PostTypesTest extends TestCase {
 	public function test_register_adds_init_hook(): void {
 		new Post_Types();
 
-		$this->assertCount( 1, WordPress_Stubs::$actions );
-		$this->assertSame( 'init', WordPress_Stubs::$actions[0]['hook'] );
+		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
+
+		$this->assertCount( 3, WordPress_Stubs::$actions );
+		$this->assertContains( 'init', $hooks );
+		$this->assertContains( 'use_block_editor_for_post_type', $hooks );
+		$this->assertContains( 'admin_head', $hooks );
 	}
 
 	public function test_register_agent_file_post_type_uses_expected_args(): void {

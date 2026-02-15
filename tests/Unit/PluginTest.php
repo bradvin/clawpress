@@ -20,12 +20,15 @@ final class PluginTest extends TestCase {
 
 		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
 
-		$this->assertCount( 9, WordPress_Stubs::$actions );
+		$this->assertCount( 13, WordPress_Stubs::$actions );
 		$this->assertContains( 'init', $hooks );
+		$this->assertContains( 'use_block_editor_for_post_type', $hooks );
 		$this->assertContains( 'rest_api_init', $hooks );
 		$this->assertContains( 'admin_menu', $hooks );
 		$this->assertContains( 'admin_enqueue_scripts', $hooks );
 		$this->assertContains( 'admin_bar_menu', $hooks );
+		$this->assertContains( 'wp_abilities_api_categories_init', $hooks );
+		$this->assertContains( 'wp_abilities_api_init', $hooks );
 		$this->assertContains( 'action_scheduler_init', $hooks );
 		$this->assertContains( 'action_scheduler_ensure_recurring_actions', $hooks );
 		$this->assertContains( 'clawpress_heartbeat_tick', $hooks );

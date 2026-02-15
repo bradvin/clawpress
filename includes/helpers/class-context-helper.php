@@ -86,6 +86,13 @@ final class Context_Helper {
 	private Workspace_Helper $workspace_helper;
 
 	/**
+	 * Abilities helper.
+	 *
+	 * @var Abilities_Helper
+	 */
+	private Abilities_Helper $abilities_helper;
+
+	/**
 	 * Constructor.
 	 */
 	private function __construct() {
@@ -94,6 +101,7 @@ final class Context_Helper {
 		$this->settings_helper     = Settings_Helper::get_instance();
 		$this->memory_helper       = Memory_Helper::get_instance();
 		$this->workspace_helper    = Workspace_Helper::get_instance();
+		$this->abilities_helper    = Abilities_Helper::get_instance();
 	}
 
 	/**
@@ -227,11 +235,23 @@ final class Context_Helper {
 			$user_id
 		);
 
+		$tool_declarations  = $this->abilities_helper->get_tool_declarations();
+		$requesting_user_id = null === $user_id
+			? ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 )
+			: $user_id;
+		$execution_user_id  = $this->settings_helper->resolve_agent_user_id();
+		if ( $execution_user_id <= 0 ) {
+			$execution_user_id = $requesting_user_id;
+		}
+
 		return [
-			'system_prompt'    => isset( $messages[0]['content'] ) ? (string) $messages[0]['content'] : '',
-			'history_messages' => $model_history_messages,
-			'messages'         => $messages,
-			'message'          => $current_message,
+			'system_prompt'      => isset( $messages[0]['content'] ) ? (string) $messages[0]['content'] : '',
+			'history_messages'   => $model_history_messages,
+			'messages'           => $messages,
+			'message'            => $current_message,
+			'tool_declarations'  => $tool_declarations,
+			'requesting_user_id' => $requesting_user_id,
+			'execution_user_id'  => $execution_user_id,
 		];
 	}
 
