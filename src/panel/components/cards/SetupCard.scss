@@ -61,7 +61,17 @@
   color: #fff;
 }
 
+.clawpress-card-setup-progress-completed .clawpress-card-setup-progress-dot {
+  border-color: var(--fp-accent);
+  background: var(--fp-accent);
+  color: #fff;
+}
+
 .clawpress-card-setup-progress-done .clawpress-card-setup-progress-line {
+  background: var(--fp-accent);
+}
+
+.clawpress-card-setup-progress-completed .clawpress-card-setup-progress-line {
   background: var(--fp-accent);
 }
 

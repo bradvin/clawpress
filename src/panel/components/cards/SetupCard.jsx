@@ -303,8 +303,13 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
             {stepItems.length > 0 ? (
               <div className="clawpress-card-setup-progress" aria-hidden="true">
                 {stepItems.map((item, index) => {
-                  const status =
+                  const rawStatus =
                     typeof item?.status === 'string' ? item.status : 'pending';
+                  const status = ['pending', 'done', 'current', 'completed'].includes(
+                    rawStatus
+                  )
+                    ? rawStatus
+                    : 'pending';
 
                   return (
                     <div

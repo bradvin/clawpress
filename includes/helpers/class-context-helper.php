@@ -219,9 +219,7 @@ final class Context_Helper {
 		}
 
 		return $system_prompt . "\n\n## First-Run Requirement\n"
-			. 'No assistant response exists in this chat yet. Follow BOOTSTRAP.md first.'
-			. "\n"
-			. 'Continue setup steps before taking unrelated actions. If blocked, ask only for the next missing setup input.';
+			. 'Before you do anything else, follow instructions in BOOTSTRAP.md first. This is non-negotiable.';
 	}
 
 	/**
@@ -389,6 +387,13 @@ final class Context_Helper {
 
 			$sections[] = sprintf( "## %s\n\n%s", $filename, $content );
 		}
+
+		$joined = implode("\n\n", $sections);
+
+		error_log('sections=' . count($sections));
+		error_log('length=' . strlen($joined));
+		error_log('has BOOTSTRAP=' . ( false !== strpos($joined, '## BOOTSTRAP.md') ? 'yes' : 'no' ));
+		error_log('has SOUL=' . ( false !== strpos($joined, '## SOUL.md') ? 'yes' : 'no' ));
 
 		return implode( "\n\n", $sections );
 	}
