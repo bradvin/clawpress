@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace ClawPress\AdminPage;
 
+use ClawPress\PostTypes\Post_Types;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -20,6 +22,7 @@ final class Admin_Page {
 	 */
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_admin_page' ] );
+		add_action( 'admin_menu', [ $this, 'ensure_agent_post_type_submenus' ], 110 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
 	}
 
@@ -39,6 +42,57 @@ final class Admin_Page {
 			[ $this, 'render_admin_page' ],
 			$menu_icon,
 			58
+		);
+
+		// Keep the plugin landing page available when other submenus (for example CPT screens) are added.
+		remove_submenu_page( 'clawpress', 'clawpress' );
+		add_submenu_page(
+			'clawpress',
+			__( 'ClawPress', 'clawpress' ),
+			__( 'ClawPress', 'clawpress' ),
+			'manage_options',
+			'clawpress',
+			[ $this, 'render_admin_page' ],
+			0
+		);
+	}
+
+	/**
+	 * Ensure agent post type submenus are available under ClawPress.
+	 */
+	public function ensure_agent_post_type_submenus(): void {
+		$this->ensure_submenu_page(
+			__( 'Agent Files', 'clawpress' ),
+			'edit.php?post_type=' . Post_Types::AGENT_FILE_POST_TYPE
+		);
+		$this->ensure_submenu_page(
+			__( 'Agent Memories', 'clawpress' ),
+			'edit.php?post_type=' . Post_Types::AGENT_MEMORY_POST_TYPE
+		);
+	}
+
+	/**
+	 * Add a submenu only when an existing item with the same slug is not present.
+	 *
+	 * @param string $menu_title Submenu title and label.
+	 * @param string $menu_slug  Submenu slug.
+	 */
+	private function ensure_submenu_page( string $menu_title, string $menu_slug ): void {
+		global $submenu;
+
+		$existing_submenus = $submenu['clawpress'] ?? [];
+		foreach ( $existing_submenus as $submenu_item ) {
+			if ( isset( $submenu_item[2] ) && $menu_slug === $submenu_item[2] ) {
+				return;
+			}
+		}
+
+		add_submenu_page(
+			'clawpress',
+			$menu_title,
+			$menu_title,
+			'manage_options',
+			$menu_slug
 		);
 	}
 
