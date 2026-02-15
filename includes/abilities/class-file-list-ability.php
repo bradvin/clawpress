@@ -37,9 +37,8 @@ final class File_List_Ability {
 				'category'            => Abilities::CATEGORY_SLUG,
 				'input_schema'        => [
 					'type'                 => 'object',
-					'properties'           => [],
+					'properties'           => new \stdClass(),
 					'additionalProperties' => false,
-					'default'              => [],
 				],
 				'output_schema'       => [
 					'type'                 => 'object',

@@ -268,13 +268,12 @@ final class Chat_Helper {
 				break;
 			}
 
-			$tool_response_message_builder = new MessageBuilder();
-			$tool_response_message_builder->usingUserRole();
 			foreach ( $function_responses as $function_response ) {
+				$tool_response_message_builder = new MessageBuilder();
+				$tool_response_message_builder->usingUserRole();
 				$tool_response_message_builder->withFunctionResponse( $function_response );
+				$conversation[] = $tool_response_message_builder->get();
 			}
-
-			$conversation[] = $tool_response_message_builder->get();
 		}
 
 		return $latest_assistant_text;

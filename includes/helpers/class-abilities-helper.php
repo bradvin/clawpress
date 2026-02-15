@@ -123,9 +123,8 @@ final class Abilities_Helper {
 			if ( [] === $parameters ) {
 				$parameters = [
 					'type'                 => 'object',
-					'properties'           => [],
+					'properties'           => new \stdClass(),
 					'additionalProperties' => false,
-					'default'              => [],
 				];
 			}
 
@@ -277,7 +276,7 @@ final class Abilities_Helper {
 
 		$result = $this->run_as_execution_user(
 			$execution_user_id,
-			static fn() => $ability->execute( [] === $args ? null : $args )
+			static fn() => $ability->execute( [] === $args ? new \stdClass() : $args )
 		);
 
 		if ( is_wp_error( $result ) ) {

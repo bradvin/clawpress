@@ -46,7 +46,6 @@ final class Memory_Long_Term_Delete_Ability {
 						],
 					],
 					'additionalProperties' => false,
-					'default'              => [],
 				],
 				'output_schema'       => [
 					'type'                 => 'object',

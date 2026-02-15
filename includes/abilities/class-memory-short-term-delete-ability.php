@@ -50,7 +50,6 @@ final class Memory_Short_Term_Delete_Ability {
 						],
 					],
 					'additionalProperties' => false,
-					'default'              => [],
 				],
 				'output_schema'       => [
 					'type'                 => 'object',
