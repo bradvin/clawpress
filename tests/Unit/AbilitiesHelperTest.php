@@ -105,5 +105,55 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertSame( 9, $GLOBALS['wpdb']->insert_calls[0]['data']['execution_user_id'] );
 		$this->assertSame( 'tool_call', $GLOBALS['wpdb']->insert_calls[0]['data']['event_type'] );
 	}
-}
 
+	public function test_destructive_confirmation_token_must_be_allowlisted_by_execution_context(): void {
+		$initial = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+
+		$this->assertTrue( $initial['requires_confirmation'] );
+		$token = (string) $initial['error']['token'];
+		$this->assertNotSame( '', $token );
+
+		$blocked = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path'          => 'notes.md',
+				'confirm'       => true,
+				'confirm_token' => $token,
+			],
+			[
+				'requesting_user_id'          => 1,
+				'execution_user_id'           => 1,
+				'allowed_confirmation_tokens' => [ 'different-token' ],
+			]
+		);
+
+		$this->assertTrue( $blocked['requires_confirmation'] );
+		$this->assertSame( 'clawpress_confirmation_required', $blocked['error']['code'] );
+
+		$allowed = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path'          => 'notes.md',
+				'confirm'       => true,
+				'confirm_token' => $token,
+			],
+			[
+				'requesting_user_id'          => 1,
+				'execution_user_id'           => 1,
+				'allowed_confirmation_tokens' => [ $token ],
+			]
+		);
+
+		$this->assertFalse( ! empty( $allowed['requires_confirmation'] ) );
+		$this->assertArrayNotHasKey( 'requires_confirmation', $allowed );
+	}
+}

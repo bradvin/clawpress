@@ -113,4 +113,68 @@ final class ChatHelperTest extends TestCase {
 		$this->assertSame( 'error', $payload['card']['type'] );
 		$this->assertStringContainsString( 'AI request failed', $payload['reply'] );
 	}
+
+	public function test_generate_ai_reply_includes_online_confirmation_card_payload(): void {
+		$chat_helper = Chat_Helper::create_for_testing(
+			null,
+			static function (): array {
+				return [
+					'reply' => 'Please confirm this action.',
+					'card'  => [
+						'type' => 'user_confirmation',
+						'data' => [
+							'title'   => 'User Confirmation Required',
+							'message' => 'Confirm or decline.',
+							'actions' => [
+								[
+									'id'     => 'confirm-action',
+									'label'  => 'Confirm Action',
+									'type'   => 'send_prompt',
+									'prompt' => 'Confirm now.',
+								],
+							],
+						],
+					],
+				];
+			},
+			static fn( array $settings ): array => [
+				'provider' => 'openai',
+				'model'    => 'gpt-4.1-mini',
+			]
+		);
+
+		$payload = $chat_helper->generate_ai_reply( 'Delete this file' );
+
+		$this->assertSame( 'online', $payload['mode'] );
+		$this->assertSame( 'Please confirm this action.', $payload['reply'] );
+		$this->assertIsArray( $payload['card'] );
+		$this->assertSame( 'user_confirmation', $payload['card']['type'] );
+	}
+
+	public function test_generate_ai_reply_uses_card_message_when_online_reply_is_empty(): void {
+		$chat_helper = Chat_Helper::create_for_testing(
+			null,
+			static function (): array {
+				return [
+					'reply' => '',
+					'card'  => [
+						'type' => 'user_confirmation',
+						'data' => [
+							'message' => 'Confirmation is required.',
+						],
+					],
+				];
+			},
+			static fn( array $settings ): array => [
+				'provider' => 'openai',
+				'model'    => 'gpt-4.1-mini',
+			]
+		);
+
+		$payload = $chat_helper->generate_ai_reply( 'Delete this file' );
+
+		$this->assertSame( 'online', $payload['mode'] );
+		$this->assertSame( 'Confirmation is required.', $payload['reply'] );
+		$this->assertSame( 'user_confirmation', $payload['card']['type'] );
+	}
 }

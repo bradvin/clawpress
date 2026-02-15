@@ -299,7 +299,7 @@ final class Agent_File_Helper {
 		}
 
 		$deleted = function_exists( 'wp_delete_post' )
-			? wp_delete_post( $existing_post_id, true )
+			? wp_delete_post( $existing_post_id, false )
 			: false;
 		if ( false === $deleted || null === $deleted ) {
 			return [

@@ -73,23 +73,23 @@ final class Chat_Helper {
 	/**
 	 * LLM reply generator.
 	 *
-	 * @var callable(array<string,mixed>,string,string):string
+	 * @var callable|null
 	 */
 	private $online_reply_generator;
 
 	/**
 	 * Provider/model resolver.
 	 *
-	 * @var callable(array<string,mixed>):array{provider:string,model:string}
+	 * @var callable|null
 	 */
 	private $provider_model_resolver;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Context_Helper|null                                                    $context_helper Optional context helper.
-	 * @param callable(array<string,mixed>,string,string):string|null                $online_reply_generator Optional online reply generator.
-	 * @param callable(array<string,mixed>):array{provider:string,model:string}|null $provider_model_resolver Optional provider/model resolver.
+	 * @param Context_Helper|null $context_helper Optional context helper.
+	 * @param callable|null       $online_reply_generator Optional online reply generator.
+	 * @param callable|null       $provider_model_resolver Optional provider/model resolver.
 	 */
 	private function __construct(
 		?Context_Helper $context_helper = null,
@@ -118,9 +118,9 @@ final class Chat_Helper {
 	/**
 	 * Create a test-scoped helper with optional dependency overrides.
 	 *
-	 * @param Context_Helper|null                                                    $context_helper Optional context helper.
-	 * @param callable(array<string,mixed>,string,string):string|null                $online_reply_generator Optional reply generator.
-	 * @param callable(array<string,mixed>):array{provider:string,model:string}|null $provider_model_resolver Optional provider/model resolver.
+	 * @param Context_Helper|null $context_helper Optional context helper.
+	 * @param callable|null       $online_reply_generator Optional reply generator.
+	 * @param callable|null       $provider_model_resolver Optional provider/model resolver.
 	 */
 	public static function create_for_testing(
 		?Context_Helper $context_helper = null,
@@ -155,16 +155,18 @@ final class Chat_Helper {
 		try {
 			$context                    = $this->context_helper->build_model_context( $message );
 			$context['request_timeout'] = $this->settings_helper->get_request_timeout( $settings );
-			$reply                      = trim(
-				(string) call_user_func(
+			$online_reply_payload       = $this->normalize_online_reply_payload(
+				call_user_func(
 					$this->online_reply_generator,
 					$context,
 					$provider,
 					$model
 				)
 			);
+			$reply                      = trim( (string) $online_reply_payload['reply'] );
+			$card                       = $online_reply_payload['card'];
 
-			if ( '' === $reply ) {
+			if ( '' === $reply && null === $card ) {
 				return [
 					'reply'       => $this->build_offline_reply( $message ),
 					'mode'        => 'offline',
@@ -174,13 +176,23 @@ final class Chat_Helper {
 				];
 			}
 
-			return [
+			if ( '' === $reply && null !== $card ) {
+				$reply = $this->build_card_fallback_reply( $card );
+			}
+
+			$payload = [
 				'reply'       => $reply,
 				'mode'        => 'online',
 				'provider'    => $provider,
 				'model'       => '' !== $model ? $model : null,
 				'suggestions' => $this->get_online_suggestions( $reply, $provider, $model ),
 			];
+
+			if ( null !== $card ) {
+				$payload['card'] = $card;
+			}
+
+			return $payload;
 		} catch ( Throwable $throwable ) {
 			return $this->build_error_reply_payload( $throwable, $provider, $model );
 		}
@@ -192,15 +204,17 @@ final class Chat_Helper {
 	 * @param array<string,mixed> $context Model context payload.
 	 * @param string              $provider Provider identifier.
 	 * @param string              $model Model identifier.
+	 * @return array{reply:string,card:array<string,mixed>|null}
 	 */
-	private function generate_online_reply( array $context, string $provider, string $model ): string {
-		$current_message    = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
-		$system_prompt      = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
-		$request_timeout    = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 30;
-		$history_messages   = $this->normalize_history_messages( $context );
-		$tool_declarations  = $this->normalize_tool_declarations( $context );
-		$requesting_user_id = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
-		$execution_user_id  = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
+	private function generate_online_reply( array $context, string $provider, string $model ): array {
+		$current_message          = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
+		$system_prompt            = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
+		$request_timeout          = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 30;
+		$history_messages         = $this->normalize_history_messages( $context );
+		$tool_declarations        = $this->normalize_tool_declarations( $context );
+		$requesting_user_id       = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
+		$execution_user_id        = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
+		$user_confirmation_tokens = $this->extract_confirmation_tokens_from_message( $current_message );
 
 		$conversation = $history_messages;
 		if ( '' !== $current_message ) {
@@ -210,6 +224,7 @@ final class Chat_Helper {
 		}
 
 		$latest_assistant_text = '';
+		$confirmation_option   = null;
 
 		for ( $round = 0; $round < self::MAX_TOOL_ROUNDS; ++$round ) {
 			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
@@ -252,10 +267,20 @@ final class Chat_Helper {
 					$tool_name,
 					$function_call->getArgs(),
 					[
-						'requesting_user_id' => $requesting_user_id,
-						'execution_user_id'  => $execution_user_id,
+						'requesting_user_id'          => $requesting_user_id,
+						'execution_user_id'           => $execution_user_id,
+						'allowed_confirmation_tokens' => $user_confirmation_tokens,
 					]
 				);
+
+				$detected_confirmation = $this->extract_tool_confirmation_option(
+					$tool_result,
+					$tool_name,
+					$function_call->getArgs()
+				);
+				if ( is_array( $detected_confirmation ) ) {
+					$confirmation_option = $detected_confirmation;
+				}
 
 				$function_responses[] = new FunctionResponse(
 					$function_response_id,
@@ -268,6 +293,13 @@ final class Chat_Helper {
 				break;
 			}
 
+			if ( is_array( $confirmation_option ) ) {
+				return [
+					'reply' => $latest_assistant_text,
+					'card'  => $this->build_tool_confirmation_card( $confirmation_option ),
+				];
+			}
+
 			foreach ( $function_responses as $function_response ) {
 				$tool_response_message_builder = new MessageBuilder();
 				$tool_response_message_builder->usingUserRole();
@@ -276,7 +308,275 @@ final class Chat_Helper {
 			}
 		}
 
-		return $latest_assistant_text;
+		return [
+			'reply' => $latest_assistant_text,
+			'card'  => $this->build_tool_confirmation_card( $confirmation_option ),
+		];
+	}
+
+	/**
+	 * Extract confirmation tokens from the current user message.
+	 *
+	 * @param string $message User message.
+	 * @return array<int,string>
+	 */
+	private function extract_confirmation_tokens_from_message( string $message ): array {
+		$message = trim( $message );
+		if ( '' === $message ) {
+			return [];
+		}
+
+		$tokens = [];
+
+		if ( preg_match_all( '/--confirm=([a-f0-9]{10,64})/i', $message, $matches ) ) {
+			$tokens = array_merge( $tokens, $matches[1] );
+		}
+
+		if ( preg_match_all( '/confirm_token["\']?\s*[:=]\s*["\']?([a-f0-9]{10,64})/i', $message, $matches ) ) {
+			$tokens = array_merge( $tokens, $matches[1] );
+		}
+
+		if ( preg_match_all( '/\b([a-f0-9]{10})\b/i', $message, $matches ) ) {
+			$tokens = array_merge( $tokens, $matches[1] );
+		}
+
+		$normalized = [];
+		foreach ( $tokens as $token ) {
+			$candidate = strtolower( trim( (string) $token ) );
+			if ( '' === $candidate ) {
+				continue;
+			}
+
+			$normalized[] = $candidate;
+		}
+
+		return array_values( array_unique( $normalized ) );
+	}
+
+	/**
+	 * Normalize online generator output into reply + optional card payload.
+	 *
+	 * @param mixed $raw_output Raw callback output.
+	 * @return array{reply:string,card:array<string,mixed>|null}
+	 */
+	private function normalize_online_reply_payload( $raw_output ): array {
+		if ( is_array( $raw_output ) ) {
+			$reply = isset( $raw_output['reply'] ) ? (string) $raw_output['reply'] : '';
+			$card  = isset( $raw_output['card'] ) && is_array( $raw_output['card'] )
+				? $this->normalize_card_payload( $raw_output['card'] )
+				: null;
+
+			return [
+				'reply' => $reply,
+				'card'  => $card,
+			];
+		}
+
+		return [
+			'reply' => (string) $raw_output,
+			'card'  => null,
+		];
+	}
+
+	/**
+	 * Normalize card payload for chat responses.
+	 *
+	 * @param array<string,mixed> $card Raw card payload.
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_card_payload( array $card ): ?array {
+		$type = isset( $card['type'] ) ? strtolower( sanitize_text_field( (string) $card['type'] ) ) : '';
+		$type = (string) preg_replace( '/[^a-z0-9_\-]/', '', $type );
+		if ( '' === $type ) {
+			return null;
+		}
+
+		return [
+			'type' => $type,
+			'data' => isset( $card['data'] ) && is_array( $card['data'] )
+				? $card['data']
+				: [],
+		];
+	}
+
+	/**
+	 * Build text fallback for card-only responses.
+	 *
+	 * @param array<string,mixed> $card Card payload.
+	 */
+	private function build_card_fallback_reply( array $card ): string {
+		$message = isset( $card['data']['message'] ) ? trim( (string) $card['data']['message'] ) : '';
+		if ( '' !== $message ) {
+			return $message;
+		}
+
+		if ( 'user_confirmation' === (string) ( $card['type'] ?? '' ) ) {
+			return __( 'A destructive action is waiting for your confirmation.', 'clawpress' );
+		}
+
+		return __( 'Action required.', 'clawpress' );
+	}
+
+	/**
+	 * Extract one pending confirmation option from tool result payload.
+	 *
+	 * @param mixed  $tool_result Tool result payload.
+	 * @param string $tool_name   Tool name.
+	 * @param mixed  $raw_args    Tool call arguments.
+	 * @return array<string,mixed>|null
+	 */
+	private function extract_tool_confirmation_option( $tool_result, string $tool_name, $raw_args ): ?array {
+		if ( ! is_array( $tool_result ) || empty( $tool_result['requires_confirmation'] ) ) {
+			return null;
+		}
+
+		$error = isset( $tool_result['error'] ) && is_array( $tool_result['error'] )
+			? $tool_result['error']
+			: [];
+		$token = isset( $error['token'] ) ? trim( (string) $error['token'] ) : '';
+		if ( '' === $token ) {
+			return null;
+		}
+
+		$normalized_tool_name = strtolower( trim( $tool_name ) );
+		if ( '' === $normalized_tool_name ) {
+			$normalized_tool_name = 'tool';
+		}
+
+		$expires_at = isset( $error['expires_at'] ) ? (int) $error['expires_at'] : 0;
+		$args       = $this->normalize_tool_args_for_prompt( $raw_args );
+
+		return [
+			'tool_name'      => $normalized_tool_name,
+			'ability_name'   => isset( $tool_result['ability'] ) ? (string) $tool_result['ability'] : '',
+			'error_message'  => isset( $error['message'] ) ? (string) $error['message'] : '',
+			'token'          => $token,
+			'expires_at'     => $expires_at,
+			'args'           => $args,
+			'confirm_prompt' => $this->build_confirmation_prompt( $normalized_tool_name, $token, $args ),
+			'decline_prompt' => $this->build_decline_prompt( $normalized_tool_name ),
+		];
+	}
+
+	/**
+	 * Build a user-confirmation card payload from a pending option.
+	 *
+	 * @param array<string,mixed>|null $confirmation_option Pending confirmation option.
+	 * @return array<string,mixed>|null
+	 */
+	private function build_tool_confirmation_card( ?array $confirmation_option ): ?array {
+		if ( ! is_array( $confirmation_option ) ) {
+			return null;
+		}
+
+		$tool_name      = isset( $confirmation_option['tool_name'] ) ? (string) $confirmation_option['tool_name'] : 'tool';
+		$token          = isset( $confirmation_option['token'] ) ? (string) $confirmation_option['token'] : '';
+		$confirm_prompt = isset( $confirmation_option['confirm_prompt'] ) ? (string) $confirmation_option['confirm_prompt'] : '';
+		$decline_prompt = isset( $confirmation_option['decline_prompt'] ) ? (string) $confirmation_option['decline_prompt'] : '';
+		$expires_at     = isset( $confirmation_option['expires_at'] ) ? (int) $confirmation_option['expires_at'] : 0;
+		$error_message  = isset( $confirmation_option['error_message'] ) ? trim( (string) $confirmation_option['error_message'] ) : '';
+
+		if ( '' === $token || '' === $confirm_prompt ) {
+			return null;
+		}
+
+		$expires_label = $expires_at > 0
+			? ( function_exists( 'wp_date' ) ? wp_date( 'Y-m-d H:i:s', $expires_at ) : gmdate( 'Y-m-d H:i:s', $expires_at ) )
+			: __( 'soon', 'clawpress' );
+
+		$message = sprintf(
+			/* translators: 1: tool name, 2: confirmation token expiry time */
+			__( 'Confirm `%1$s` to continue this destructive action. Confirmation token expires at %2$s.', 'clawpress' ),
+			$tool_name,
+			$expires_label
+		);
+
+		if ( '' !== $error_message ) {
+			$message = $error_message . "\n\n" . $message;
+		}
+
+		return [
+			'type' => 'user_confirmation',
+			'data' => [
+				'title'    => __( 'User Confirmation Required', 'clawpress' ),
+				'subtitle' => __( 'Destructive action pending', 'clawpress' ),
+				'message'  => $message,
+				'actions'  => [
+					[
+						'id'     => 'confirm-' . md5( $token ),
+						'label'  => __( 'Confirm Action', 'clawpress' ),
+						'type'   => 'send_prompt',
+						'prompt' => $confirm_prompt,
+					],
+					[
+						'id'     => 'decline-' . md5( $token ),
+						'label'  => __( 'Decline', 'clawpress' ),
+						'type'   => 'send_prompt',
+						'prompt' => '' !== $decline_prompt
+							? $decline_prompt
+							: __( 'Do not run the pending destructive action.', 'clawpress' ),
+					],
+				],
+			],
+		];
+	}
+
+	/**
+	 * Build a confirmation prompt for the next user turn.
+	 *
+	 * @param string              $tool_name Tool name.
+	 * @param string              $token Confirmation token.
+	 * @param array<string,mixed> $args Original tool arguments.
+	 */
+	private function build_confirmation_prompt( string $tool_name, string $token, array $args ): string {
+		$args_json = wp_json_encode( $args );
+		if ( false === $args_json || '' === trim( (string) $args_json ) ) {
+			$args_json = '{}';
+		}
+
+		return sprintf(
+			/* translators: 1: tool name, 2: confirmation token, 3: serialized JSON arguments */
+			__( 'Confirm and run the pending `%1$s` tool call now. Re-run it with arguments %3$s and include `confirm=true` plus `confirm_token=\"%2$s\"`.', 'clawpress' ),
+			$tool_name,
+			$token,
+			(string) $args_json
+		);
+	}
+
+	/**
+	 * Build a decline/cancel prompt for the next user turn.
+	 *
+	 * @param string $tool_name Tool name.
+	 */
+	private function build_decline_prompt( string $tool_name ): string {
+		return sprintf(
+			/* translators: %s: tool name */
+			__( 'Cancel the pending destructive `%s` tool call and do not run it.', 'clawpress' ),
+			$tool_name
+		);
+	}
+
+	/**
+	 * Normalize tool-call args for prompt interpolation.
+	 *
+	 * @param mixed $raw_args Raw tool-call args payload.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_tool_args_for_prompt( $raw_args ): array {
+		if ( is_array( $raw_args ) ) {
+			return $raw_args;
+		}
+
+		if ( is_object( $raw_args ) ) {
+			return (array) $raw_args;
+		}
+
+		if ( ! is_string( $raw_args ) || '' === trim( $raw_args ) ) {
+			return [];
+		}
+
+		$decoded = json_decode( $raw_args, true );
+		return is_array( $decoded ) ? $decoded : [];
 	}
 
 	/**

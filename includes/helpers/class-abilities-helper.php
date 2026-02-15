@@ -175,15 +175,19 @@ final class Abilities_Helper {
 	 * @return array<string,mixed>
 	 */
 	public function execute_tool_call( string $tool_name, $raw_args = null, array $execution_context = [] ): array {
-		$normalized_tool_name = strtolower( trim( $tool_name ) );
-		$ability_name         = self::TOOL_TO_ABILITY[ $normalized_tool_name ] ?? '';
-		$args                 = $this->normalize_tool_args( $raw_args );
-		$requesting_user_id   = isset( $execution_context['requesting_user_id'] )
+		$normalized_tool_name        = strtolower( trim( $tool_name ) );
+		$ability_name                = self::TOOL_TO_ABILITY[ $normalized_tool_name ] ?? '';
+		$args                        = $this->normalize_tool_args( $raw_args );
+		$requesting_user_id          = isset( $execution_context['requesting_user_id'] )
 			? (int) $execution_context['requesting_user_id']
 			: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
-		$execution_user_id    = isset( $execution_context['execution_user_id'] ) && (int) $execution_context['execution_user_id'] > 0
+		$execution_user_id           = isset( $execution_context['execution_user_id'] ) && (int) $execution_context['execution_user_id'] > 0
 			? (int) $execution_context['execution_user_id']
 			: $this->resolve_execution_user_id();
+		$has_confirmation_allowlist  = array_key_exists( 'allowed_confirmation_tokens', $execution_context );
+		$allowed_confirmation_tokens = $this->normalize_allowed_confirmation_tokens(
+			$execution_context['allowed_confirmation_tokens'] ?? null
+		);
 
 		$args_json = wp_json_encode( $args );
 		$args_hash = false !== $args_json ? hash( 'sha256', (string) $args_json ) : '';
@@ -247,12 +251,15 @@ final class Abilities_Helper {
 
 		$safety_class = $this->infer_safety_class( $ability );
 		if ( $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
-			$confirm_token = isset( $args['confirm_token'] ) ? trim( (string) $args['confirm_token'] ) : null;
-			$is_confirmed  = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
+			$confirm_token    = isset( $args['confirm_token'] ) ? trim( (string) $args['confirm_token'] ) : null;
+			$is_confirmed     = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
 				? clawpress_sanitize_boolean( $args['confirm'] )
 				: false;
+			$token_is_allowed = ! $has_confirmation_allowlist
+				? true
+				: ( null !== $confirm_token && in_array( strtolower( $confirm_token ), $allowed_confirmation_tokens, true ) );
 
-			if ( ! $is_confirmed || ! $this->security->consume_destructive_confirmation( $ability_name, $confirm_token, $requesting_user_id ) ) {
+			if ( ! $is_confirmed || ! $token_is_allowed || ! $this->security->consume_destructive_confirmation( $ability_name, $confirm_token, $requesting_user_id ) ) {
 				$issued  = $this->security->issue_destructive_confirmation( $ability_name, $requesting_user_id );
 				$payload = [
 					'success'               => false,
@@ -328,6 +335,30 @@ final class Abilities_Helper {
 
 		$decoded = json_decode( $raw_args, true );
 		return is_array( $decoded ) ? $decoded : [];
+	}
+
+	/**
+	 * Normalize allowlisted confirmation tokens from execution context.
+	 *
+	 * @param mixed $raw_tokens Raw token list payload.
+	 * @return array<int,string>
+	 */
+	private function normalize_allowed_confirmation_tokens( $raw_tokens ): array {
+		if ( ! is_array( $raw_tokens ) ) {
+			return [];
+		}
+
+		$tokens = [];
+		foreach ( $raw_tokens as $token ) {
+			$normalized = strtolower( trim( (string) $token ) );
+			if ( '' === $normalized ) {
+				continue;
+			}
+
+			$tokens[] = $normalized;
+		}
+
+		return array_values( array_unique( $tokens ) );
 	}
 
 	/**

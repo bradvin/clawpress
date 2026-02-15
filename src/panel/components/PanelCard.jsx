@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import WelcomeCard from './cards/WelcomeCard';
 import SetupCard from './cards/SetupCard';
 import ErrorCard from './cards/ErrorCard';
+import UserConfirmationCard from './cards/UserConfirmationCard';
 import { normalizeCardActions } from '../utils/cardActions';
 
 const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
@@ -16,6 +17,8 @@ const PanelCard = ({ card, fallbackText, onSendAction, isBusy = false }) => {
       return <SetupCard card={card} onSendAction={onSendAction} isBusy={isBusy} />;
     case 'error':
       return <ErrorCard card={card} />;
+    case 'user_confirmation':
+      return <UserConfirmationCard card={card} onSendAction={onSendAction} isBusy={isBusy} />;
     default:
       break;
   }
