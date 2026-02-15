@@ -12,6 +12,7 @@ namespace ClawPress\Helpers;
 use ClawPress\Commands\Commands;
 use Throwable;
 use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Messages\DTO\Message;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,11 +42,43 @@ final class Chat_Helper {
 	private Provider_Helper $provider_helper;
 
 	/**
-	 * Constructor.
+	 * Context helper.
+	 *
+	 * @var Context_Helper
 	 */
-	private function __construct() {
-		$this->settings_helper = Settings_Helper::get_instance();
-		$this->provider_helper = Provider_Helper::get_instance();
+	private Context_Helper $context_helper;
+
+	/**
+	 * LLM reply generator.
+	 *
+	 * @var callable(array<string,mixed>,string,string):string
+	 */
+	private $online_reply_generator;
+
+	/**
+	 * Provider/model resolver.
+	 *
+	 * @var callable(array<string,mixed>):array{provider:string,model:string}
+	 */
+	private $provider_model_resolver;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Context_Helper|null                                                    $context_helper Optional context helper.
+	 * @param callable(array<string,mixed>,string,string):string|null                $online_reply_generator Optional online reply generator.
+	 * @param callable(array<string,mixed>):array{provider:string,model:string}|null $provider_model_resolver Optional provider/model resolver.
+	 */
+	private function __construct(
+		?Context_Helper $context_helper = null,
+		?callable $online_reply_generator = null,
+		?callable $provider_model_resolver = null
+	) {
+		$this->settings_helper         = Settings_Helper::get_instance();
+		$this->provider_helper         = Provider_Helper::get_instance();
+		$this->context_helper          = $context_helper ?? Context_Helper::get_instance();
+		$this->online_reply_generator  = $online_reply_generator ?? [ $this, 'generate_online_reply' ];
+		$this->provider_model_resolver = $provider_model_resolver ?? [ $this, 'resolve_provider_and_model' ];
 	}
 
 	/**
@@ -60,6 +93,21 @@ final class Chat_Helper {
 	}
 
 	/**
+	 * Create a test-scoped helper with optional dependency overrides.
+	 *
+	 * @param Context_Helper|null                                                    $context_helper Optional context helper.
+	 * @param callable(array<string,mixed>,string,string):string|null                $online_reply_generator Optional reply generator.
+	 * @param callable(array<string,mixed>):array{provider:string,model:string}|null $provider_model_resolver Optional provider/model resolver.
+	 */
+	public static function create_for_testing(
+		?Context_Helper $context_helper = null,
+		?callable $online_reply_generator = null,
+		?callable $provider_model_resolver = null
+	): self {
+		return new self( $context_helper, $online_reply_generator, $provider_model_resolver );
+	}
+
+	/**
 	 * Generate a model reply payload.
 	 *
 	 * @param string $message User message.
@@ -67,8 +115,9 @@ final class Chat_Helper {
 	 */
 	public function generate_ai_reply( string $message ): array {
 		$settings = $this->settings_helper->get_settings();
-		$provider = $this->provider_helper->resolve_provider_with_fallback( $settings );
-		$model    = $this->provider_helper->resolve_model( $settings );
+		$resolved = call_user_func( $this->provider_model_resolver, $settings );
+		$provider = isset( $resolved['provider'] ) ? trim( (string) $resolved['provider'] ) : '';
+		$model    = isset( $resolved['model'] ) ? trim( (string) $resolved['model'] ) : '';
 
 		if ( '' === $provider ) {
 			return [
@@ -81,12 +130,16 @@ final class Chat_Helper {
 		}
 
 		try {
-			$builder = AiClient::prompt( $message )->usingProvider( $provider );
-			if ( '' !== $model ) {
-				$builder = $builder->usingModelPreference( [ $provider, $model ] );
-			}
+			$context = $this->context_helper->build_model_context( $message );
+			$reply   = trim(
+				(string) call_user_func(
+					$this->online_reply_generator,
+					$context,
+					$provider,
+					$model
+				)
+			);
 
-			$reply = trim( $builder->generateText() );
 			if ( '' === $reply ) {
 				return [
 					'reply'       => $this->build_offline_reply( $message ),
@@ -115,6 +168,55 @@ final class Chat_Helper {
 				'suggestions' => $this->get_default_offline_suggestions(),
 			];
 		}
+	}
+
+	/**
+	 * Default online reply generator using php-ai-client.
+	 *
+	 * @param array<string,mixed> $context Model context payload.
+	 * @param string              $provider Provider identifier.
+	 * @param string              $model Model identifier.
+	 */
+	private function generate_online_reply( array $context, string $provider, string $model ): string {
+		$current_message = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
+		$builder         = AiClient::prompt( $current_message )->usingProvider( $provider );
+
+		$system_prompt = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
+		if ( '' !== $system_prompt ) {
+			$builder = $builder->usingSystemInstruction( $system_prompt );
+		}
+
+		$history_messages = [];
+		if ( isset( $context['history_messages'] ) && is_array( $context['history_messages'] ) ) {
+			foreach ( $context['history_messages'] as $history_message ) {
+				if ( $history_message instanceof Message ) {
+					$history_messages[] = $history_message;
+				}
+			}
+		}
+
+		if ( [] !== $history_messages ) {
+			$builder = $builder->withHistory( ...$history_messages );
+		}
+
+		if ( '' !== $model ) {
+			$builder = $builder->usingModelPreference( [ $provider, $model ] );
+		}
+
+		return (string) $builder->generateText();
+	}
+
+	/**
+	 * Resolve provider + model with default runtime behavior.
+	 *
+	 * @param array<string,mixed> $settings Current settings.
+	 * @return array{provider:string,model:string}
+	 */
+	private function resolve_provider_and_model( array $settings ): array {
+		return [
+			'provider' => $this->provider_helper->resolve_provider_with_fallback( $settings ),
+			'model'    => $this->provider_helper->resolve_model( $settings ),
+		];
 	}
 
 	/**

@@ -77,6 +77,7 @@ final class Agent_File_Helper {
 				continue;
 			}
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads local plugin template file.
 			$content = file_get_contents( $absolute_path );
 			if ( false === $content ) {
 				$errors[] = [
@@ -150,6 +151,31 @@ final class Agent_File_Helper {
 	}
 
 	/**
+	 * Resolve content for a logical agent file path.
+	 *
+	 * Resolution order:
+	 * 1. `agent-file` post content by logical path.
+	 *
+	 * @param string $logical_path Logical file path (e.g. `SOUL.md`).
+	 */
+	public function get_file_content_by_logical_path( string $logical_path ): string {
+		$normalized_path = $this->normalize_logical_path( $logical_path );
+		if ( '' === $normalized_path ) {
+			return '';
+		}
+
+		$slug    = $this->build_slug_from_template_path( $normalized_path );
+		$post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
+		if ( $post_id > 0 && function_exists( 'get_post' ) ) {
+			$post = get_post( $post_id );
+			if ( $post instanceof \WP_Post && is_string( $post->post_content ) ) {
+				return $post->post_content;
+			}
+		}
+		return '';
+	}
+
+	/**
 	 * Resolve all template files in templates directory.
 	 *
 	 * @return array<string,string> Relative path => absolute path.
@@ -217,6 +243,31 @@ final class Agent_File_Helper {
 	 * @param string $slug Post slug candidate.
 	 */
 	private function find_existing_agent_file_post_id( string $relative_path, string $slug ): int {
+		if ( ! function_exists( 'get_posts' ) ) {
+			return 0;
+		}
+
+		$normalized_path = $this->normalize_logical_path( $relative_path );
+		if ( '' === $normalized_path ) {
+			return 0;
+		}
+
+		// phpcs:disable WordPress.DB.SlowDBQuery.slow_db_query_meta_key,WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Deterministic single-row lookup by logical/template path.
+		$existing_by_logical_meta = get_posts(
+			[
+				'post_type'      => Post_Types::AGENT_FILE_POST_TYPE,
+				'post_status'    => 'any',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'meta_key'       => self::META_LOGICAL_PATH,
+				'meta_value'     => $normalized_path,
+			]
+		);
+
+		if ( is_array( $existing_by_logical_meta ) && ! empty( $existing_by_logical_meta[0] ) ) {
+			return (int) $existing_by_logical_meta[0];
+		}
+
 		$existing_by_meta = get_posts(
 			[
 				'post_type'      => Post_Types::AGENT_FILE_POST_TYPE,
@@ -224,9 +275,10 @@ final class Agent_File_Helper {
 				'posts_per_page' => 1,
 				'fields'         => 'ids',
 				'meta_key'       => self::META_TEMPLATE_PATH,
-				'meta_value'     => $relative_path,
+				'meta_value'     => $normalized_path,
 			]
 		);
+		// phpcs:enable
 
 		if ( is_array( $existing_by_meta ) && ! empty( $existing_by_meta[0] ) ) {
 			return (int) $existing_by_meta[0];
@@ -247,5 +299,17 @@ final class Agent_File_Helper {
 		}
 
 		return 0;
+	}
+
+	/**
+	 * Normalize a logical path into a canonical slash-based value.
+	 *
+	 * @param string $logical_path Raw logical path.
+	 */
+	private function normalize_logical_path( string $logical_path ): string {
+		$normalized_path = str_replace( '\\', '/', trim( $logical_path ) );
+		$normalized_path = ltrim( $normalized_path, '/' );
+		$normalized_path = (string) preg_replace( '#/+#', '/', $normalized_path );
+		return trim( $normalized_path );
 	}
 }
