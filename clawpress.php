@@ -36,4 +36,8 @@ if ( file_exists( CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-sc
 	require_once CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 }
 
+if ( function_exists( 'register_activation_hook' ) ) {
+	register_activation_hook( CLAWPRESS_FILE, [ Plugin::class, 'activate' ] );
+}
+
 Plugin::get_instance();

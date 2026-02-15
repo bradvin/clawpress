@@ -26,9 +26,9 @@ final class Context_Helper {
 	 */
 	private const BOOTSTRAP_FILES = [
 		'AGENTS.md',
+		'BOOTSTRAP.md',
 		'SOUL.md',
 		'USER.md',
-		'TOOLS.md',
 		'IDENTITY.md',
 		'HEARTBEAT.md',
 	];

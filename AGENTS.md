@@ -66,6 +66,7 @@ Use helpers in `includes/helpers/` as the primary integration surface for shared
 
 | Helper | File | Responsibility | Usage Rule |
 |------|------|------|------|
+| `Action_Log_Helper` | `includes/helpers/class-action-log-helper.php` | Action/event log persistence and retrieval in `clawpress_action_logs` | Route action/event log writes and reads through this helper. |
 | `Agent_File_Helper` | `includes/helpers/class-agent-file-helper.php` | Bootstrap and resolve agent files from `clawpress_agent_file` | Resolve logical files through this helper; do not bypass with ad-hoc lookups. |
 | `Chat_Helper` | `includes/helpers/class-chat-helper.php` | Online/offline reply orchestration and AI-call integration | Route model replies through this helper from chat flows. |
 | `Chat_History_Helper` | `includes/helpers/class-chat-history-helper.php` | Per-user chat transcript persistence | Use for chat history reads/writes and clears. |

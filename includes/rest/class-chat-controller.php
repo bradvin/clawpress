@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\RestAPI\Controllers;
 
 use ClawPress\Commands\Commands;
+use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Helpers\Chat_Helper;
 use ClawPress\Helpers\Chat_History_Helper;
 
@@ -41,6 +42,13 @@ final class Chat_Controller implements Route_Controller {
 	private Chat_Helper $chat_helper;
 
 	/**
+	 * Action log helper.
+	 *
+	 * @var Action_Log_Helper
+	 */
+	private Action_Log_Helper $action_log_helper;
+
+	/**
 	 * Offline command engine.
 	 *
 	 * @var Commands
@@ -53,10 +61,11 @@ final class Chat_Controller implements Route_Controller {
 	 * @param callable(string):array<string,mixed>|null $reply_generator Optional reply generator callback.
 	 */
 	public function __construct( ?callable $reply_generator = null ) {
-		$this->chat_helper     = Chat_Helper::get_instance();
-		$this->history_helper  = Chat_History_Helper::get_instance();
-		$this->commands        = new Commands();
-		$this->reply_generator = $reply_generator ?? [ $this->chat_helper, 'generate_ai_reply' ];
+		$this->chat_helper       = Chat_Helper::get_instance();
+		$this->history_helper    = Chat_History_Helper::get_instance();
+		$this->action_log_helper = Action_Log_Helper::get_instance();
+		$this->commands          = new Commands();
+		$this->reply_generator   = $reply_generator ?? [ $this->chat_helper, 'generate_ai_reply' ];
 	}
 
 	/**
@@ -138,6 +147,16 @@ final class Chat_Controller implements Route_Controller {
 			);
 		}
 
+		$this->log_action_event(
+			$message,
+			$reply,
+			$command_meta,
+			$error_meta,
+			isset( $reply_payload['mode'] ) ? (string) $reply_payload['mode'] : 'offline',
+			isset( $reply_payload['provider'] ) ? (string) $reply_payload['provider'] : '',
+			isset( $reply_payload['model'] ) ? (string) $reply_payload['model'] : ''
+		);
+
 		return new \WP_REST_Response(
 			[
 				'message' => $message,
@@ -165,6 +184,52 @@ final class Chat_Controller implements Route_Controller {
 				],
 			],
 			200
+		);
+	}
+
+	/**
+	 * Write action/event log record for chat processing.
+	 *
+	 * @param string                   $message User message.
+	 * @param string                   $reply Reply content.
+	 * @param array<string,mixed>      $command_meta Command metadata.
+	 * @param array<string,mixed>|null $error_meta Error metadata.
+	 * @param string                   $mode Reply mode.
+	 * @param string                   $provider Provider identifier.
+	 * @param string                   $model Model identifier.
+	 */
+	private function log_action_event(
+		string $message,
+		string $reply,
+		array $command_meta,
+		?array $error_meta,
+		string $mode,
+		string $provider,
+		string $model
+	): void {
+		$is_command  = [] !== $command_meta;
+		$action_name = $is_command && isset( $command_meta['name'] )
+			? (string) $command_meta['name']
+			: 'chat.message';
+
+		$status = null !== $error_meta
+			? 'error'
+			: ( ( isset( $command_meta['error'] ) && true === $command_meta['error'] ) ? 'warning' : 'success' );
+
+		$this->action_log_helper->log_event(
+			$action_name,
+			[
+				'event_type' => $is_command ? 'command' : 'message',
+				'status'     => $status,
+				'message'    => $reply,
+				'context'    => [
+					'mode'      => $mode,
+					'provider'  => '' !== $provider ? $provider : null,
+					'model'     => '' !== $model ? $model : null,
+					'user_text' => $message,
+					'error'     => $error_meta,
+				],
+			]
 		);
 	}
 

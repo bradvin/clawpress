@@ -11,6 +11,7 @@ namespace ClawPress;
 
 use ClawPress\AdminPage\Admin_Page;
 use ClawPress\Heartbeat\Heartbeat;
+use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Panel\Panel;
 use ClawPress\PostTypes\Post_Types;
 use ClawPress\RestAPI\Rest_API;
@@ -48,5 +49,12 @@ final class Plugin {
 		}
 
 		return self::$instance;
+	}
+
+	/**
+	 * Plugin activation callback.
+	 */
+	public static function activate(): void {
+		Action_Log_Helper::get_instance()->create_table();
 	}
 }
