@@ -316,9 +316,10 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @param Command_Request $request Parsed request.
 	 */
 	private function set_model( Command_Request $request ): Command_Response {
-		$settings = $this->settings_helper->get_settings();
-		$provider = clawpress_sanitize_provider( $settings['provider'] ?? '' );
-		$model    = trim( $request->get_argument( 1 ) );
+		$settings        = $this->settings_helper->get_settings();
+		$provider        = clawpress_sanitize_provider( $settings['provider'] ?? '' );
+		$model_arguments = array_slice( $request->get_arguments(), 1 );
+		$model           = $this->sanitize_model_id( implode( ' ', $model_arguments ) );
 
 		if ( '' === $provider ) {
 			return $this->build_error_response(
@@ -326,10 +327,9 @@ final class Setup_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$model_ids = $this->get_model_ids_for_provider( $provider );
-		if ( '' === $model || ! in_array( $model, $model_ids, true ) ) {
+		if ( ! $this->is_model_valid_for_provider( $provider, $model ) ) {
 			return $this->build_error_response(
-				__( 'Selected model is not available for the current provider.', 'clawpress' )
+				__( 'Selected model is not available for the current provider. Enter a valid model ID and try again.', 'clawpress' )
 			);
 		}
 
@@ -357,8 +357,8 @@ final class Setup_Command_Handler implements Command_Handler {
 	private function test_connection(): Command_Response {
 		$settings       = $this->settings_helper->get_settings();
 		$provider       = clawpress_sanitize_provider( $settings['provider'] ?? '' );
-		$model          = trim( (string) ( $settings['model'] ?? '' ) );
-		$model_is_valid = in_array( $model, $this->get_model_ids_for_provider( $provider ), true );
+		$model          = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
+		$model_is_valid = $this->is_model_valid_for_provider( $provider, $model );
 
 		if ( '' === $provider || '' === $model || ! $model_is_valid ) {
 			return $this->build_error_response(
@@ -557,8 +557,7 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		$selected_model = trim( (string) ( $settings['model'] ?? '' ) );
-		$model_ids      = $this->get_model_ids_for_provider( $selected_provider );
-		if ( '' === $selected_model || ! in_array( $selected_model, $model_ids, true ) ) {
+		if ( ! $this->is_model_valid_for_provider( $selected_provider, $selected_model ) ) {
 			$this->settings_helper->update_settings( [ 'setup_completed' => false ] );
 			return 'model';
 		}
@@ -743,12 +742,19 @@ final class Setup_Command_Handler implements Command_Handler {
 					'type'  => 'open_url',
 					'url'   => self::PROVIDER_SETUP_PATH,
 				];
+				$data['actions'][] = [
+					'id'     => 'refresh-providers',
+					'label'  => __( 'Refresh Providers', 'clawpress' ),
+					'type'   => 'send_prompt',
+					'prompt' => '/setup refresh',
+				];
 				break;
 
 			case 'model':
-				$provider        = clawpress_sanitize_provider( $settings['provider'] ?? '' );
-				$models          = $this->get_model_ids_for_provider( $provider );
-				$data['message'] = sprintf(
+				$provider               = clawpress_sanitize_provider( $settings['provider'] ?? '' );
+				$models                 = $this->get_model_ids_for_provider( $provider );
+				$data['selected_model'] = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
+				$data['message']        = sprintf(
 					/* translators: %s: provider */
 					__( 'Choose a model for `%s`.', 'clawpress' ),
 					$provider
@@ -947,6 +953,48 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		return array_values( array_unique( $ids ) );
+	}
+
+	/**
+	 * Check whether a model is valid for a provider.
+	 *
+	 * A model is valid when it is a known option for the provider, or a valid custom model ID.
+	 *
+	 * @param string $provider Provider ID.
+	 * @param string $model Model ID.
+	 */
+	private function is_model_valid_for_provider( string $provider, string $model ): bool {
+		$provider = clawpress_sanitize_provider( $provider );
+		$model    = $this->sanitize_model_id( $model );
+
+		if ( '' === $provider || '' === $model ) {
+			return false;
+		}
+
+		$model_ids = $this->get_model_ids_for_provider( $provider );
+		if ( in_array( $model, $model_ids, true ) ) {
+			return true;
+		}
+
+		return $this->is_valid_custom_model_id( $model );
+	}
+
+	/**
+	 * Check whether a model ID is valid for the custom model path.
+	 *
+	 * @param string $model Model ID.
+	 */
+	private function is_valid_custom_model_id( string $model ): bool {
+		return 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:@\/-]{0,191}$/', $model );
+	}
+
+	/**
+	 * Normalize and sanitize a model ID.
+	 *
+	 * @param string $model Raw model ID.
+	 */
+	private function sanitize_model_id( string $model ): string {
+		return trim( sanitize_text_field( $model ) );
 	}
 
 	/**

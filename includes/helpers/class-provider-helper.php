@@ -114,8 +114,8 @@ final class Provider_Helper {
 	public function get_configured_provider_ids(): array {
 		$configured = [];
 
-		foreach ( $this->get_registered_provider_ids() as $provider_id ) {
-			if ( ! $this->is_provider_configured( $provider_id ) ) {
+		foreach ( $this->get_supported_provider_ids() as $provider_id ) {
+			if ( ! $this->has_provider_credentials( $provider_id ) && ! $this->is_provider_configured( $provider_id ) ) {
 				continue;
 			}
 
@@ -123,6 +123,20 @@ final class Provider_Helper {
 		}
 
 		return array_values( array_unique( $configured ) );
+	}
+
+	/**
+	 * Get supported provider IDs from known credentials and registry entries.
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_supported_provider_ids(): array {
+		$provider_ids = array_merge(
+			array_keys( self::PROVIDER_CREDENTIALS ),
+			$this->get_registered_provider_ids()
+		);
+
+		return array_values( array_unique( $provider_ids ) );
 	}
 
 	/**

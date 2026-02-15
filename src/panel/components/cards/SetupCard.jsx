@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { normalizeCardActions } from '../../utils/cardActions';
 
+const CUSTOM_MODEL_OPTION_ID = '__clawpress_custom_model__';
+
 const getChoiceActions = (actions, prefix) =>
   actions
     .filter(
@@ -84,6 +86,25 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
     () => getChoiceActions(actions, '/setup model '),
     [actions]
   );
+  const selectedModelValue =
+    typeof data.selected_model === 'string' && data.selected_model.trim()
+      ? data.selected_model.trim()
+      : '';
+  const modelSelectActions = useMemo(() => {
+    if (step !== 'model') {
+      return modelChoiceActions;
+    }
+
+    return [
+      ...modelChoiceActions,
+      {
+        id: CUSTOM_MODEL_OPTION_ID,
+        label: __('Use Custom Model ID', 'clawpress'),
+        type: 'send_prompt',
+        prompt: '',
+      },
+    ];
+  }, [modelChoiceActions, step]);
 
   const filteredActions = useMemo(() => {
     const hiddenIds = new Set([
@@ -121,8 +142,9 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
     providerChoiceActions[0]?.id || ''
   );
   const [selectedModelId, setSelectedModelId] = useState(
-    modelChoiceActions[0]?.id || ''
+    modelSelectActions[0]?.id || ''
   );
+  const [customModelName, setCustomModelName] = useState('');
 
   useEffect(() => {
     const ids = providerChoiceActions.map((action) => action.id);
@@ -137,7 +159,7 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
   }, [providerChoiceActions, selectedProviderId]);
 
   useEffect(() => {
-    const ids = modelChoiceActions.map((action) => action.id);
+    const ids = modelSelectActions.map((action) => action.id);
     if (ids.length === 0) {
       setSelectedModelId('');
       return;
@@ -146,7 +168,24 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
     if (!ids.includes(selectedModelId)) {
       setSelectedModelId(ids[0]);
     }
-  }, [modelChoiceActions, selectedModelId]);
+  }, [modelSelectActions, selectedModelId]);
+
+  useEffect(() => {
+    if (step !== 'model' || !selectedModelValue) {
+      return;
+    }
+
+    const selectedAction = modelChoiceActions.find(
+      (action) => action.value === selectedModelValue
+    );
+    if (selectedAction) {
+      setSelectedModelId(selectedAction.id);
+      return;
+    }
+
+    setSelectedModelId(CUSTOM_MODEL_OPTION_ID);
+    setCustomModelName(selectedModelValue);
+  }, [modelChoiceActions, selectedModelValue, step]);
 
   const selectedProviderAction =
     providerChoiceActions.find((action) => action.id === selectedProviderId) ||
@@ -156,6 +195,9 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
     modelChoiceActions.find((action) => action.id === selectedModelId) ||
     modelChoiceActions[0] ||
     null;
+  const isCustomModelSelected =
+    step === 'model' && selectedModelId === CUSTOM_MODEL_OPTION_ID;
+  const customModelValue = customModelName.trim();
 
   const settingsUrl =
     typeof data.settings_url === 'string' && data.settings_url.trim()
@@ -216,14 +258,29 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
     return '';
   })();
   const showProviderPicker = step === 'provider' && providerChoiceActions.length > 1;
-  const showModelPicker = step === 'model' && modelChoiceActions.length > 1;
+  const showModelPicker = step === 'model' && modelSelectActions.length > 0;
   const showSingleProviderAction =
     step === 'provider' && providerChoiceActions.length === 1;
-  const showSingleModelAction = step === 'model' && modelChoiceActions.length === 1;
+  const showSingleModelAction =
+    step === 'model' && !showModelPicker && modelChoiceActions.length === 1;
   const showActionButtons =
     showSingleProviderAction || showSingleModelAction || actionsWithBack.length > 0;
   const hasButtonsSection =
     showProviderPicker || showModelPicker || showActionButtons;
+  const selectedModelPrompt = isCustomModelSelected
+    ? (customModelValue ? `/setup model ${customModelValue}` : '')
+    : (selectedModelAction?.prompt || '');
+  const primaryActionPrompt =
+    step === 'provider'
+      ? (selectedProviderAction?.prompt || '')
+      : selectedModelPrompt;
+  const isPrimaryActionDisabled =
+    isBusy ||
+    (step === 'provider' && !selectedProviderAction) ||
+    (step === 'model' &&
+      (isCustomModelSelected
+        ? customModelValue.length === 0
+        : !selectedModelAction));
 
   return (
     <div className="clawpress-card clawpress-card-setup">
@@ -334,28 +391,28 @@ const SetupCard = ({ card, onSendAction, isBusy = false }) => {
                     onChange={(event) => setSelectedModelId(event.target.value)}
                     disabled={isBusy}
                   >
-                    {modelChoiceActions.map((action) => (
+                    {modelSelectActions.map((action) => (
                       <option key={action.id} value={action.id}>
                         {action.label}
                       </option>
                     ))}
                   </select>
                 ) : null}
+                {isCustomModelSelected ? (
+                  <input
+                    type="text"
+                    className="clawpress-card-setup-input"
+                    value={customModelName}
+                    onChange={(event) => setCustomModelName(event.target.value)}
+                    placeholder={__('Enter custom model ID', 'clawpress')}
+                    disabled={isBusy}
+                  />
+                ) : null}
                 <button
                   type="button"
                   className="button button-primary button-small"
-                  disabled={
-                    isBusy ||
-                    (step === 'provider' && !selectedProviderAction) ||
-                    (step === 'model' && !selectedModelAction)
-                  }
-                  onClick={() =>
-                    onSendAction?.(
-                      step === 'provider'
-                        ? selectedProviderAction?.prompt || ''
-                        : selectedModelAction?.prompt || ''
-                    )
-                  }
+                  disabled={isPrimaryActionDisabled}
+                  onClick={() => onSendAction?.(primaryActionPrompt)}
                 >
                   {step === 'provider'
                     ? __('Use Selected Provider', 'clawpress')
