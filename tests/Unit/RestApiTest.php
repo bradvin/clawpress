@@ -201,6 +201,7 @@ final class RestApiTest extends TestCase {
 					'card'     => null,
 					'command'  => null,
 					'error'    => null,
+					'context'  => null,
 				),
 			),
 			$response->get_data()

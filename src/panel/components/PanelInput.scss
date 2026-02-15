@@ -20,8 +20,102 @@
   border: 1px solid var(--fp-border);
 }
 
-.clawpress-input > button {
-  align-self: flex-end;
+.clawpress-input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
+}
+
+.clawpress-context-slot {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+}
+
+.clawpress-context-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: var(--fp-muted);
+  cursor: default;
+  outline: none;
+}
+
+.clawpress-context-pie {
+  --clawpress-context-used: 0%;
+
+  position: relative;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--fp-border);
+  background: conic-gradient(
+    var(--fp-accent) var(--clawpress-context-used),
+    var(--fp-surface-contrast) 0
+  );
+}
+
+.clawpress-context-pie::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fp-surface);
+}
+
+.clawpress-context-tooltip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  width: 220px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(30, 30, 32, 0.95);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 3;
+}
+
+.clawpress-context-indicator:hover .clawpress-context-tooltip,
+.clawpress-context-indicator:focus-visible .clawpress-context-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.clawpress-context-tooltip-title {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.clawpress-context-tooltip-line {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.45;
+}
+
+.clawpress-context-tooltip-note {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.35;
 }
 
 .clawpress-suggestions {

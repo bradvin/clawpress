@@ -36,6 +36,7 @@ const Panel = () => {
   const [statusSnapshot, setStatusSnapshot] = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [suggestions, setSuggestions] = useState([]);
+  const [contextUsage, setContextUsage] = useState(null);
   const [panelStateReady, setPanelStateReady] = useState(false);
   const mockEnabled = Boolean(CLAWPRESS_PANEL.mockEnabled);
   const [themeMode, setThemeMode] = useState(
@@ -407,6 +408,7 @@ const Panel = () => {
         setMessages([]);
         setToolDialogs([]);
         setToolPlans([]);
+        setContextUsage(null);
         timelineRef.current = 0;
         break;
       case 'suggestions': {
@@ -414,6 +416,11 @@ const Panel = () => {
         setSuggestions(nextSuggestions);
         break;
       }
+      case 'context_usage':
+        if (parsed?.context) {
+          setContextUsage(parsed.context);
+        }
+        break;
       case 'tool_call':
         if (!toolPlanningShown) {
           setEphemeralStatus(__('Preparing tool plan...', 'clawpress'));
@@ -914,6 +921,7 @@ const Panel = () => {
           onInputChange={(e) => setInput(e.target.value)}
           onSend={sendPrompt}
           suggestions={suggestions}
+          contextUsage={contextUsage}
           onSendSuggestion={(suggestion) => sendPrompt(suggestion)}
           onStop={stopStream}
           streaming={streaming}

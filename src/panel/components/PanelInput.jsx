@@ -1,5 +1,32 @@
 import { useRef } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
+
+const formatCompactTokens = (rawValue) => {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0';
+  }
+
+  if (value < 1000) {
+    return String(Math.round(value));
+  }
+
+  const units = [
+    { threshold: 1000000000, suffix: 'b' },
+    { threshold: 1000000, suffix: 'm' },
+    { threshold: 1000, suffix: 'k' },
+  ];
+
+  for (const unit of units) {
+    if (value >= unit.threshold) {
+      const scaled = value / unit.threshold;
+      const precision = scaled >= 100 ? 0 : 1;
+      return `${scaled.toFixed(precision).replace(/\.0$/, '')}${unit.suffix}`;
+    }
+  }
+
+  return String(Math.round(value));
+};
 
 const PanelInput = ({
   input,
@@ -8,11 +35,54 @@ const PanelInput = ({
   onStop,
   streaming,
   suggestions,
+  contextUsage,
   onSendSuggestion,
   onHistoryUp,
   onHistoryDown,
 }) => {
   const textareaRef = useRef(null);
+  const normalizedUsedTokens = Number(contextUsage?.usedTokens);
+  const normalizedContextWindowTokens = Number(contextUsage?.contextWindowTokens);
+  const normalizedPercentUsed = Number(contextUsage?.percentUsed);
+
+  const usedTokens =
+    Number.isFinite(normalizedUsedTokens) && normalizedUsedTokens >= 0
+      ? Math.round(normalizedUsedTokens)
+      : 0;
+  const contextWindowTokens =
+    Number.isFinite(normalizedContextWindowTokens) &&
+    normalizedContextWindowTokens > 0
+      ? Math.round(normalizedContextWindowTokens)
+      : 0;
+  const resolvedPercentUsed =
+    Number.isFinite(normalizedPercentUsed) && normalizedPercentUsed >= 0
+      ? Math.max(0, Math.min(100, Math.round(normalizedPercentUsed)))
+      : contextWindowTokens > 0
+        ? Math.max(0, Math.min(100, Math.round((usedTokens / contextWindowTokens) * 100)))
+        : null;
+  const resolvedPercentLeft =
+    resolvedPercentUsed === null ? null : Math.max(0, 100 - resolvedPercentUsed);
+  const hasContextUsage =
+    contextWindowTokens > 0 &&
+    resolvedPercentUsed !== null &&
+    usedTokens >= 0;
+  const contextUsageSummary =
+    hasContextUsage && resolvedPercentLeft !== null
+      ? sprintf(
+          /* translators: 1: percentage used, 2: percentage left */
+          __('%1$d%% used (%2$d%% left)', 'clawpress'),
+          resolvedPercentUsed,
+          resolvedPercentLeft
+        )
+      : '';
+  const contextTokensSummary = hasContextUsage
+    ? sprintf(
+        /* translators: 1: used tokens, 2: available context-window tokens */
+        __('%1$s / %2$s tokens used', 'clawpress'),
+        formatCompactTokens(usedTokens),
+        formatCompactTokens(contextWindowTokens)
+      )
+    : '';
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -94,15 +164,52 @@ const PanelInput = ({
         placeholder={__('Ask me anything…', 'clawpress')}
         disabled={streaming}
       />
-      {streaming ? (
-        <button className="button" onClick={onStop} type="button">
-          {__('Stop', 'clawpress')}
-        </button>
-      ) : (
-        <button className="button button-primary" onClick={onSend} type="button">
-          {__('Send', 'clawpress')}
-        </button>
-      )}
+      <div className="clawpress-input-footer">
+        <div className="clawpress-context-slot">
+          {hasContextUsage ? (
+            <div
+              className="clawpress-context-indicator"
+              role="img"
+              tabIndex={0}
+              aria-label={sprintf(
+                /* translators: 1: context usage summary, 2: token usage summary */
+                __('Context window: %1$s. %2$s.', 'clawpress'),
+                contextUsageSummary,
+                contextTokensSummary
+              )}
+            >
+              <span
+                className="clawpress-context-pie"
+                style={{ '--clawpress-context-used': `${resolvedPercentUsed}%` }}
+                aria-hidden="true"
+              />
+              <div className="clawpress-context-tooltip" role="tooltip">
+                <div className="clawpress-context-tooltip-title">
+                  {__('Context window:', 'clawpress')}
+                </div>
+                <div className="clawpress-context-tooltip-line">
+                  {contextUsageSummary}
+                </div>
+                <div className="clawpress-context-tooltip-line">
+                  {contextTokensSummary}
+                </div>
+                <div className="clawpress-context-tooltip-note">
+                  {__('Codex automatically compacts its context', 'clawpress')}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        {streaming ? (
+          <button className="button" onClick={onStop} type="button">
+            {__('Stop', 'clawpress')}
+          </button>
+        ) : (
+          <button className="button button-primary" onClick={onSend} type="button">
+            {__('Send', 'clawpress')}
+          </button>
+        )}
+      </div>
     </div>
   );
 };

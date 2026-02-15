@@ -15,6 +15,7 @@ use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Builders\MessageBuilder;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
+use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Tools\DTO\FunctionCall;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 use WordPress\AiClient\Tools\DTO\FunctionResponse;
@@ -34,6 +35,31 @@ final class Chat_Helper {
 	 * Maximum tool calls executed in one assistant turn.
 	 */
 	private const MAX_TOOL_CALLS_PER_ROUND = 6;
+
+	/**
+	 * Known context windows for common model families.
+	 *
+	 * @var array<string,array<string,int>>
+	 */
+	private const MODEL_CONTEXT_WINDOWS = [
+		'openai'    => [
+			'gpt-4.1-mini' => 1048576,
+			'gpt-4.1'      => 1048576,
+			'gpt-4o-mini'  => 128000,
+			'gpt-4o'       => 128000,
+			'gpt-5'        => 400000,
+			'o3'           => 200000,
+			'o1'           => 200000,
+		],
+		'anthropic' => [
+			'claude-' => 200000,
+		],
+		'google'    => [
+			'gemini-2.5' => 1048576,
+			'gemini-2.0' => 1048576,
+			'gemini-1.5' => 1048576,
+		],
+	];
 
 	/**
 	 * Singleton instance.
@@ -165,6 +191,7 @@ final class Chat_Helper {
 			);
 			$reply                      = trim( (string) $online_reply_payload['reply'] );
 			$card                       = $online_reply_payload['card'];
+			$context_usage              = $online_reply_payload['context'];
 
 			if ( '' === $reply && null === $card ) {
 				return [
@@ -192,6 +219,10 @@ final class Chat_Helper {
 				$payload['card'] = $card;
 			}
 
+			if ( null !== $context_usage ) {
+				$payload['context'] = $context_usage;
+			}
+
 			return $payload;
 		} catch ( Throwable $throwable ) {
 			return $this->build_error_reply_payload( $throwable, $provider, $model );
@@ -204,7 +235,7 @@ final class Chat_Helper {
 	 * @param array<string,mixed> $context Model context payload.
 	 * @param string              $provider Provider identifier.
 	 * @param string              $model Model identifier.
-	 * @return array{reply:string,card:array<string,mixed>|null}
+	 * @return array{reply:string,card:array<string,mixed>|null,context:array<string,mixed>|null}
 	 */
 	private function generate_online_reply( array $context, string $provider, string $model ): array {
 		$current_message          = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
@@ -225,6 +256,7 @@ final class Chat_Helper {
 
 		$latest_assistant_text = '';
 		$confirmation_option   = null;
+		$latest_context_usage  = null;
 
 		for ( $round = 0; $round < self::MAX_TOOL_ROUNDS; ++$round ) {
 			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
@@ -245,6 +277,7 @@ final class Chat_Helper {
 			$assistant_message     = $result->toMessage();
 			$conversation[]        = $assistant_message;
 			$latest_assistant_text = $this->extract_text_from_message( $assistant_message );
+			$latest_context_usage  = $this->extract_context_usage_from_result( $result, $provider, $model );
 
 			$function_calls = $this->extract_function_calls( $assistant_message );
 			if ( [] === $function_calls ) {
@@ -295,8 +328,9 @@ final class Chat_Helper {
 
 			if ( is_array( $confirmation_option ) ) {
 				return [
-					'reply' => $latest_assistant_text,
-					'card'  => $this->build_tool_confirmation_card( $confirmation_option ),
+					'reply'   => $latest_assistant_text,
+					'card'    => $this->build_tool_confirmation_card( $confirmation_option ),
+					'context' => $latest_context_usage,
 				];
 			}
 
@@ -309,8 +343,9 @@ final class Chat_Helper {
 		}
 
 		return [
-			'reply' => $latest_assistant_text,
-			'card'  => $this->build_tool_confirmation_card( $confirmation_option ),
+			'reply'   => $latest_assistant_text,
+			'card'    => $this->build_tool_confirmation_card( $confirmation_option ),
+			'context' => $latest_context_usage,
 		];
 	}
 
@@ -357,25 +392,147 @@ final class Chat_Helper {
 	 * Normalize online generator output into reply + optional card payload.
 	 *
 	 * @param mixed $raw_output Raw callback output.
-	 * @return array{reply:string,card:array<string,mixed>|null}
+	 * @return array{reply:string,card:array<string,mixed>|null,context:array<string,mixed>|null}
 	 */
 	private function normalize_online_reply_payload( $raw_output ): array {
 		if ( is_array( $raw_output ) ) {
-			$reply = isset( $raw_output['reply'] ) ? (string) $raw_output['reply'] : '';
-			$card  = isset( $raw_output['card'] ) && is_array( $raw_output['card'] )
+			$reply   = isset( $raw_output['reply'] ) ? (string) $raw_output['reply'] : '';
+			$card    = isset( $raw_output['card'] ) && is_array( $raw_output['card'] )
 				? $this->normalize_card_payload( $raw_output['card'] )
+				: null;
+			$context = isset( $raw_output['context'] ) && is_array( $raw_output['context'] )
+				? $this->normalize_context_usage_payload( $raw_output['context'] )
 				: null;
 
 			return [
-				'reply' => $reply,
-				'card'  => $card,
+				'reply'   => $reply,
+				'card'    => $card,
+				'context' => $context,
 			];
 		}
 
 		return [
-			'reply' => (string) $raw_output,
-			'card'  => null,
+			'reply'   => (string) $raw_output,
+			'card'    => null,
+			'context' => null,
 		];
+	}
+
+	/**
+	 * Build normalized context usage metadata from a provider result.
+	 *
+	 * @param GenerativeAiResult $result Result payload.
+	 * @param string             $provider Provider identifier.
+	 * @param string             $model Model identifier.
+	 * @return array<string,mixed>|null
+	 */
+	private function extract_context_usage_from_result( GenerativeAiResult $result, string $provider, string $model ): ?array {
+		$token_usage        = $result->getTokenUsage();
+		$prompt_tokens      = max( 0, (int) $token_usage->getPromptTokens() );
+		$completion_tokens  = max( 0, (int) $token_usage->getCompletionTokens() );
+		$total_tokens       = max( 0, (int) $token_usage->getTotalTokens() );
+		$context_used       = $prompt_tokens > 0 ? $prompt_tokens : $total_tokens;
+		$context_window     = $this->resolve_context_window_tokens( $provider, $model );
+		$percent_used       = null;
+		$percent_left       = null;
+		$window_is_estimate = null;
+
+		if ( $context_window > 0 ) {
+			$percent_used       = (int) round( min( 100, ( $context_used / $context_window ) * 100 ) );
+			$percent_left       = max( 0, 100 - $percent_used );
+			$window_is_estimate = true;
+		}
+
+		if ( 0 === $prompt_tokens && 0 === $completion_tokens && 0 === $total_tokens && null === $percent_used ) {
+			return null;
+		}
+
+		return [
+			'prompt_tokens'         => $prompt_tokens,
+			'completion_tokens'     => $completion_tokens,
+			'total_tokens'          => $total_tokens,
+			'used_tokens'           => $context_used,
+			'context_window_tokens' => $context_window > 0 ? $context_window : null,
+			'percent_used'          => $percent_used,
+			'percent_left'          => $percent_left,
+			'window_is_estimated'   => $window_is_estimate,
+		];
+	}
+
+	/**
+	 * Normalize context usage payload.
+	 *
+	 * @param array<string,mixed> $context Raw context payload.
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_context_usage_payload( array $context ): ?array {
+		$prompt_tokens      = isset( $context['prompt_tokens'] ) ? (int) $context['prompt_tokens'] : 0;
+		$completion_tokens  = isset( $context['completion_tokens'] ) ? (int) $context['completion_tokens'] : 0;
+		$total_tokens       = isset( $context['total_tokens'] ) ? (int) $context['total_tokens'] : 0;
+		$used_tokens        = isset( $context['used_tokens'] ) ? (int) $context['used_tokens'] : max( 0, $prompt_tokens );
+		$context_window     = isset( $context['context_window_tokens'] ) ? (int) $context['context_window_tokens'] : 0;
+		$percent_used       = isset( $context['percent_used'] ) ? (int) $context['percent_used'] : null;
+		$percent_left       = isset( $context['percent_left'] ) ? (int) $context['percent_left'] : null;
+		$window_is_estimate = isset( $context['window_is_estimated'] ) ? (bool) $context['window_is_estimated'] : null;
+
+		$prompt_tokens     = max( 0, $prompt_tokens );
+		$completion_tokens = max( 0, $completion_tokens );
+		$total_tokens      = max( 0, $total_tokens );
+		$used_tokens       = max( 0, $used_tokens );
+		$context_window    = max( 0, $context_window );
+
+		if ( $context_window > 0 ) {
+			if ( null === $percent_used ) {
+				$percent_used = (int) round( min( 100, ( $used_tokens / $context_window ) * 100 ) );
+			}
+
+			$percent_used = max( 0, min( 100, $percent_used ) );
+			$percent_left = null !== $percent_left
+				? max( 0, min( 100, $percent_left ) )
+				: max( 0, 100 - $percent_used );
+		} else {
+			$percent_used = null;
+			$percent_left = null;
+		}
+
+		if ( 0 === $prompt_tokens && 0 === $completion_tokens && 0 === $total_tokens && 0 === $used_tokens && 0 === $context_window ) {
+			return null;
+		}
+
+		return [
+			'prompt_tokens'         => $prompt_tokens,
+			'completion_tokens'     => $completion_tokens,
+			'total_tokens'          => $total_tokens,
+			'used_tokens'           => $used_tokens,
+			'context_window_tokens' => $context_window > 0 ? $context_window : null,
+			'percent_used'          => $percent_used,
+			'percent_left'          => $percent_left,
+			'window_is_estimated'   => $window_is_estimate,
+		];
+	}
+
+	/**
+	 * Resolve best-known context window for a provider/model pair.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	private function resolve_context_window_tokens( string $provider, string $model ): int {
+		$provider = clawpress_sanitize_provider( $provider );
+		$model    = strtolower( trim( $model ) );
+		if ( '' === $provider || '' === $model || ! isset( self::MODEL_CONTEXT_WINDOWS[ $provider ] ) ) {
+			return 0;
+		}
+
+		foreach ( self::MODEL_CONTEXT_WINDOWS[ $provider ] as $prefix => $window ) {
+			if ( 0 !== strpos( $model, strtolower( (string) $prefix ) ) ) {
+				continue;
+			}
+
+			return max( 0, (int) $window );
+		}
+
+		return 0;
 	}
 
 	/**

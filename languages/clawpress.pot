@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-15T15:37:26+00:00\n"
+"POT-Creation-Date: 2026-02-15T17:22:05+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -609,7 +609,7 @@ msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:391
 #: includes/commands/handlers/class-test-command-handler.php:201
-#: includes/helpers/class-chat-helper.php:708
+#: includes/helpers/class-chat-helper.php:913
 msgid "Unknown provider error."
 msgstr ""
 
@@ -693,7 +693,7 @@ msgid "Model"
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:669
-#: includes/commands/handlers/class-setup-command-handler.php:791
+#: includes/commands/handlers/class-setup-command-handler.php:794
 msgid "Test Connection"
 msgstr ""
 
@@ -709,143 +709,143 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:698
+#: includes/commands/handlers/class-setup-command-handler.php:701
 #: src/panel/components/cards/SetupCard.jsx:55
 msgid "Setup Wizard"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:717
+#: includes/commands/handlers/class-setup-command-handler.php:720
 msgid "No configured providers found. Open provider settings, add credentials, then refresh."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:721
+#: includes/commands/handlers/class-setup-command-handler.php:724
 msgid "Open Provider Settings"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:727
-#: includes/commands/handlers/class-setup-command-handler.php:753
+#: includes/commands/handlers/class-setup-command-handler.php:730
+#: includes/commands/handlers/class-setup-command-handler.php:756
 msgid "Refresh Providers"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:735
+#: includes/commands/handlers/class-setup-command-handler.php:738
 msgid "Choose a configured provider to continue."
 msgstr ""
 
 #. translators: %s: provider display label
 #. translators: %s: model identifier
-#: includes/commands/handlers/class-setup-command-handler.php:740
-#: includes/commands/handlers/class-setup-command-handler.php:773
+#: includes/commands/handlers/class-setup-command-handler.php:743
+#: includes/commands/handlers/class-setup-command-handler.php:776
 #, php-format
 msgid "Use %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:747
+#: includes/commands/handlers/class-setup-command-handler.php:750
 msgid "Provider Settings"
 msgstr ""
 
 #. translators: %s: provider
-#: includes/commands/handlers/class-setup-command-handler.php:765
+#: includes/commands/handlers/class-setup-command-handler.php:768
 #, php-format
 msgid "Choose a model for `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:780
+#: includes/commands/handlers/class-setup-command-handler.php:783
 msgid "Refresh"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:787
+#: includes/commands/handlers/class-setup-command-handler.php:790
 msgid "Run a live test with the selected provider and model."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:797
+#: includes/commands/handlers/class-setup-command-handler.php:800
 #: src/panel/utils/toolDialogHelpers.js:7
 #: src/panel/utils/tools/updatePostsFindReplace.js:112
 msgid "Retry"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:807
+#: includes/commands/handlers/class-setup-command-handler.php:810
 msgid "Select the user account the agent will use. All actions taken by the agent will be performed as this user. A dedicated Contributor user is recommended to start, and more access can be granted later."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:811
+#: includes/commands/handlers/class-setup-command-handler.php:814
 msgid "Create Agent User"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:820
+#: includes/commands/handlers/class-setup-command-handler.php:823
 msgid "Use Current User"
 msgstr ""
 
 #. translators: %s: user login
-#: includes/commands/handlers/class-setup-command-handler.php:839
+#: includes/commands/handlers/class-setup-command-handler.php:842
 #, php-format
 msgid "Use Existing (%s)"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:851
+#: includes/commands/handlers/class-setup-command-handler.php:854
 msgid "Create a secure workspace for the agent to read/write files."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:855
+#: includes/commands/handlers/class-setup-command-handler.php:858
 msgid "Yes"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:856
+#: includes/commands/handlers/class-setup-command-handler.php:859
 msgid "No"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:858
+#: includes/commands/handlers/class-setup-command-handler.php:861
 msgid "Workspace path is not available until an agent user is selected."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:864
+#: includes/commands/handlers/class-setup-command-handler.php:867
 msgid "Use Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:865
+#: includes/commands/handlers/class-setup-command-handler.php:868
 msgid "Create Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:876
+#: includes/commands/handlers/class-setup-command-handler.php:879
 msgid "Clawpress uses a couple of agent files which you can edit to customize how your ClawPress agent behaves:"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:878
+#: includes/commands/handlers/class-setup-command-handler.php:881
 msgid "AGENTS.md - core agent operating guide for how your agent behaves."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:879
+#: includes/commands/handlers/class-setup-command-handler.php:882
 msgid "SOUL.md - core behavior and boundaries for your agent"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:880
+#: includes/commands/handlers/class-setup-command-handler.php:883
 msgid "USER.md - user profile, working relationship, so your agent knows who it is interacting with"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:881
+#: includes/commands/handlers/class-setup-command-handler.php:884
 msgid "HEARTBEAT.md - list of tasks for your agent to perform proactively on a regular basis"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:887
+#: includes/commands/handlers/class-setup-command-handler.php:890
 msgid "Create Agent Files"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:896
+#: includes/commands/handlers/class-setup-command-handler.php:899
 msgid "Setup is complete. ClawPress is ready to use."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:900
+#: includes/commands/handlers/class-setup-command-handler.php:903
 msgid "View Settings"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:906
+#: includes/commands/handlers/class-setup-command-handler.php:909
 msgid "View Agent Files"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:912
+#: includes/commands/handlers/class-setup-command-handler.php:915
 msgid "Say Hi to Your Agent"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:925
+#: includes/commands/handlers/class-setup-command-handler.php:928
 #: src/panel/components/cards/SetupCard.jsx:133
 msgid "Back"
 msgstr ""
@@ -1034,103 +1034,103 @@ msgstr ""
 msgid "- tool_execution: unavailable (no registered abilities)"
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:196
+#: includes/helpers/class-abilities-helper.php:200
 msgid "The requested tool is not allowlisted."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:209
+#: includes/helpers/class-abilities-helper.php:213
 msgid "The WordPress Abilities API is unavailable."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:224
+#: includes/helpers/class-abilities-helper.php:228
 msgid "The requested ability is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:262
+#: includes/helpers/class-abilities-helper.php:269
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:417
+#: includes/helpers/class-abilities-helper.php:448
 msgid "Tool execution completed."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:366
+#: includes/helpers/class-chat-helper.php:571
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:369
+#: includes/helpers/class-chat-helper.php:574
 msgid "Action required."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:437
+#: includes/helpers/class-chat-helper.php:642
 msgid "soon"
 msgstr ""
 
 #. translators: 1: tool name, 2: confirmation token expiry time
-#: includes/helpers/class-chat-helper.php:441
+#: includes/helpers/class-chat-helper.php:646
 #, php-format
 msgid "Confirm `%1$s` to continue this destructive action. Confirmation token expires at %2$s."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:453
+#: includes/helpers/class-chat-helper.php:658
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:454
+#: includes/helpers/class-chat-helper.php:659
 #: src/panel/components/cards/UserConfirmationCard.jsx:12
 msgid "Destructive action pending"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:459
+#: includes/helpers/class-chat-helper.php:664
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:465
+#: includes/helpers/class-chat-helper.php:670
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:469
+#: includes/helpers/class-chat-helper.php:674
 msgid "Do not run the pending destructive action."
 msgstr ""
 
 #. translators: 1: tool name, 2: confirmation token, 3: serialized JSON arguments
-#: includes/helpers/class-chat-helper.php:491
+#: includes/helpers/class-chat-helper.php:696
 #, php-format
 msgid "Confirm and run the pending `%1$s` tool call now. Re-run it with arguments %3$s and include `confirm=true` plus `confirm_token=\\\"%2$s\\\"`."
 msgstr ""
 
 #. translators: %s: tool name
-#: includes/helpers/class-chat-helper.php:506
+#: includes/helpers/class-chat-helper.php:711
 #, php-format
 msgid "Cancel the pending destructive `%s` tool call and do not run it."
 msgstr ""
 
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:647
+#: includes/helpers/class-chat-helper.php:852
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:714
+#: includes/helpers/class-chat-helper.php:919
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:719
-#: src/panel/Panel.jsx:108
+#: includes/helpers/class-chat-helper.php:924
+#: src/panel/Panel.jsx:109
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:720
-#: src/panel/Panel.jsx:110
+#: includes/helpers/class-chat-helper.php:925
+#: src/panel/Panel.jsx:111
 msgid "Provider error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:742
+#: includes/helpers/class-chat-helper.php:947
 #: src/panel/components/cards/ErrorCard.jsx:7
-#: src/panel/Panel.jsx:119
+#: src/panel/Panel.jsx:120
 msgid "Request Error"
 msgstr ""
 
@@ -1318,27 +1318,27 @@ msgstr ""
 msgid "Step %1$d OF %2$d : %3$s"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:334
+#: src/panel/components/cards/SetupCard.jsx:339
 msgid "Path"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:344
+#: src/panel/components/cards/SetupCard.jsx:349
 msgid "Exists"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:358
+#: src/panel/components/cards/SetupCard.jsx:363
 msgid "Provider settings page detected. After saving credentials, click Refresh Providers here."
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:407
+#: src/panel/components/cards/SetupCard.jsx:412
 msgid "Enter custom model ID"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:418
+#: src/panel/components/cards/SetupCard.jsx:423
 msgid "Use Selected Provider"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:419
+#: src/panel/components/cards/SetupCard.jsx:424
 msgid "Use Selected Model"
 msgstr ""
 
@@ -1347,12 +1347,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:587
+#: src/panel/Panel.jsx:594
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:588
+#: src/panel/Panel.jsx:595
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1374,7 +1374,7 @@ msgid "Tool Error"
 msgstr ""
 
 #: src/panel/components/MockPanel.jsx:19
-#: src/panel/Panel.jsx:114
+#: src/panel/Panel.jsx:115
 msgid "Error"
 msgstr ""
 
@@ -1425,20 +1425,46 @@ msgstr ""
 msgid "Close panel"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:69
-#: src/panel/components/PanelInput.jsx:72
+#. translators: 1: percentage used, 2: percentage left
+#: src/panel/components/PanelInput.jsx:73
+#, js-format
+msgid "%1$d%% used (%2$d%% left)"
+msgstr ""
+
+#. translators: 1: used tokens, 2: available context-window tokens
+#: src/panel/components/PanelInput.jsx:81
+#, js-format
+msgid "%1$s / %2$s tokens used"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:139
+#: src/panel/components/PanelInput.jsx:142
 msgid "Suggestions"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:94
+#: src/panel/components/PanelInput.jsx:164
 msgid "Ask me anything…"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:99
+#. translators: 1: context usage summary, 2: token usage summary
+#: src/panel/components/PanelInput.jsx:176
+#, js-format
+msgid "Context window: %1$s. %2$s."
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:188
+msgid "Context window:"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:197
+msgid "Codex automatically compacts its context"
+msgstr ""
+
+#: src/panel/components/PanelInput.jsx:205
 msgid "Stop"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:103
+#: src/panel/components/PanelInput.jsx:209
 msgid "Send"
 msgstr ""
 
@@ -1536,51 +1562,51 @@ msgstr ""
 msgid "Sample Post"
 msgstr ""
 
-#: src/panel/Panel.jsx:109
+#: src/panel/Panel.jsx:110
 msgid "Network or API request error"
 msgstr ""
 
-#: src/panel/Panel.jsx:124
-#: src/panel/services/realClient.js:130
-#: src/panel/services/realClient.js:169
+#: src/panel/Panel.jsx:125
+#: src/panel/services/realClient.js:196
+#: src/panel/services/realClient.js:235
 msgid "Chat request failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:419
+#: src/panel/Panel.jsx:426
 msgid "Preparing tool plan..."
 msgstr ""
 
-#: src/panel/Panel.jsx:432
+#: src/panel/Panel.jsx:439
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:593
+#: src/panel/Panel.jsx:600
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:614
+#: src/panel/Panel.jsx:621
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:678
+#: src/panel/Panel.jsx:685
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:716
+#: src/panel/Panel.jsx:723
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:774
-#: src/panel/Panel.jsx:791
+#: src/panel/Panel.jsx:781
+#: src/panel/Panel.jsx:798
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:782
+#: src/panel/Panel.jsx:789
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:829
+#: src/panel/Panel.jsx:836
 #, js-format
 msgid "Mock: %s"
 msgstr ""
@@ -1591,7 +1617,7 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:180
+#: src/panel/services/realClient.js:246
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 

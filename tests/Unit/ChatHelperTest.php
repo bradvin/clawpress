@@ -177,4 +177,39 @@ final class ChatHelperTest extends TestCase {
 		$this->assertSame( 'Confirmation is required.', $payload['reply'] );
 		$this->assertSame( 'user_confirmation', $payload['card']['type'] );
 	}
+
+	public function test_generate_ai_reply_includes_context_usage_payload_when_available(): void {
+		$chat_helper = Chat_Helper::create_for_testing(
+			null,
+			static function (): array {
+				return [
+					'reply'   => 'Context-aware reply.',
+					'context' => [
+						'prompt_tokens'         => 1000,
+						'completion_tokens'     => 120,
+						'total_tokens'          => 1120,
+						'used_tokens'           => 1000,
+						'context_window_tokens' => 128000,
+						'percent_used'          => 1,
+						'percent_left'          => 99,
+						'window_is_estimated'   => true,
+					],
+				];
+			},
+			static fn( array $settings ): array => [
+				'provider' => 'openai',
+				'model'    => 'gpt-4o',
+			]
+		);
+
+		$payload = $chat_helper->generate_ai_reply( 'Show context' );
+
+		$this->assertSame( 'online', $payload['mode'] );
+		$this->assertSame( 'Context-aware reply.', $payload['reply'] );
+		$this->assertIsArray( $payload['context'] );
+		$this->assertSame( 1000, $payload['context']['prompt_tokens'] );
+		$this->assertSame( 128000, $payload['context']['context_window_tokens'] );
+		$this->assertSame( 1, $payload['context']['percent_used'] );
+		$this->assertSame( 99, $payload['context']['percent_left'] );
+	}
 }

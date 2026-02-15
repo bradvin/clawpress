@@ -95,6 +95,67 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
     return { type, data };
   };
 
+  const normalizeContextUsage = (rawContext) => {
+    if (!rawContext || typeof rawContext !== 'object') {
+      return null;
+    }
+
+    const toPositiveNumber = (value) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric < 0) {
+        return null;
+      }
+      return Math.round(numeric);
+    };
+
+    const toNullablePercent = (value) => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return null;
+      }
+      return Math.max(0, Math.min(100, Math.round(numeric)));
+    };
+
+    const promptTokens = toPositiveNumber(rawContext.prompt_tokens) ?? 0;
+    const completionTokens = toPositiveNumber(rawContext.completion_tokens) ?? 0;
+    const totalTokens = toPositiveNumber(rawContext.total_tokens) ?? 0;
+    const usedTokens =
+      toPositiveNumber(rawContext.used_tokens) ??
+      (promptTokens > 0 ? promptTokens : totalTokens);
+    const contextWindowTokens =
+      toPositiveNumber(rawContext.context_window_tokens) ?? null;
+    const percentUsed = toNullablePercent(rawContext.percent_used);
+    const percentLeft = toNullablePercent(rawContext.percent_left);
+    const windowIsEstimated =
+      typeof rawContext.window_is_estimated === 'boolean'
+        ? rawContext.window_is_estimated
+        : null;
+
+    if (
+      promptTokens === 0 &&
+      completionTokens === 0 &&
+      totalTokens === 0 &&
+      usedTokens === 0 &&
+      contextWindowTokens === null
+    ) {
+      return null;
+    }
+
+    return {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      usedTokens,
+      contextWindowTokens,
+      percentUsed,
+      percentLeft,
+      windowIsEstimated,
+    };
+  };
+
   // Keep a stream-compatible interface for the existing panel flow.
   const stream = (prompt) => {
     const controller = new AbortController();
@@ -112,6 +173,11 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
 
         if (Array.isArray(response?.meta?.suggestions)) {
           onEvent('suggestions', { items: response.meta.suggestions });
+        }
+
+        const contextUsage = normalizeContextUsage(response?.meta?.context);
+        if (contextUsage) {
+          onEvent('context_usage', { context: contextUsage });
         }
 
         const responseError =
