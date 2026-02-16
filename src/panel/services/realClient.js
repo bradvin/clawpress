@@ -156,6 +156,61 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
     };
   };
 
+  const normalizeToolCall = (rawCall) => {
+    if (!rawCall || typeof rawCall !== 'object') {
+      return null;
+    }
+
+    const normalizeStatus = (value) => {
+      const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+      if (
+        normalized === 'success' ||
+        normalized === 'error' ||
+        normalized === 'requires_confirmation'
+      ) {
+        return normalized;
+      }
+      return 'success';
+    };
+
+    const name = typeof rawCall.name === 'string' ? rawCall.name.trim() : '';
+    if (!name) {
+      return null;
+    }
+
+    const ability = typeof rawCall.ability === 'string' ? rawCall.ability.trim() : '';
+    const args =
+      rawCall.args && typeof rawCall.args === 'object' && !Array.isArray(rawCall.args)
+        ? rawCall.args
+        : {};
+    const status = normalizeStatus(rawCall.status);
+    const message =
+      typeof rawCall.message === 'string' && rawCall.message.trim()
+        ? rawCall.message.trim()
+        : '';
+    const round = Number.isFinite(Number(rawCall.round))
+      ? Math.max(1, Math.round(Number(rawCall.round)))
+      : 1;
+    const sequence = Number.isFinite(Number(rawCall.sequence))
+      ? Math.max(1, Math.round(Number(rawCall.sequence)))
+      : 1;
+    const requiresConfirmation =
+      typeof rawCall.requires_confirmation === 'boolean'
+        ? rawCall.requires_confirmation
+        : status === 'requires_confirmation';
+
+    return {
+      name,
+      ability: ability || null,
+      args,
+      status,
+      message: message || null,
+      round,
+      sequence,
+      requiresConfirmation,
+    };
+  };
+
   // Keep a stream-compatible interface for the existing panel flow.
   const stream = (prompt) => {
     const controller = new AbortController();
@@ -179,6 +234,20 @@ const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
         if (contextUsage) {
           onEvent('context_usage', { context: contextUsage });
         }
+
+        const toolCalls = Array.isArray(response?.meta?.tool_calls)
+          ? response.meta.tool_calls
+              .map((rawCall) => normalizeToolCall(rawCall))
+              .filter(Boolean)
+          : [];
+
+        toolCalls.forEach((call, index) => {
+          onEvent('tool_call', {
+            call,
+            index: index + 1,
+            total: toolCalls.length,
+          });
+        });
 
         const responseError =
           response?.meta?.error && typeof response.meta.error === 'object'

@@ -387,14 +387,7 @@ final class Context_Helper {
 
 			$sections[] = sprintf( "## %s\n\n%s", $filename, $content );
 		}
-
-		$joined = implode("\n\n", $sections);
-
-		error_log('sections=' . count($sections));
-		error_log('length=' . strlen($joined));
-		error_log('has BOOTSTRAP=' . ( false !== strpos($joined, '## BOOTSTRAP.md') ? 'yes' : 'no' ));
-		error_log('has SOUL=' . ( false !== strpos($joined, '## SOUL.md') ? 'yes' : 'no' ));
-
+		
 		return implode( "\n\n", $sections );
 	}
 

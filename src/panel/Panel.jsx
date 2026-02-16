@@ -422,6 +422,53 @@ const Panel = () => {
         }
         break;
       case 'tool_call':
+        if (parsed?.call && typeof parsed.call === 'object') {
+          const callName =
+            typeof parsed.call.name === 'string' ? parsed.call.name.trim() : '';
+          if (!callName) {
+            break;
+          }
+
+          const callStatus =
+            typeof parsed.call.status === 'string' ? parsed.call.status.trim() : 'success';
+          const callMessage =
+            typeof parsed.call.message === 'string' ? parsed.call.message.trim() : '';
+          const callIndex = Number.isFinite(Number(parsed?.index))
+            ? Math.max(1, Math.round(Number(parsed.index)))
+            : null;
+          const callTotal = Number.isFinite(Number(parsed?.total))
+            ? Math.max(1, Math.round(Number(parsed.total)))
+            : null;
+
+          let statusLabel = __('success', 'clawpress');
+          if (callStatus === 'error') {
+            statusLabel = __('error', 'clawpress');
+          } else if (callStatus === 'requires_confirmation') {
+            statusLabel = __('confirmation required', 'clawpress');
+          }
+
+          let summary = sprintf(
+            /* translators: 1: tool name, 2: tool call status */
+            __('Tool call `%1$s` (%2$s)', 'clawpress'),
+            callName,
+            statusLabel
+          );
+
+          if (callIndex && callTotal) {
+            summary = sprintf(
+              /* translators: 1: tool call position, 2: total tool calls, 3: tool summary text */
+              __('[%1$d/%2$d] %3$s', 'clawpress'),
+              callIndex,
+              callTotal,
+              summary
+            );
+          }
+
+          const details = callMessage ? `${summary}\n${callMessage}` : summary;
+          appendMessage('system', details);
+          break;
+        }
+
         if (!toolPlanningShown) {
           setEphemeralStatus(__('Preparing tool plan...', 'clawpress'));
           setToolPlanningShown(true);

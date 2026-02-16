@@ -212,4 +212,57 @@ final class ChatHelperTest extends TestCase {
 		$this->assertSame( 1, $payload['context']['percent_used'] );
 		$this->assertSame( 99, $payload['context']['percent_left'] );
 	}
+
+	public function test_generate_ai_reply_includes_tool_call_trace_when_available(): void {
+		$chat_helper = Chat_Helper::create_for_testing(
+			null,
+			static function (): array {
+				return [
+					'reply'      => 'Completed tool calls.',
+					'tool_calls' => [
+						[
+							'name'                  => 'file_read',
+							'ability'               => 'clawpress/file/read',
+							'args'                  => [
+								'path' => '/tmp/example.txt',
+							],
+							'status'                => 'success',
+							'requires_confirmation' => false,
+							'message'               => '',
+							'round'                 => 1,
+							'sequence'              => 1,
+						],
+						[
+							'name'                  => 'file_delete',
+							'ability'               => 'clawpress/file/delete',
+							'args'                  => [
+								'path' => '/tmp/example.txt',
+							],
+							'status'                => 'requires_confirmation',
+							'requires_confirmation' => true,
+							'message'               => 'Explicit confirmation is required.',
+							'round'                 => 1,
+							'sequence'              => 2,
+						],
+					],
+				];
+			},
+			static fn( array $settings ): array => [
+				'provider' => 'openai',
+				'model'    => 'gpt-4.1-mini',
+			]
+		);
+
+		$payload = $chat_helper->generate_ai_reply( 'Run tools' );
+
+		$this->assertSame( 'online', $payload['mode'] );
+		$this->assertSame( 'Completed tool calls.', $payload['reply'] );
+		$this->assertIsArray( $payload['tool_calls'] );
+		$this->assertCount( 2, $payload['tool_calls'] );
+		$this->assertSame( 'file_read', $payload['tool_calls'][0]['name'] );
+		$this->assertSame( 'success', $payload['tool_calls'][0]['status'] );
+		$this->assertSame( 'file_delete', $payload['tool_calls'][1]['name'] );
+		$this->assertSame( 'requires_confirmation', $payload['tool_calls'][1]['status'] );
+		$this->assertSame( true, $payload['tool_calls'][1]['requires_confirmation'] );
+	}
 }

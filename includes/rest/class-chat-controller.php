@@ -184,6 +184,9 @@ final class Chat_Controller implements Route_Controller {
 					'context'     => isset( $reply_payload['context'] ) && is_array( $reply_payload['context'] )
 						? $reply_payload['context']
 						: null,
+					'tool_calls'  => isset( $reply_payload['tool_calls'] ) && is_array( $reply_payload['tool_calls'] )
+						? array_values( $reply_payload['tool_calls'] )
+						: null,
 				],
 			],
 			200

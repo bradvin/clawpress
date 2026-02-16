@@ -192,6 +192,7 @@ final class Chat_Helper {
 			$reply                      = trim( (string) $online_reply_payload['reply'] );
 			$card                       = $online_reply_payload['card'];
 			$context_usage              = $online_reply_payload['context'];
+			$tool_calls                 = $online_reply_payload['tool_calls'];
 
 			if ( '' === $reply && null === $card ) {
 				return [
@@ -223,6 +224,10 @@ final class Chat_Helper {
 				$payload['context'] = $context_usage;
 			}
 
+			if ( [] !== $tool_calls ) {
+				$payload['tool_calls'] = $tool_calls;
+			}
+
 			return $payload;
 		} catch ( Throwable $throwable ) {
 			return $this->build_error_reply_payload( $throwable, $provider, $model );
@@ -235,7 +240,12 @@ final class Chat_Helper {
 	 * @param array<string,mixed> $context Model context payload.
 	 * @param string              $provider Provider identifier.
 	 * @param string              $model Model identifier.
-	 * @return array{reply:string,card:array<string,mixed>|null,context:array<string,mixed>|null}
+	 * @return array{
+	 *     reply:string,
+	 *     card:array<string,mixed>|null,
+	 *     context:array<string,mixed>|null,
+	 *     tool_calls:array<int,array<string,mixed>>
+	 * }
 	 */
 	private function generate_online_reply( array $context, string $provider, string $model ): array {
 		$current_message          = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
@@ -257,6 +267,7 @@ final class Chat_Helper {
 		$latest_assistant_text = '';
 		$confirmation_option   = null;
 		$latest_context_usage  = null;
+		$tool_call_trace       = [];
 
 		for ( $round = 0; $round < self::MAX_TOOL_ROUNDS; ++$round ) {
 			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
@@ -296,7 +307,7 @@ final class Chat_Helper {
 					$function_response_id = sprintf( 'tool-call-%d-%d', $round + 1, $index + 1 );
 				}
 
-				$tool_result = $this->abilities_helper->execute_tool_call(
+				$tool_result       = $this->abilities_helper->execute_tool_call(
 					$tool_name,
 					$function_call->getArgs(),
 					[
@@ -304,6 +315,13 @@ final class Chat_Helper {
 						'execution_user_id'           => $execution_user_id,
 						'allowed_confirmation_tokens' => $user_confirmation_tokens,
 					]
+				);
+				$tool_call_trace[] = $this->build_tool_call_trace_entry(
+					$tool_name,
+					$function_call->getArgs(),
+					$tool_result,
+					$round + 1,
+					$index + 1
 				);
 
 				$detected_confirmation = $this->extract_tool_confirmation_option(
@@ -328,9 +346,10 @@ final class Chat_Helper {
 
 			if ( is_array( $confirmation_option ) ) {
 				return [
-					'reply'   => $latest_assistant_text,
-					'card'    => $this->build_tool_confirmation_card( $confirmation_option ),
-					'context' => $latest_context_usage,
+					'reply'      => $latest_assistant_text,
+					'card'       => $this->build_tool_confirmation_card( $confirmation_option ),
+					'context'    => $latest_context_usage,
+					'tool_calls' => $tool_call_trace,
 				];
 			}
 
@@ -343,9 +362,10 @@ final class Chat_Helper {
 		}
 
 		return [
-			'reply'   => $latest_assistant_text,
-			'card'    => $this->build_tool_confirmation_card( $confirmation_option ),
-			'context' => $latest_context_usage,
+			'reply'      => $latest_assistant_text,
+			'card'       => $this->build_tool_confirmation_card( $confirmation_option ),
+			'context'    => $latest_context_usage,
+			'tool_calls' => $tool_call_trace,
 		];
 	}
 
@@ -392,30 +412,128 @@ final class Chat_Helper {
 	 * Normalize online generator output into reply + optional card payload.
 	 *
 	 * @param mixed $raw_output Raw callback output.
-	 * @return array{reply:string,card:array<string,mixed>|null,context:array<string,mixed>|null}
+	 * @return array{
+	 *     reply:string,
+	 *     card:array<string,mixed>|null,
+	 *     context:array<string,mixed>|null,
+	 *     tool_calls:array<int,array<string,mixed>>
+	 * }
 	 */
 	private function normalize_online_reply_payload( $raw_output ): array {
 		if ( is_array( $raw_output ) ) {
-			$reply   = isset( $raw_output['reply'] ) ? (string) $raw_output['reply'] : '';
-			$card    = isset( $raw_output['card'] ) && is_array( $raw_output['card'] )
+			$reply      = isset( $raw_output['reply'] ) ? (string) $raw_output['reply'] : '';
+			$card       = isset( $raw_output['card'] ) && is_array( $raw_output['card'] )
 				? $this->normalize_card_payload( $raw_output['card'] )
 				: null;
-			$context = isset( $raw_output['context'] ) && is_array( $raw_output['context'] )
+			$context    = isset( $raw_output['context'] ) && is_array( $raw_output['context'] )
 				? $this->normalize_context_usage_payload( $raw_output['context'] )
 				: null;
+			$tool_calls = isset( $raw_output['tool_calls'] ) && is_array( $raw_output['tool_calls'] )
+				? $this->normalize_tool_call_trace_payload( $raw_output['tool_calls'] )
+				: [];
 
 			return [
-				'reply'   => $reply,
-				'card'    => $card,
-				'context' => $context,
+				'reply'      => $reply,
+				'card'       => $card,
+				'context'    => $context,
+				'tool_calls' => $tool_calls,
 			];
 		}
 
 		return [
-			'reply'   => (string) $raw_output,
-			'card'    => null,
-			'context' => null,
+			'reply'      => (string) $raw_output,
+			'card'       => null,
+			'context'    => null,
+			'tool_calls' => [],
 		];
+	}
+
+	/**
+	 * Build a compact trace row for a single tool call.
+	 *
+	 * @param string              $tool_name Tool name.
+	 * @param mixed               $raw_args Tool arguments.
+	 * @param array<string,mixed> $tool_result Tool result payload.
+	 * @param int                 $round Tool round number.
+	 * @param int                 $sequence Tool sequence in round.
+	 * @return array<string,mixed>
+	 */
+	private function build_tool_call_trace_entry(
+		string $tool_name,
+		$raw_args,
+		array $tool_result,
+		int $round,
+		int $sequence
+	): array {
+		$normalized_tool_name  = strtolower( trim( $tool_name ) );
+		$ability_name          = isset( $tool_result['ability'] ) ? trim( (string) $tool_result['ability'] ) : '';
+		$requires_confirmation = isset( $tool_result['requires_confirmation'] ) && true === $tool_result['requires_confirmation'];
+		$success               = isset( $tool_result['success'] ) && true === $tool_result['success'];
+		$status                = $success ? 'success' : ( $requires_confirmation ? 'requires_confirmation' : 'error' );
+		$message               = '';
+
+		if ( isset( $tool_result['error']['message'] ) ) {
+			$message = trim( sanitize_text_field( (string) $tool_result['error']['message'] ) );
+		} elseif ( isset( $tool_result['result']['message'] ) ) {
+			$message = trim( sanitize_text_field( (string) $tool_result['result']['message'] ) );
+		}
+
+		if ( '' !== $message && strlen( $message ) > 200 ) {
+			$message = substr( $message, 0, 197 ) . '...';
+		}
+
+		return [
+			'name'                  => $normalized_tool_name,
+			'ability'               => '' !== $ability_name ? $ability_name : null,
+			'args'                  => $this->normalize_tool_args_for_prompt( $raw_args ),
+			'status'                => $status,
+			'requires_confirmation' => $requires_confirmation,
+			'message'               => '' !== $message ? $message : null,
+			'round'                 => max( 1, $round ),
+			'sequence'              => max( 1, $sequence ),
+		];
+	}
+
+	/**
+	 * Normalize tool call trace payload.
+	 *
+	 * @param array<int,mixed> $tool_calls Raw trace payload.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function normalize_tool_call_trace_payload( array $tool_calls ): array {
+		$normalized = [];
+
+		foreach ( $tool_calls as $index => $tool_call ) {
+			if ( ! is_array( $tool_call ) ) {
+				continue;
+			}
+
+			$name = isset( $tool_call['name'] ) ? strtolower( trim( sanitize_text_field( (string) $tool_call['name'] ) ) ) : '';
+			if ( '' === $name ) {
+				continue;
+			}
+
+			$ability  = isset( $tool_call['ability'] ) ? trim( sanitize_text_field( (string) $tool_call['ability'] ) ) : '';
+			$args     = isset( $tool_call['args'] ) ? $this->normalize_tool_args_for_prompt( $tool_call['args'] ) : [];
+			$status   = isset( $tool_call['status'] ) ? strtolower( trim( (string) $tool_call['status'] ) ) : 'success';
+			$status   = in_array( $status, [ 'success', 'error', 'requires_confirmation' ], true ) ? $status : 'success';
+			$message  = isset( $tool_call['message'] ) ? trim( sanitize_text_field( (string) $tool_call['message'] ) ) : '';
+			$round    = isset( $tool_call['round'] ) ? (int) $tool_call['round'] : 1;
+			$sequence = isset( $tool_call['sequence'] ) ? (int) $tool_call['sequence'] : ( $index + 1 );
+
+			$normalized[] = [
+				'name'                  => $name,
+				'ability'               => '' !== $ability ? $ability : null,
+				'args'                  => $args,
+				'status'                => $status,
+				'requires_confirmation' => isset( $tool_call['requires_confirmation'] ) ? (bool) $tool_call['requires_confirmation'] : ( 'requires_confirmation' === $status ),
+				'message'               => '' !== $message ? $message : null,
+				'round'                 => max( 1, $round ),
+				'sequence'              => max( 1, $sequence ),
+			];
+		}
+
+		return $normalized;
 	}
 
 	/**
