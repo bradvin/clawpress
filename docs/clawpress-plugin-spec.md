@@ -7,7 +7,7 @@ Minimum WordPress: 6.9
 
 ## 1) Product Vision
 
-ClawPress is an in-admin AI agent for WordPress that can reason and take actions safely inside a site. It is inspired by OpenClaw, but built around WordPress-first architecture, permissions, and UX.
+ClawPress is an in-admin AI agent for WordPress that can reason and take actions safely inside a site. It is inspired by OpenClaw, but built around a WordPress-first architecture, permissions, and UX.
 
 Core promise: "The AI for WordPress that actually does things" while remaining secure by default.
 
@@ -171,54 +171,15 @@ Command responses must be produced locally without external LLM calls.
 
 Use Option A (hybrid) for v1:
 
-- Custom tables for high-volume operational data:
-  1. `{$wpdb->prefix}clawpress_threads`
-  2. `{$wpdb->prefix}clawpress_messages`
-  3. `{$wpdb->prefix}clawpress_action_logs`
+- Custom table for action_log:
+  - `{$wpdb->prefix}clawpress_action_logs`
 - Custom post types for editor-friendly, queryable entities:
-  - `clawpress_memory`
-  - `clawpress_skill`
-  - `agent-file`
+  - `clawpress_agent_file`
+  - `clawpress_agent_mem`
+  - `clawpress_agent_skill`
 - Filesystem workspace for agent file operations, with secure randomized paths.
-- `wp_options` via `register_setting()` for plugin settings and retention defaults.
-- `user_meta` for per-user workspace mapping and per-user setup/chat UI state.
-- Additional options for agent behavior:
-  - `clawpress_active_soul_file` (active `SOUL.md` file reference)
-  - `clawpress_agent_user_id` (selected WP user for agent action execution)
-  - `clawpress_setup_templates_version` (tracks template bootstrap version applied)
 
-#### 6.3.1 Memory Storage (`clawpress_memory` CPT)
-
-Memory is stored in a private CPT to enable visual admin workflows, built-in WP querying, revisions, and capability control.
-
-- CPT config: `public=false`, `show_ui=true`, `show_in_rest=false` (v1), custom capabilities.
-- Scope model (hybrid default):
-  - Global/shared memory
-  - User-private memory
-- Suggested post meta:
-  - `clawpress_scope` (`global|user`)
-  - `clawpress_owner_user_id` (nullable for global)
-  - `clawpress_visibility`
-  - `clawpress_importance`
-  - `clawpress_expires_at` (UTC)
-  - `clawpress_last_used_at` (UTC)
-  - `clawpress_tags` (array/string)
-
-#### 6.3.2 Skill Storage (`clawpress_skill` CPT)
-
-Skills are stored in a private CPT so admins can manage and lock them down visually.
-
-- CPT config: `public=false`, `show_ui=true`, custom capabilities.
-- Suggested post meta:
-  - `clawpress_skill_handler` (registered handler slug/class)
-  - `clawpress_ability_id` (registered ability identifier, e.g. `clawpress/file_read`)
-  - `clawpress_required_capability`
-  - `clawpress_enabled` (`0|1`)
-  - `clawpress_safety_level`
-  - `clawpress_config_json`
-- Runtime uses allowlisted handlers; CPT stores configuration/policy, not arbitrary executable code.
-
-#### 6.3.3 Agent File Storage (`agent-file` CPT)
+#### 6.3.1 Agent File Storage (`clawpress_agent_file` CPT)
 
 Agent files are stored as a private CPT to provide editable file-like content with built-in WordPress revisions, access controls, and auditability.
 
@@ -226,19 +187,19 @@ Agent files are stored as a private CPT to provide editable file-like content wi
 - Canonical file identity:
   - logical file path (e.g., `SOUL.md`, `playbooks/editorial.md`)
   - unique normalized slug/path key
-- Suggested post meta:
-  - `clawpress_file_path` (normalized logical path)
-  - `clawpress_file_type` (`policy|prompt|playbook|note|other`)
-  - `clawpress_file_protected` (`0|1`)
-  - `clawpress_file_owner_user_id`
-  - `clawpress_file_scope` (`global|user`)
-  - `clawpress_file_checksum`
-  - `clawpress_file_last_used_at` (UTC)
+
+#### 6.3.2 Memory Storage (`clawpress_agent_mem` CPT)
+
+Memory is stored in a private CPT to enable visual admin workflows, built-in WP querying, revisions, and capability control.
+
+#### 6.3.3 Skill Storage (`clawpress_agent_skill` CPT)
+
+Skills design is still to be determined.
 
 Resolver order for built-in file tools:
 
 1. All file lookups are executed through built-in `file_read` tool semantics.
-2. Look up `agent-file` CPT by normalized path.
+2. Look up `clawpress_agent_file` CPT by normalized path.
 3. If not found, run fallback scan in workspace filesystem under resolved uploads workspace root.
 
 Authoring and isolation rules:
@@ -249,10 +210,11 @@ Authoring and isolation rules:
 
 Setup bootstrap files (created in `agent-file` CPT):
 
-1. `SOUL.md` (protected, required)
+1. `SOUL.md` (required)
 2. `AGENTS.md` (required)
 3. `USER.md` (required)
 4. `HEARTBEAT.md` (required for heartbeat polling behavior)
+5. `BOOTSTRAP.md` (required for bootstrap behavior, then deleted)
 
 ### 6.4 AI Provider Integration (`wordpress/php-ai-client`)
 
@@ -288,11 +250,11 @@ Integration rules:
 Default workspace location is under uploads:
 
 - Base path: `wp-content/uploads/clawpress/`
-- Workspace root per user/session: `ws/{site_hash}/{user_hash}/{workspace_token}/`
+- Workspace root per user/session: `/{user_id}/{workspace_token}/`
 - `workspace_token` must be high-entropy random bytes (non-guessable).
 - Store workspace mapping in `user_meta`; never expose absolute paths in client responses.
 - Single-site first in v1; multisite support deferred to later phase.
-- Use a single workspace location resolver (`inc/workspace.php`) as the only way to derive workspace paths.
+- Use a single workspace location resolver (`class-workspace-helper.php`) as the only way to derive workspace paths.
 - File tools and file routes must not construct workspace paths directly.
 - Resolver API must be stable so path strategy can evolve later (for multi-agent layouts).
 
@@ -334,10 +296,6 @@ Required routes:
 9. `GET /tools`
 10. `POST /settings/provider`
 11. `POST /settings/agent` (manage editable `SOUL.md` and execution-user settings)
-12. `GET /files`
-13. `POST /files`
-14. `GET /files/(?P<path>...)`
-15. `DELETE /files/(?P<path>...)`
 
 Endpoint requirements:
 
@@ -377,44 +335,6 @@ Endpoint requirements:
    - mark protected files (including `SOUL.md`) and require elevated capability + confirmation for edits.
    - canonicalize file paths and block traversal/symlink escapes before filesystem fallback.
 
-
-## 9) Setup State Machine
-
-States:
-
-1. `welcome`
-2. `permissions`
-3. `agent_user_setup`
-4. `agent_files_setup`
-5. `provider_setup`
-6. `connection_test`
-7. `memory_preferences`
-8. `offline_commands_tutorial`
-9. `ready`
-
-Rules:
-
-- If provider not configured, `provider_setup` is required before online status.
-- `agent_user_setup` is required before mutating actions are allowed.
-- `agent_files_setup` creates required setup files in `agent-file` CPT using templates.
-- Setup cannot reach `ready` unless required setup files exist.
-- `offline_commands_tutorial` is always available and can complete setup even offline.
-- State persisted per site with per-user completion metadata.
-
-## 10) Agent Behavior (MVP)
-
-1. In Offline mode:
-   - command parser executes deterministic handlers only.
-2. In Online mode:
-   - intent classification decides between command/tool/LLM response.
-   - LLM suggestions that trigger site-changing actions require confirmation.
-3. Tool execution:
-   - use allowlisted internal tools only.
-   - register and execute tools through Abilities API only.
-   - pass minimal context and capability-limited execution.
-   - execute as configured agent user and evaluate action capability in that context.
-   - resolve files via `agent-file` CPT first; filesystem workspace only as fallback.
-
 ## 11) WordPress Best Practices Checklist
 
 1. `declare( strict_types=1 )` and namespaced modules.
@@ -427,84 +347,3 @@ Rules:
 8. Do not edit generated build asset files manually.
 9. Register and enforce ClawPress tools through Abilities API only.
 10. Use Action Scheduler for background work; do not rely on ad-hoc WP-Cron hooks.
-
-## 12) Observability and Supportability
-
-1. Add Site Health section for ClawPress:
-   - provider connectivity
-   - background task status
-   - DB schema version
-2. Structured logs for:
-   - chat requests
-   - command invocations
-   - tool/ability executions
-   - requesting actor vs execution actor attribution
-   - file resolution source (`agent-file|workspace`) where relevant
-   - Action Scheduler job lifecycle events
-   - provider failures/timeouts
-3. Admin diagnostics export (redacted).
-
-## 13) Performance Targets (MVP)
-
-1. Chat open interaction latency < 100ms on typical admin screens.
-2. Offline command response target < 500ms.
-3. Online first-token feedback < 2s when provider supports it.
-4. Memory retrieval query p95 < 200ms for up to 50k memory rows.
-
-## 14) Phased Delivery Plan
-
-### Phase 1: Foundation
-
-- Chat shell on all admin pages.
-- Status API + provider settings.
-- Offline command engine.
-- Chat-first setup v1.
-
-### Phase 2: Online AI
-
-- `php-ai-client` integration.
-- Basic agent routing with confirmation gate.
-- Persistent chat threads/messages.
-
-### Phase 3: Memory + Safety Hardening
-
-- Durable memory retrieval + retention.
-- Action logging and diagnostics.
-- Site Health integration.
-
-## 15) MVP Acceptance Criteria
-
-1. User can open chat from any admin page.
-2. Fresh install shows setup in chat.
-3. With no provider configured, status is Offline and offline commands work.
-4. User can configure provider and send a successful online prompt.
-5. Chat history persists across page reloads.
-6. Memory can be viewed and cleared from command or settings UX.
-7. Every mutating action is permission-checked and logged with requesting + execution actor IDs.
-8. Mutating actions are blocked until setup sets agent user.
-9. Agent identity policy is sourced from editable protected `SOUL.md` file.
-10. Agent can create and reference user files; built-in file tools resolve `agent-file` CPT first and workspace second.
-11. All ClawPress tools are registered and authorized via Abilities API.
-12. Background jobs run through Action Scheduler and are observable/retry-safe.
-13. Setup creates `SOUL.md`, `AGENTS.md`, `USER.md`, and `HEARTBEAT.md` in `agent-file` CPT.
-
-## 16) Decision Log and Open Questions
-
-Resolved for v1:
-1. Storage model: Option A hybrid (custom tables + CPT + filesystem workspace).
-2. Memory scope default: hybrid (global + user-private).
-3. Skills management: `clawpress_skill` CPT + meta.
-4. Workspace location: uploads subdirectory with non-guessable randomized folder names.
-5. Retention baseline: configurable TTL with Action Scheduler purge jobs.
-6. Multisite: single-site first.
-7. Agent action model: execute actions as selected WP agent user (recommended low-privilege dedicated account).
-8. Identity model: `SOUL.md` is an editable protected file in `agent-file` CPT and is injected server-side through resolver.
-9. File model: built-in file tools resolve `agent-file` CPT first, with workspace filesystem fallback.
-10. Tool model: all ClawPress tools are abilities (Abilities API).
-11. Background scheduling model: Action Scheduler (not WP-Cron).
-12. Setup file model: required context files are provisioned from `docs/templates/` into `agent-file` CPT.
-
-Still open:
-1. Which capabilities should map to non-admin chat users in v1?
-2. Which provider(s) are first-class in setup presets?
-3. Is streaming response required in MVP or phase 2?

@@ -23,48 +23,69 @@ final class Model_Helper {
 	private const MODEL_OPTIONS = [
 		'openai' => [
 			[
-				'id'    => 'gpt-4.1-mini',
-				'label' => 'GPT-4.1 Mini',
+				'id'    => 'gpt-5.2-codex',
+				'label' => 'GPT-5.2 Codex',
+				'context' => '400K',
+				'cost'    => '$1.75/M input tokens | $14/M output tokens'
 			],
 			[
-				'id'    => 'gpt-4.1',
-				'label' => 'GPT-4.1',
+				'id'    => 'gpt-5.2',
+				'label' => 'GPT-5.2',
+				'context' => '400K',
+				'cost'    => '$1.75/M input tokens | $14/M output tokens'
 			],
 			[
-				'id'    => 'gpt-4o-mini',
-				'label' => 'GPT-4o Mini',
+				'id'    => 'gpt-5.2-chat',
+				'label' => 'GPT-5.2 Chat',
+				'context' => '128K',
+				'cost'    => '$1.75/M input tokens | $14/M output tokens'
 			],
 			[
-				'id'    => 'gpt-4o',
-				'label' => 'GPT-4o',
+				'id'      => 'gpt-5.2-pro',
+				'label'   => 'GPT-5.2 Pro',
+				'context' => '400K',
+				'cost'    => '$21/M input tokens | $168/M output tokens'
 			],
 		],
 		'anthropic' => [
 			[
-				'id'    => 'claude-3-5-haiku-latest',
-				'label' => 'Claude 3.5 Haiku',
+				'id'    => 'claude-opus-4.6',
+				'label' => 'Claude Opus 4.6',
+				'context' => '1M',
+				'cost'    => '$5/M input tokens | $25/M output tokens'
 			],
 			[
-				'id'    => 'claude-3-5-sonnet-latest',
-				'label' => 'Claude 3.5 Sonnet',
+				'id'    => 'claude-sonnet-4.5',
+				'label' => 'Claude Sonnet 4.5',
+				'context' => '200K',
+				'cost'    => '$1/M input tokens | $5/M output tokens'
 			],
 			[
-				'id'    => 'claude-3-7-sonnet-latest',
-				'label' => 'Claude 3.7 Sonnet',
+				'id'    => 'claude-haiku-4.5',
+				'label' => 'Claude Haiku 4.5',
+				'context' => '1M',
+				'cost'    => '$5/M input tokens | $25/M output tokens'
 			],
+
 		],
 		'google' => [
 			[
-				'id'    => 'gemini-2.0-flash',
-				'label' => 'Gemini 2.0 Flash',
+				'id'    => 'gemini-3-pro-preview',
+				'label' => 'Gemini 3 Pro',
+				'context' => '1.05M',
+				'cost'    => '$2/M input tokens | $12/M output tokens'
 			],
 			[
-				'id'    => 'gemini-2.5-flash',
-				'label' => 'Gemini 2.5 Flash',
+				'id'    => 'gemini-3-flash-preview',
+				'label' => 'Gemini 3 Flash',
+				'context' => '1.05M',
+				'cost'    => '$0.50/M input tokens | $3/M output tokens'
 			],
 			[
 				'id'    => 'gemini-2.5-pro',
 				'label' => 'Gemini 2.5 Pro',
+				'context' => '1.05M',
+				'cost'    => '$1.25/M input tokens | $10/M output tokens'
 			],
 		],
 	];
