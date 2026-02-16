@@ -16,6 +16,7 @@ use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Panel\Panel;
 use ClawPress\PostTypes\Post_Types;
 use ClawPress\RestAPI\Rest_API;
+use WordPress\AI_Client\AI_Client;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -40,6 +41,13 @@ final class Plugin {
 		new Admin_Page();
 		new Panel();
 		new Heartbeat();
+		
+		add_action( 'init', [ $this, 'init' ] );
+	}
+
+	function init() {
+		// Initialize the WP AI Client.
+		AI_Client::init();
 	}
 
 	/**
