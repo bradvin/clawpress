@@ -17,7 +17,6 @@ use ClawPress\Helpers\Panel_Helper;
 use ClawPress\Panel\Panel;
 use ClawPress\PostTypes\Post_Types;
 use ClawPress\RestAPI\Rest_API;
-use WordPress\AI_Client\AI_Client;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -43,17 +42,8 @@ final class Plugin {
 		new Panel();
 		new Heartbeat();
 		
-		add_action( 'init', [ $this, 'init' ] );
-	}
-
-	/**
-	 * Initialize AI client integration for available package versions.
-	 */
-	public function init(): void {
-		// Ensure the modern php-ai-client is available.
-		if ( class_exists( AI_Client::class ) ) {
-			AI_Client::init();
-		}
+		// Initialize AI client. Goto Settings -> AI Credentials to set up.
+		add_action( 'init', array( 'WordPress\AI_Client\AI_Client', 'init' ) );
 	}
 
 	/**
