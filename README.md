@@ -1,5 +1,7 @@
 # ClawPress
 
+![ClawPress Logo](img/clawpress-logo-500x500.png)
+
 The AI for WordPress that actually does things
 
 [Preview in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
