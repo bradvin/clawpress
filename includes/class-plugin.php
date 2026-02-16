@@ -45,9 +45,14 @@ final class Plugin {
 		add_action( 'init', [ $this, 'init' ] );
 	}
 
-	function init() {
-		// Initialize the WP AI Client.
-		AI_Client::init();
+	/**
+	 * Initialize AI client integration for available package versions.
+	 */
+	public function init(): void {
+		// Ensure the modern php-ai-client is available.
+		if ( class_exists( AI_Client::class ) ) {
+			AI_Client::init();
+		}
 	}
 
 	/**
