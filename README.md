@@ -2,21 +2,9 @@
 
 The AI for WordPress that actually does things
 
-[Preview in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/bacoords/clawpress/refs/heads/main/blueprint.json)
+[Preview in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
 
 ## Quick Start
-
-This template is designed for AI-assisted development. To create a new plugin:
-
-1. Copy this directory and rename it to your plugin name
-2. Ask your AI agent to rename the plugin by performing find and replace on these patterns:
-   - `clawpress` → `your-plugin-name`
-   - `ClawPress` → `YourPluginName`
-   - `clawpress` → `your_plugin_name`
-   - `CLAWPRESS` → `YOUR_PLUGIN_NAME`
-   - `clawpress` → `your-tool-name`
-   - `clawpress/v1` → `your-plugin/v1`
-3. Install dependencies and build:
 
 ```bash
 composer install
@@ -26,40 +14,63 @@ npm run build
 
 ## Key Features
 
-### Foundation Chat MVP (Spec 1)
+### Admin Assistant MVP
 
-Current `wp-admin` MVP features implemented in this plugin:
+Current MVP features implemented in this plugin:
 
-- Floating panel available across admin screens for authorized users (`manage_options`).
-- Admin bar toggle (`🦞`) plus fallback floating toggle when admin bar link is unavailable.
-- Chat transport aligned to REST endpoints:
-  - `POST /wp-json/clawpress/v1/chat/message`
-  - `GET /wp-json/clawpress/v1/chat/history`
-- Status contract endpoint:
-  - `GET /wp-json/clawpress/v1/status`
-  - Envelope keys: `mode`, `provider`, `model`, `setup`, `memory`, `agent_user`
-- Panel state persistence endpoint (per-user):
-  - `GET /wp-json/clawpress/v1/panel/state`
-  - `POST /wp-json/clawpress/v1/panel/state`
-  - Stores `open`, `width`, `last_history_id`
-- Header status indicator with online/offline badge and provider/model label.
-- Keyboard shortcut standardized to `Cmd/Ctrl + K`.
-- Requests include WP REST nonce (`X-WP-Nonce`) for authenticated REST calls.
+- Floating chat panel available across all admin screens to chat with your AI assistant.
+- Admin bar toggle (`🦞`) to open / close the chat panel.
+- Offline mode which still allows slash commands to be used.
+- Setup Wizard built into chat to guide users through plugin setup process.
+- Admin settings page to set which provider, model, and other settings to use.
+- Registers WP Abilities to and loads them as tools into the AI client.
+- Creates an action log database table to track actions taken by the AI assistant.
+- Context & system prompt built up using chat history, tools (abilities), agent files & memory.
+- Card UI system to display information in a card format.
+  - Included cards : Welcome card, Setup Wizard card, User Permissions card.
+- Shows context usage with toolip.
 
-Out of scope for Spec 1 and intentionally not complete yet:
+Current Agent Features:
 
-- Full tool runtime/execution policy for `/run-tool`.
-- Multi-channel adapters.
-- Background jobs and memory retention implementation.
+- Access to agent files (AGENTS.md, SOUL.md, BOOTSTRAP.md) (stored in `clawpress-agent-file` custom post type).
+- Persistent agent memory (stored as `clawpress-agent-mem` custom post type). (Short term memory, long term memory)
+- Access to a secure workspace file-system located at `/wp-content/uploads/<agent-user-id>/<random-hash>`
+- Has an assigned WordPress user. (this user will be used to perform heartbeat tasks)
+- Agent abilities:
+  - `file_list` (read from agent-files first then workspace)
+  - `file_read`
+  - `file_write`
+  - `file_delete`
+  - `memory_long_term_add`
+  - `memory_long_term_update`
+  - `memory_long_term_delete`
+  - `memory_short_term_add`
+  - `memory_short_term_update`
+  - `memory_short_term_delete`
 
-### WordPress Admin Page
+### Slash Commands
 
-Registers a top-level WordPress admin page and mounts a React app.
+- `/help` - shows availalble commands.
+- `/clear` - Clears chat history.
+- `/status` - Shows plugin status.
+- `/tools` - Shows registered abilities (tools).
+- `/site info` - Shows site information.
+- `/memory list|clear` - Shows agent memory.
+- `/setup` - Runs the setup wizard.
+- `/test` - Runs a test to ensure the AI client is working.
+- `/reset` - Resets the chat history and shows Welcome card.
 
-- Location: `includes/class-admin-page.php`
-- Menu: **Dashboard → ClawPress**
-- Uses `add_menu_page()` and mounts React into `#clawpress-admin-root`
-- Scripts/styles auto-enqueued via asset file pattern
+## Technical Details
+
+- Uses modern WordPress patterns for admin pages and REST API.
+- Uses `@automattic/jetpack-autoloader` for autoloading. ([docs](https://github.com/Automattic/jetpack-autoloader))
+- Uses `@wordpress/php-ai-client` for AI client. ([docs](https://github.com/WordPress/php-ai-client))
+- Uses `@woocommerce/action-scheduler` for background processing. ([docs](https://github.com/woocommerce/action-scheduler))
+- Includes admin table/grid interface using `@wordpress/dataviews` with WordPress Data Layer.
+- Uses `wp-scripts` for build tooling. ([docs](https://developer.wordpress.org/block-editor/packages/packages-scripts/))
+- Uses `phpunit` for unit testing.
+- Uses `wp-coding-standards` and `phpcodesniffer` for code quality.
+- Built from Brian Coords [woodev-extension-starter](https://github.com/bacoords/woodev-extension-starter)
 
 ### REST API
 
@@ -73,75 +84,6 @@ Custom endpoints with permission callbacks and parameter validation.
   - `/chat/message` (POST)
   - `/chat/history` (GET)
 - Location: `includes/class-rest-api.php`
-
-**Note**: The DataViews demo uses `@wordpress/core-data` which leverages the built-in WordPress REST API. Custom endpoints are only needed for operations not covered by core.
-
-### DataViews Admin UI
-
-Pre-built table/grid interface using `@wordpress/dataviews` with WordPress Data Layer.
-
-- **App.js**: Main component with view state management
-- **useItems.js**: Custom hook using `useEntityRecords` from `@wordpress/core-data`
-- **itemConfig.js**: Field definitions and action handlers (view/edit/trash)
-
-The demo displays WordPress pages. Replace `'page'` with your custom post type slug to work with your own data.
-
-### Floating AI Panel
-
-ClawPress includes a floating wp-admin panel UI for chat-style interactions.
-
-- Source: `src/panel/`
-- Build output: `build/panel/`
-- Runtime loader: `includes/class-panel.php`
-- Header status indicator reads from `GET /clawpress/v1/status`
-- Panel state sync reads/writes `GET/POST /clawpress/v1/panel/state`
-- Shortcut: `Cmd/Ctrl + K`
-
-## Customization Guide
-
-### Adding a Custom Post Type
-
-Register custom post types in `includes/class-post-types.php`. After registering, update `src/js/admin/hooks/useItems.js` to use your post type slug instead of `'page'`.
-
-### Adding a New Admin Feature
-
-1. Create `src/js/admin/components/NewFeature.js`
-2. Import and use in `App.js`
-3. Add any new REST endpoints in `includes/class-rest-api.php`
-
-### Changing the Post Type
-
-The demo uses WordPress pages. To use a custom post type:
-
-1. Edit `src/js/admin/hooks/useItems.js`:
-```javascript
-// Change 'page' to your post type slug
-useEntityRecords( 'postType', 'your_post_type', { ... } );
-```
-
-2. Update field definitions in `src/js/admin/config/itemConfig.js` to match your post type's fields.
-
-### Adding Fields to DataViews
-
-Edit `src/js/admin/config/itemConfig.js`:
-
-```javascript
-export const fields = [
-    {
-        id: 'your_field',
-        label: 'Your Field',
-        type: 'text',
-        enableSorting: true,
-        getValue: ({ item }) => item.your_field,
-    },
-    // ...
-];
-```
-
-### Adding a New PHP Feature
-
-1. Create `includes/class-your-feature.php` with namespace and class
-2. Run `composer dump-autoload` after adding/renaming/removing PHP class files
 
 ## Dependencies
 
@@ -159,7 +101,7 @@ export const fields = [
 
 | Pattern | Purpose |
 |---------|---------|
-| Namespaced PHP modules | Isolated features, no conflicts |
+| Namespaced PHP classes | Isolated features, no conflicts |
 | Config-driven UI | Modify fields/actions without touching components |
 | Custom hooks | Encapsulated data logic |
 | REST API with validation | Clear frontend/backend contract |
@@ -173,8 +115,40 @@ export const fields = [
 - WordPress 6.9+
 - Node.js 18+
 
-## Current Status Summary
+## TODO
 
-- Spec 1 in-scope MVP work is implemented in code.
-- Unit-level coverage includes routes, status/controller permission checks, and panel-state round trip.
-- Remaining work is mostly from later specs (tool runtime depth, richer setup/memory workflows, and broader integration/manual verification).
+- Fix context usage info / limit / tooltip.
+- Add current admin screen to context.
+- Persist tool calls to chat history
+- Define actual scope of agent user. (should the user only be used for heartbeat tasks?)
+- Agent skills!
+- Chat threads - have multiple conversation threads at once, per user.
+- Improve agent loop for multi-step messages
+- Add heartbeat wizard for setting up useful nightly site health email report.
+- Implement working heartbeat tasks.
+- Use WP_Filesystem to read/write files
+- Add abilities to read memory files (long and short term)
+- Fix boostrap agent file setup and writing (doesnt always run)
+- /reset command should clear everything (like uninstall + activation)
+- Add more agent abilities for general WordPress content (posts, pages, etc.)
+- Consider how browser search and use will work within WordPress.
+- Mulit agent support. (can configure multiple agents)
+- Multi-user support. (each user has their own agents)
+- Channels for agent interaction.
+- Streaming responses.
+
+## Decision Log
+
+1. Storage model: (custom table + CPT + filesystem workspace).
+2. Memory management: `clawpress_agent_mem` CPT (long term and short term).
+3. Skills management: `clawpress_agent_skill` CPT.
+4. Workspace location: uploads subdirectory with non-guessable randomized folder names.
+5. Retention baseline: configurable TTL with Action Scheduler purge jobs.
+6. Agent action model: execute actions as selected WP agent user (recommended low-privilege dedicated account).
+7. System prompt built up from small system prompt + chat history + tools + agent files + memory.
+8. File model: built-in file tools resolve `clawpress_agent_file` CPT first, with workspace filesystem fallback.
+9. Tool model: all ClawPress tools are abilities (Abilities API).
+10. Background scheduling model: Action Scheduler (not WP-Cron).
+11. Cards are used to display complex UI in chat panel.
+12. Commands can be used offline.
+13. Cards can have actions, which run commands, or send messages.
