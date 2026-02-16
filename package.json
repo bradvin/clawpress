@@ -6,6 +6,7 @@
     "build:scripts": "wp-scripts build --config webpack.scripts.config.js",
     "build:panel": "wp-scripts build --config webpack.panel.config.js",
     "build:pot": "mkdir -p languages && wp i18n make-pot . languages/clawpress.pot --domain=clawpress --exclude=build,node_modules,vendor,tests,ideas,docs",
+    "plugin-zip": "mkdir -p dist && wp-scripts plugin-zip && mv -f \"$npm_package_name.zip\" dist/",
     "start": "npm run start:scripts & npm run start:panel",
     "start:scripts": "wp-scripts start --config webpack.scripts.config.js",
     "start:panel": "wp-scripts start --config webpack.panel.config.js",
@@ -13,7 +14,10 @@
     "lint:js": "wp-scripts lint-js",
     "lint:css": "wp-scripts lint-style",
     "lint:php": "composer lint",
-    "lint:php:fix": "composer lint:fix"
+    "lint:php:fix": "composer lint:fix",
+    "composer:cleanup": "composer install --prefer-dist --optimize-autoloader --no-dev",
+    "predeploy": "npm run lint && npm run build && npm run composer:cleanup",
+    "deploy": "npm run plugin-zip"
   },
   "dependencies": {
     "@wordpress/dataviews": "^11.3.0",
