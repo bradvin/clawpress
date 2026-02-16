@@ -13,7 +13,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://github-proxy.com/proxy/?repo=bradvin/clawpress"
+        "url": "https://github.com/bradvin/clawpress/releases/download/0.0.1/clawpress.zip"
       }
     },
     {
