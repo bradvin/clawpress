@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-15T17:22:05+00:00\n"
+"POT-Creation-Date: 2026-02-16T20:30:24+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -609,7 +609,7 @@ msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:391
 #: includes/commands/handlers/class-test-command-handler.php:201
-#: includes/helpers/class-chat-helper.php:913
+#: includes/helpers/class-chat-helper.php:1031
 msgid "Unknown provider error."
 msgstr ""
 
@@ -1054,81 +1054,81 @@ msgstr ""
 msgid "Tool execution completed."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:571
+#: includes/helpers/class-chat-helper.php:689
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:574
+#: includes/helpers/class-chat-helper.php:692
 msgid "Action required."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:642
+#: includes/helpers/class-chat-helper.php:760
 msgid "soon"
 msgstr ""
 
 #. translators: 1: tool name, 2: confirmation token expiry time
-#: includes/helpers/class-chat-helper.php:646
+#: includes/helpers/class-chat-helper.php:764
 #, php-format
 msgid "Confirm `%1$s` to continue this destructive action. Confirmation token expires at %2$s."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:658
+#: includes/helpers/class-chat-helper.php:776
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:659
+#: includes/helpers/class-chat-helper.php:777
 #: src/panel/components/cards/UserConfirmationCard.jsx:12
 msgid "Destructive action pending"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:664
+#: includes/helpers/class-chat-helper.php:782
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:670
+#: includes/helpers/class-chat-helper.php:788
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:674
+#: includes/helpers/class-chat-helper.php:792
 msgid "Do not run the pending destructive action."
 msgstr ""
 
 #. translators: 1: tool name, 2: confirmation token, 3: serialized JSON arguments
-#: includes/helpers/class-chat-helper.php:696
+#: includes/helpers/class-chat-helper.php:814
 #, php-format
 msgid "Confirm and run the pending `%1$s` tool call now. Re-run it with arguments %3$s and include `confirm=true` plus `confirm_token=\\\"%2$s\\\"`."
 msgstr ""
 
 #. translators: %s: tool name
-#: includes/helpers/class-chat-helper.php:711
+#: includes/helpers/class-chat-helper.php:829
 #, php-format
 msgid "Cancel the pending destructive `%s` tool call and do not run it."
 msgstr ""
 
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:852
+#: includes/helpers/class-chat-helper.php:970
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:919
+#: includes/helpers/class-chat-helper.php:1037
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:924
+#: includes/helpers/class-chat-helper.php:1042
 #: src/panel/Panel.jsx:109
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:925
+#: includes/helpers/class-chat-helper.php:1043
 #: src/panel/Panel.jsx:111
 msgid "Provider error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:947
+#: includes/helpers/class-chat-helper.php:1065
 #: src/panel/components/cards/ErrorCard.jsx:7
 #: src/panel/Panel.jsx:120
 msgid "Request Error"
@@ -1347,12 +1347,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:594
+#: src/panel/Panel.jsx:641
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:595
+#: src/panel/Panel.jsx:642
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1567,46 +1567,70 @@ msgid "Network or API request error"
 msgstr ""
 
 #: src/panel/Panel.jsx:125
-#: src/panel/services/realClient.js:196
-#: src/panel/services/realClient.js:235
+#: src/panel/services/realClient.js:265
+#: src/panel/services/realClient.js:304
 msgid "Chat request failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:426
+#: src/panel/Panel.jsx:443
+msgid "success"
+msgstr ""
+
+#: src/panel/Panel.jsx:445
+msgid "error"
+msgstr ""
+
+#: src/panel/Panel.jsx:447
+msgid "confirmation required"
+msgstr ""
+
+#. translators: 1: tool name, 2: tool call status
+#: src/panel/Panel.jsx:452
+#, js-format
+msgid "Tool call `%1$s` (%2$s)"
+msgstr ""
+
+#. translators: 1: tool call position, 2: total tool calls, 3: tool summary text
+#: src/panel/Panel.jsx:460
+#, js-format
+msgid "[%1$d/%2$d] %3$s"
+msgstr ""
+
+#: src/panel/Panel.jsx:473
 msgid "Preparing tool plan..."
 msgstr ""
 
-#: src/panel/Panel.jsx:439
+#: src/panel/Panel.jsx:486
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:600
+#: src/panel/Panel.jsx:647
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:621
+#: src/panel/Panel.jsx:668
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:685
+#: src/panel/Panel.jsx:732
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:723
+#: src/panel/Panel.jsx:770
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:781
-#: src/panel/Panel.jsx:798
+#: src/panel/Panel.jsx:828
+#: src/panel/Panel.jsx:845
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:789
+#: src/panel/Panel.jsx:836
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:836
+#: src/panel/Panel.jsx:883
 #, js-format
 msgid "Mock: %s"
 msgstr ""
@@ -1617,7 +1641,7 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:246
+#: src/panel/services/realClient.js:315
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 
