@@ -1,6 +1,15 @@
 {
   "name": "clawpress",
   "version": "0.0.1",
+  "files": [
+    "build",
+    "includes",
+    "languages",
+    "vendor",
+    "clawpress.php",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "npm run build:scripts && npm run build:panel && npm run build:pot",
     "build:scripts": "wp-scripts build --config webpack.scripts.config.js",
