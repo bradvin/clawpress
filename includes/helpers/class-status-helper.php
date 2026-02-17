@@ -71,29 +71,29 @@ final class Status_Helper {
 		$suggestions = 'offline' === $mode ? ( new Commands() )->get_default_suggestions() : [];
 
 		return [
-			'mode' => $mode,
-			'provider' => [
+			'mode'        => $mode,
+			'provider'    => [
 				'id'         => '' !== $provider_id ? $provider_id : null,
 				'configured' => '' !== $provider_id,
 			],
-			'model' => [
+			'model'       => [
 				'id'         => '' !== $model_id ? $model_id : null,
 				'configured' => '' !== $model_id,
 			],
-			'memory' => [
+			'memory'      => [
 				'enabled' => $this->settings_helper->get_memory_enabled( $settings ),
 			],
-			'setup' => [
+			'setup'       => [
 				'completed' => $this->settings_helper->get_setup_completed( $settings ),
 			],
-			'agent_user' => [
+			'agent_user'  => [
 				'id'         => $agent_user > 0 ? $agent_user : null,
 				'configured' => $agent_user > 0,
 			],
 			'permissions' => [
 				'can_manage_options' => current_user_can( 'manage_options' ),
 			],
-			'plugin' => [
+			'plugin'      => [
 				'version' => defined( 'CLAWPRESS_VERSION' ) ? (string) CLAWPRESS_VERSION : 'unknown',
 			],
 			'suggestions' => $suggestions,

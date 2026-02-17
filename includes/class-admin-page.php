@@ -24,23 +24,20 @@ final class Admin_Page {
 		add_action( 'admin_menu', [ $this, 'register_admin_page' ] );
 		add_action( 'admin_menu', [ $this, 'ensure_agent_post_type_submenus' ], 110 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+		add_action( 'admin_head', [ $this, 'render_menu_icon_styles' ] );
 	}
 
 	/**
 	 * Register the ClawPress admin page.
 	 */
 	public function register_admin_page(): void {
-		$menu_icon = 'data:image/svg+xml;utf8,' . rawurlencode(
-			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><text x="50%" y="30%" text-anchor="middle" dominant-baseline="middle" font-size="8">🦞</text></svg>'
-		);
-
 		add_menu_page(
 			__( 'ClawPress', 'clawpress' ),
 			__( 'ClawPress', 'clawpress' ),
 			'manage_options',
 			'clawpress',
 			[ $this, 'render_admin_page' ],
-			$menu_icon,
+			'none',
 			58
 		);
 
@@ -105,6 +102,22 @@ final class Admin_Page {
 			<h1><?php esc_html_e( 'ClawPress', 'clawpress' ); ?></h1>
 			<div id="clawpress-admin-root"></div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render custom CSS for the ClawPress top-level menu icon.
+	 */
+	public function render_menu_icon_styles(): void {
+		?>
+		<style id="clawpress-menu-icon">
+			#toplevel_page_clawpress .wp-menu-image:before {
+				content: "🦞";
+				font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+				font-size: 17px;
+				line-height: 20px;
+			}
+		</style>
 		<?php
 	}
 
