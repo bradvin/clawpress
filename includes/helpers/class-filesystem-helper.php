@@ -59,6 +59,20 @@ final class Filesystem_Helper {
 
 		$initialized = \WP_Filesystem();
 		if ( ! $initialized || ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			/**
+			 * Fires when WP_Filesystem initialization fails.
+			 *
+			 * Allows plugins/themes to log errors or provide alternatives.
+			 *
+			 * @since 1.0.0
+			 */
+			do_action( 'clawpress_filesystem_init_failed' );
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'ClawPress: WP_Filesystem initialization failed' );
+			}
+
 			return false;
 		}
 
@@ -135,17 +149,66 @@ final class Filesystem_Helper {
 	 * @return bool True on success, false on failure.
 	 */
 	public function put_contents( string $path, string $contents, int $mode = 0640 ): bool {
+		// Capability check: ensure user can edit files.
+		if ( ! current_user_can( 'edit_files' ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( sprintf( 'ClawPress: User lacks edit_files capability for writing: %s', $path ) );
+			}
+			return false;
+		}
+
+		/**
+		 * Filters file permissions before writing.
+		 *
+		 * Some hosts require 0644, others 0640. Let users/hosts override.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param int    $mode Default file permissions.
+		 * @param string $path File path being written.
+		 */
+		$mode = apply_filters( 'clawpress_file_permissions', $mode, $path );
+
+		/**
+		 * Fires before a file is written.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param string $path     File path being written.
+		 * @param string $contents File contents.
+		 * @param int    $mode     File permissions.
+		 */
+		do_action( 'clawpress_before_file_write', $path, $contents, $mode );
+
 		$fs = $this->get_filesystem();
 		if ( false === $fs ) {
 			$result = file_put_contents( $path, $contents ); // Fallback.
-			if ( false !== $result ) {
-				@chmod( $path, $mode );
+			if ( false !== $result && file_exists( $path ) ) {
+				chmod( $path, $mode );
 			}
-			return false !== $result;
+			$success = false !== $result;
+		} else {
+			$result  = $fs->put_contents( $path, $contents, $mode );
+			$success = false !== $result;
 		}
 
-		$result = $fs->put_contents( $path, $contents, $mode );
-		return false !== $result;
+		/**
+		 * Fires after a file write attempt.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param string $path    File path that was written.
+		 * @param bool   $success Whether write succeeded.
+		 */
+		do_action( 'clawpress_after_file_write', $path, $success );
+
+		if ( ! $success && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( sprintf( 'ClawPress: Failed to write file: %s', $path ) );
+		}
+
+		return $success;
 	}
 
 	/**
@@ -155,12 +218,50 @@ final class Filesystem_Helper {
 	 * @return bool True on success, false on failure.
 	 */
 	public function delete( string $path ): bool {
-		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return @unlink( $path ); // Fallback.
+		// Capability check: ensure user can delete files.
+		if ( ! current_user_can( 'delete_files' ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( sprintf( 'ClawPress: User lacks delete_files capability for: %s', $path ) );
+			}
+			return false;
 		}
 
-		return $fs->delete( $path );
+		/**
+		 * Fires before a file is deleted.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param string $path File path being deleted.
+		 */
+		do_action( 'clawpress_before_file_delete', $path );
+
+		$fs = $this->get_filesystem();
+		if ( false === $fs ) {
+			if ( ! file_exists( $path ) ) {
+				return false;
+			}
+			$success = unlink( $path );
+		} else {
+			$success = $fs->delete( $path );
+		}
+
+		/**
+		 * Fires after a file deletion attempt.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param string $path    File path that was deleted.
+		 * @param bool   $success Whether deletion succeeded.
+		 */
+		do_action( 'clawpress_after_file_delete', $path, $success );
+
+		if ( ! $success && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( sprintf( 'ClawPress: Failed to delete file: %s', $path ) );
+		}
+
+		return $success;
 	}
 
 	/**
@@ -171,9 +272,26 @@ final class Filesystem_Helper {
 	 * @return bool True on success, false on failure.
 	 */
 	public function mkdir( string $path, int $chmod = 0750 ): bool {
-		// Always use wp_mkdir_p for recursive directory creation
-		// WP_Filesystem::mkdir() is not recursive
-		return wp_mkdir_p( $path );
+		/**
+		 * Filters directory permissions before creation.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param int    $chmod Default directory permissions.
+		 * @param string $path  Directory path being created.
+		 */
+		$chmod = apply_filters( 'clawpress_directory_permissions', $chmod, $path );
+
+		// Always use wp_mkdir_p for recursive directory creation.
+		// WP_Filesystem::mkdir() is not recursive.
+		$success = wp_mkdir_p( $path );
+
+		if ( ! $success && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( sprintf( 'ClawPress: Failed to create directory: %s', $path ) );
+		}
+
+		return $success;
 	}
 
 	/**
@@ -200,7 +318,10 @@ final class Filesystem_Helper {
 	public function size( string $path ) {
 		$fs = $this->get_filesystem();
 		if ( false === $fs ) {
-			return @filesize( $path ); // Fallback.
+			if ( ! file_exists( $path ) ) {
+				return false;
+			}
+			return filesize( $path );
 		}
 
 		return $fs->size( $path );
@@ -216,7 +337,10 @@ final class Filesystem_Helper {
 	public function chmod( string $path, int $mode ): bool {
 		$fs = $this->get_filesystem();
 		if ( false === $fs ) {
-			return @chmod( $path, $mode ); // Fallback.
+			if ( ! file_exists( $path ) ) {
+				return false;
+			}
+			return chmod( $path, $mode );
 		}
 
 		return $fs->chmod( $path, $mode );
@@ -266,21 +390,24 @@ final class Filesystem_Helper {
 
 			foreach ( $iterator as $item ) {
 				if ( $item->isDir() ) {
-					if ( ! @rmdir( (string) $item->getPathname() ) ) {
+					if ( ! rmdir( (string) $item->getPathname() ) ) {
 						return false;
 					}
 					continue;
 				}
 
-				if ( ! @unlink( (string) $item->getPathname() ) ) {
+				if ( ! unlink( (string) $item->getPathname() ) ) {
 					return false;
 				}
 			}
 		} catch ( \Throwable $throwable ) {
-			unset( $throwable );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( sprintf( 'ClawPress: rmdir_recursive_fallback error: %s', $throwable->getMessage() ) );
+			}
 			return false;
 		}
 
-		return @rmdir( $directory );
+		return rmdir( $directory );
 	}
 }
