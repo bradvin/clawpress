@@ -251,7 +251,7 @@ final class Abilities_Helper {
 
 		$safety_class = $this->infer_safety_class( $ability );
 		if ( $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
-			$confirm_token    = isset( $args['confirm_token'] ) ? trim( (string) $args['confirm_token'] ) : null;
+			$confirm_token    = $this->normalize_confirmation_token( $args['confirm_token'] ?? null );
 			$is_confirmed     = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
 				? clawpress_sanitize_boolean( $args['confirm'] )
 				: false;
@@ -335,6 +335,35 @@ final class Abilities_Helper {
 
 		$decoded = json_decode( $raw_args, true );
 		return is_array( $decoded ) ? $decoded : [];
+	}
+
+	/**
+	 * Normalize a confirmation token argument from model-produced input.
+	 *
+	 * @param mixed $raw_token Raw token value.
+	 */
+	private function normalize_confirmation_token( $raw_token ): ?string {
+		if ( null === $raw_token ) {
+			return null;
+		}
+
+		$token = trim( (string) $raw_token );
+		if ( '' === $token ) {
+			return null;
+		}
+
+		// Some providers echo escaped or quoted token text; normalize before checks.
+		$token = str_replace( [ '\\"', "\\'" ], [ '"', "'" ], $token );
+		$token = trim( $token, " \t\n\r\0\x0B\"'`" );
+		if ( '' === $token ) {
+			return null;
+		}
+
+		if ( preg_match( '/([a-f0-9]{10,64})/i', $token, $matches ) ) {
+			$token = $matches[1];
+		}
+
+		return strtolower( $token );
 	}
 
 	/**

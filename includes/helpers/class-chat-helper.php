@@ -387,11 +387,11 @@ final class Chat_Helper {
 			$tokens = array_merge( $tokens, $matches[1] );
 		}
 
-		if ( preg_match_all( '/confirm_token["\']?\s*[:=]\s*["\']?([a-f0-9]{10,64})/i', $message, $matches ) ) {
+		if ( preg_match_all( '/confirm_token[^a-f0-9]+([a-f0-9]{10,64})/i', $message, $matches ) ) {
 			$tokens = array_merge( $tokens, $matches[1] );
 		}
 
-		if ( preg_match_all( '/\b([a-f0-9]{10})\b/i', $message, $matches ) ) {
+		if ( preg_match_all( '/\b([a-f0-9]{10,64})\b/i', $message, $matches ) ) {
 			$tokens = array_merge( $tokens, $matches[1] );
 		}
 
@@ -811,7 +811,7 @@ final class Chat_Helper {
 
 		return sprintf(
 			/* translators: 1: tool name, 2: confirmation token, 3: serialized JSON arguments */
-			__( 'Confirm and run the pending `%1$s` tool call now. Re-run it with arguments %3$s and include `confirm=true` plus `confirm_token=\"%2$s\"`.', 'clawpress' ),
+			__( 'Confirm and run the pending `%1$s` tool call now. Re-run `%1$s` with arguments %3$s, and include `confirm=true` plus `confirm_token="%2$s"`.', 'clawpress' ),
 			$tool_name,
 			$token,
 			(string) $args_json
