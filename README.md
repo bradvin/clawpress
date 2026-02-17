@@ -66,7 +66,7 @@ Current Agent Features:
 
 - Uses modern WordPress patterns for admin pages and REST API.
 - Uses `@automattic/jetpack-autoloader` for autoloading. ([docs](https://github.com/Automattic/jetpack-autoloader))
-- Uses `@wordpress/php-ai-client` for AI client. ([docs](https://github.com/WordPress/php-ai-client))
+- Uses `@wordpress/wp-ai-client` for AI client. ([docs](https://github.com/WordPress/wp-ai-client))
 - Uses `@woocommerce/action-scheduler` for background processing. ([docs](https://github.com/woocommerce/action-scheduler))
 - Includes admin table/grid interface using `@wordpress/dataviews` with WordPress Data Layer.
 - Uses `wp-scripts` for build tooling. ([docs](https://developer.wordpress.org/block-editor/packages/packages-scripts/))
