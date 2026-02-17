@@ -90,7 +90,7 @@ final class Create_Agent_Files_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$result = $this->agent_file_helper->create_default_agent_files_from_templates();
+		$result        = $this->agent_file_helper->create_default_agent_files_from_templates();
 		$created_count = isset( $result['created'] ) && is_array( $result['created'] ) ? count( $result['created'] ) : 0;
 		$skipped_count = isset( $result['skipped'] ) && is_array( $result['skipped'] ) ? count( $result['skipped'] ) : 0;
 		$error_count   = isset( $result['errors'] ) && is_array( $result['errors'] ) ? count( $result['errors'] ) : 0;

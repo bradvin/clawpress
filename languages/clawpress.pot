@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-16T20:30:24+00:00\n"
+"POT-Creation-Date: 2026-02-17T02:31:39+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -17,11 +17,11 @@ msgstr ""
 #. Plugin Name of the plugin
 #: clawpress.php
 #: includes/class-abilities.php:53
-#: includes/class-admin-page.php:38
-#: includes/class-admin-page.php:39
-#: includes/class-admin-page.php:51
-#: includes/class-admin-page.php:52
-#: includes/class-admin-page.php:105
+#: includes/class-admin-page.php:35
+#: includes/class-admin-page.php:36
+#: includes/class-admin-page.php:48
+#: includes/class-admin-page.php:49
+#: includes/class-admin-page.php:102
 #: src/panel/components/PanelToggle.jsx:9
 msgid "ClawPress"
 msgstr ""
@@ -202,7 +202,7 @@ msgstr ""
 msgid "Abilities provided by the ClawPress plugin."
 msgstr ""
 
-#: includes/class-admin-page.php:65
+#: includes/class-admin-page.php:62
 #: includes/class-post-types.php:45
 #: includes/class-post-types.php:55
 #: includes/class-post-types.php:56
@@ -211,7 +211,7 @@ msgstr ""
 msgid "Agent Files"
 msgstr ""
 
-#: includes/class-admin-page.php:69
+#: includes/class-admin-page.php:66
 #: includes/class-post-types.php:81
 #: includes/class-post-types.php:91
 #: includes/class-post-types.php:92

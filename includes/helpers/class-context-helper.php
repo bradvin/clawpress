@@ -387,7 +387,7 @@ final class Context_Helper {
 
 			$sections[] = sprintf( "## %s\n\n%s", $filename, $content );
 		}
-		
+
 		return implode( "\n\n", $sections );
 	}
 
