@@ -171,12 +171,9 @@ final class Filesystem_Helper {
 	 * @return bool True on success, false on failure.
 	 */
 	public function mkdir( string $path, int $chmod = 0750 ): bool {
-		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return wp_mkdir_p( $path ); // Use WordPress helper as fallback.
-		}
-
-		return $fs->mkdir( $path, $chmod );
+		// Always use wp_mkdir_p for recursive directory creation
+		// WP_Filesystem::mkdir() is not recursive
+		return wp_mkdir_p( $path );
 	}
 
 	/**
