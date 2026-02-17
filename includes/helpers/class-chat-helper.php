@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use ClawPress\Commands\Command_Confirmation_Store;
 use ClawPress\Commands\Commands;
 use Throwable;
 use WordPress\AiClient\AiClient;
@@ -97,6 +98,13 @@ final class Chat_Helper {
 	private Abilities_Helper $abilities_helper;
 
 	/**
+	 * Confirmation store.
+	 *
+	 * @var Command_Confirmation_Store
+	 */
+	private Command_Confirmation_Store $confirmation_store;
+
+	/**
 	 * LLM reply generator.
 	 *
 	 * @var callable|null
@@ -126,6 +134,7 @@ final class Chat_Helper {
 		$this->provider_helper         = Provider_Helper::get_instance();
 		$this->context_helper          = $context_helper ?? Context_Helper::get_instance();
 		$this->abilities_helper        = Abilities_Helper::get_instance();
+		$this->confirmation_store      = new Command_Confirmation_Store();
 		$this->online_reply_generator  = $online_reply_generator ?? [ $this, 'generate_online_reply' ];
 		$this->provider_model_resolver = $provider_model_resolver ?? [ $this, 'resolve_provider_and_model' ];
 	}
@@ -255,7 +264,7 @@ final class Chat_Helper {
 		$tool_declarations        = $this->normalize_tool_declarations( $context );
 		$requesting_user_id       = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
 		$execution_user_id        = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
-		$user_confirmation_tokens = $this->extract_confirmation_tokens_from_message( $current_message );
+		$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
 
 		$conversation = $history_messages;
 		if ( '' !== $current_message ) {
@@ -265,7 +274,7 @@ final class Chat_Helper {
 		}
 
 		$latest_assistant_text = '';
-		$confirmation_option   = null;
+		$confirmation_batch    = [];
 		$latest_context_usage  = null;
 		$tool_call_trace       = [];
 
@@ -311,9 +320,9 @@ final class Chat_Helper {
 					$tool_name,
 					$function_call->getArgs(),
 					[
-						'requesting_user_id'          => $requesting_user_id,
-						'execution_user_id'           => $execution_user_id,
-						'allowed_confirmation_tokens' => $user_confirmation_tokens,
+						'requesting_user_id' => $requesting_user_id,
+						'execution_user_id'  => $execution_user_id,
+						'confirmation_scope' => 'batch',
 					]
 				);
 				$tool_call_trace[] = $this->build_tool_call_trace_entry(
@@ -324,13 +333,13 @@ final class Chat_Helper {
 					$index + 1
 				);
 
-				$detected_confirmation = $this->extract_tool_confirmation_option(
+				$pending_confirmation = $this->normalize_pending_confirmation_tool_call(
 					$tool_result,
 					$tool_name,
 					$function_call->getArgs()
 				);
-				if ( is_array( $detected_confirmation ) ) {
-					$confirmation_option = $detected_confirmation;
+				if ( is_array( $pending_confirmation ) ) {
+					$confirmation_batch[] = $pending_confirmation;
 				}
 
 				$function_responses[] = new FunctionResponse(
@@ -344,10 +353,15 @@ final class Chat_Helper {
 				break;
 			}
 
-			if ( is_array( $confirmation_option ) ) {
+			if ( [] !== $confirmation_batch ) {
+				$issued_batch = $this->confirmation_store->issue_tool_batch(
+					$confirmation_batch,
+					$requesting_user_id > 0 ? $requesting_user_id : null
+				);
+
 				return [
 					'reply'      => $latest_assistant_text,
-					'card'       => $this->build_tool_confirmation_card( $confirmation_option ),
+					'card'       => $this->build_tool_confirmation_card( $issued_batch ),
 					'context'    => $latest_context_usage,
 					'tool_calls' => $tool_call_trace,
 				];
@@ -363,49 +377,10 @@ final class Chat_Helper {
 
 		return [
 			'reply'      => $latest_assistant_text,
-			'card'       => $this->build_tool_confirmation_card( $confirmation_option ),
+			'card'       => null,
 			'context'    => $latest_context_usage,
 			'tool_calls' => $tool_call_trace,
 		];
-	}
-
-	/**
-	 * Extract confirmation tokens from the current user message.
-	 *
-	 * @param string $message User message.
-	 * @return array<int,string>
-	 */
-	private function extract_confirmation_tokens_from_message( string $message ): array {
-		$message = trim( $message );
-		if ( '' === $message ) {
-			return [];
-		}
-
-		$tokens = [];
-
-		if ( preg_match_all( '/--confirm=([a-f0-9]{10,64})/i', $message, $matches ) ) {
-			$tokens = array_merge( $tokens, $matches[1] );
-		}
-
-		if ( preg_match_all( '/confirm_token[^a-f0-9]+([a-f0-9]{10,64})/i', $message, $matches ) ) {
-			$tokens = array_merge( $tokens, $matches[1] );
-		}
-
-		if ( preg_match_all( '/\b([a-f0-9]{10,64})\b/i', $message, $matches ) ) {
-			$tokens = array_merge( $tokens, $matches[1] );
-		}
-
-		$normalized = [];
-		foreach ( $tokens as $token ) {
-			$candidate = strtolower( trim( (string) $token ) );
-			if ( '' === $candidate ) {
-				continue;
-			}
-
-			$normalized[] = $candidate;
-		}
-
-		return array_values( array_unique( $normalized ) );
 	}
 
 	/**
@@ -693,142 +668,112 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Extract one pending confirmation option from tool result payload.
+	 * Build one pending confirmation row for a destructive tool call.
 	 *
-	 * @param mixed  $tool_result Tool result payload.
-	 * @param string $tool_name   Tool name.
-	 * @param mixed  $raw_args    Tool call arguments.
+	 * @param array<string,mixed> $tool_result Tool execution result.
+	 * @param string              $tool_name Tool name.
+	 * @param mixed               $raw_args Raw tool-call args.
 	 * @return array<string,mixed>|null
 	 */
-	private function extract_tool_confirmation_option( $tool_result, string $tool_name, $raw_args ): ?array {
-		if ( ! is_array( $tool_result ) || empty( $tool_result['requires_confirmation'] ) ) {
-			return null;
-		}
-
-		$error = isset( $tool_result['error'] ) && is_array( $tool_result['error'] )
-			? $tool_result['error']
-			: [];
-		$token = isset( $error['token'] ) ? trim( (string) $error['token'] ) : '';
-		if ( '' === $token ) {
+	private function normalize_pending_confirmation_tool_call( array $tool_result, string $tool_name, $raw_args ): ?array {
+		if ( empty( $tool_result['requires_confirmation'] ) ) {
 			return null;
 		}
 
 		$normalized_tool_name = strtolower( trim( $tool_name ) );
 		if ( '' === $normalized_tool_name ) {
-			$normalized_tool_name = 'tool';
+			return null;
 		}
 
-		$expires_at = isset( $error['expires_at'] ) ? (int) $error['expires_at'] : 0;
-		$args       = $this->normalize_tool_args_for_prompt( $raw_args );
-
 		return [
-			'tool_name'      => $normalized_tool_name,
-			'ability_name'   => isset( $tool_result['ability'] ) ? (string) $tool_result['ability'] : '',
-			'error_message'  => isset( $error['message'] ) ? (string) $error['message'] : '',
-			'token'          => $token,
-			'expires_at'     => $expires_at,
-			'args'           => $args,
-			'confirm_prompt' => $this->build_confirmation_prompt( $normalized_tool_name, $token, $args ),
-			'decline_prompt' => $this->build_decline_prompt( $normalized_tool_name ),
+			'tool_name'    => $normalized_tool_name,
+			'ability_name' => isset( $tool_result['ability'] ) ? (string) $tool_result['ability'] : '',
+			'args'         => $this->normalize_tool_args_for_prompt( $raw_args ),
 		];
 	}
 
 	/**
-	 * Build a user-confirmation card payload from a pending option.
+	 * Build a user-confirmation card payload from a pending batch.
 	 *
-	 * @param array<string,mixed>|null $confirmation_option Pending confirmation option.
+	 * @param array<string,mixed>|null $confirmation_batch Pending confirmation batch.
 	 * @return array<string,mixed>|null
 	 */
-	private function build_tool_confirmation_card( ?array $confirmation_option ): ?array {
-		if ( ! is_array( $confirmation_option ) ) {
+	private function build_tool_confirmation_card( ?array $confirmation_batch ): ?array {
+		if ( ! is_array( $confirmation_batch ) ) {
 			return null;
 		}
 
-		$tool_name      = isset( $confirmation_option['tool_name'] ) ? (string) $confirmation_option['tool_name'] : 'tool';
-		$token          = isset( $confirmation_option['token'] ) ? (string) $confirmation_option['token'] : '';
-		$confirm_prompt = isset( $confirmation_option['confirm_prompt'] ) ? (string) $confirmation_option['confirm_prompt'] : '';
-		$decline_prompt = isset( $confirmation_option['decline_prompt'] ) ? (string) $confirmation_option['decline_prompt'] : '';
-		$expires_at     = isset( $confirmation_option['expires_at'] ) ? (int) $confirmation_option['expires_at'] : 0;
-		$error_message  = isset( $confirmation_option['error_message'] ) ? trim( (string) $confirmation_option['error_message'] ) : '';
+		$batch_id  = isset( $confirmation_batch['batch_id'] ) ? strtolower( trim( (string) $confirmation_batch['batch_id'] ) ) : '';
+		$expires_at = isset( $confirmation_batch['expires_at'] ) ? (int) $confirmation_batch['expires_at'] : 0;
+		$calls      = isset( $confirmation_batch['calls'] ) && is_array( $confirmation_batch['calls'] )
+			? array_values( $confirmation_batch['calls'] )
+			: [];
 
-		if ( '' === $token || '' === $confirm_prompt ) {
+		if ( '' === $batch_id || [] === $calls ) {
 			return null;
 		}
 
-		$expires_label = $expires_at > 0
-			? ( function_exists( 'wp_date' ) ? wp_date( 'Y-m-d H:i:s', $expires_at ) : gmdate( 'Y-m-d H:i:s', $expires_at ) )
-			: __( 'soon', 'clawpress' );
-
-		$message = sprintf(
-			/* translators: 1: tool name, 2: confirmation token expiry time */
-			__( 'Confirm `%1$s` to continue this destructive action. Confirmation token expires at %2$s.', 'clawpress' ),
-			$tool_name,
-			$expires_label
+		$tool_names = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static fn( $call ): string => isset( $call['tool_name'] )
+							? strtolower( trim( (string) $call['tool_name'] ) )
+							: '',
+						$calls
+					)
+				)
+			)
 		);
+		$total_calls = count( $calls );
+		$expires_at  = $expires_at > 0 ? $expires_at : time();
+		$expires_label = function_exists( 'wp_date' )
+			? wp_date( 'Y-m-d H:i:s', $expires_at )
+			: gmdate( 'Y-m-d H:i:s', $expires_at );
 
-		if ( '' !== $error_message ) {
-			$message = $error_message . "\n\n" . $message;
+		if ( 1 === $total_calls ) {
+			$message = sprintf(
+				/* translators: 1: tool name, 2: batch ID, 3: expiry time */
+				__( 'Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s.', 'clawpress' ),
+				$tool_names[0] ?? 'tool',
+				$batch_id,
+				$expires_label
+			);
+		} else {
+			$message = sprintf(
+				/* translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time */
+				__( 'This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s.', 'clawpress' ),
+				$total_calls,
+				$batch_id,
+				[] !== $tool_names ? implode( ', ', $tool_names ) : __( 'tools', 'clawpress' ),
+				$expires_label
+			);
 		}
 
 		return [
 			'type' => 'user_confirmation',
 			'data' => [
 				'title'    => __( 'User Confirmation Required', 'clawpress' ),
-				'subtitle' => __( 'Destructive action pending', 'clawpress' ),
+				'subtitle' => __( 'Destructive batch pending', 'clawpress' ),
 				'message'  => $message,
 				'actions'  => [
 					[
-						'id'     => 'confirm-' . md5( $token ),
-						'label'  => __( 'Confirm Action', 'clawpress' ),
+						'id'     => 'confirm-batch-' . md5( $batch_id ),
+						'label'  => $total_calls > 1
+							? __( 'Confirm All', 'clawpress' )
+							: __( 'Confirm Action', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => $confirm_prompt,
+						'prompt' => '/confirm --batch=' . $batch_id,
 					],
 					[
-						'id'     => 'decline-' . md5( $token ),
+						'id'     => 'decline-batch-' . md5( $batch_id ),
 						'label'  => __( 'Decline', 'clawpress' ),
 						'type'   => 'send_prompt',
-						'prompt' => '' !== $decline_prompt
-							? $decline_prompt
-							: __( 'Do not run the pending destructive action.', 'clawpress' ),
+						'prompt' => '/decline --batch=' . $batch_id,
 					],
 				],
 			],
 		];
-	}
-
-	/**
-	 * Build a confirmation prompt for the next user turn.
-	 *
-	 * @param string              $tool_name Tool name.
-	 * @param string              $token Confirmation token.
-	 * @param array<string,mixed> $args Original tool arguments.
-	 */
-	private function build_confirmation_prompt( string $tool_name, string $token, array $args ): string {
-		$args_json = wp_json_encode( $args );
-		if ( false === $args_json || '' === trim( (string) $args_json ) ) {
-			$args_json = '{}';
-		}
-
-		return sprintf(
-			/* translators: 1: tool name, 2: confirmation token, 3: serialized JSON arguments */
-			__( 'Confirm and run the pending `%1$s` tool call now. Re-run `%1$s` with arguments %3$s, and include `confirm=true` plus `confirm_token="%2$s"`.', 'clawpress' ),
-			$tool_name,
-			$token,
-			(string) $args_json
-		);
-	}
-
-	/**
-	 * Build a decline/cancel prompt for the next user turn.
-	 *
-	 * @param string $tool_name Tool name.
-	 */
-	private function build_decline_prompt( string $tool_name ): string {
-		return sprintf(
-			/* translators: %s: tool name */
-			__( 'Cancel the pending destructive `%s` tool call and do not run it.', 'clawpress' ),
-			$tool_name
-		);
 	}
 
 	/**

@@ -184,6 +184,12 @@ final class Abilities_Helper {
 		$execution_user_id           = isset( $execution_context['execution_user_id'] ) && (int) $execution_context['execution_user_id'] > 0
 			? (int) $execution_context['execution_user_id']
 			: $this->resolve_execution_user_id();
+		$confirmation_scope          = isset( $execution_context['confirmation_scope'] )
+			? strtolower( trim( (string) $execution_context['confirmation_scope'] ) )
+			: '';
+		$skip_confirmation           = isset( $execution_context['skip_confirmation'] ) && function_exists( 'clawpress_sanitize_boolean' )
+			? clawpress_sanitize_boolean( $execution_context['skip_confirmation'] )
+			: false;
 		$has_confirmation_allowlist  = array_key_exists( 'allowed_confirmation_tokens', $execution_context );
 		$allowed_confirmation_tokens = $this->normalize_allowed_confirmation_tokens(
 			$execution_context['allowed_confirmation_tokens'] ?? null
@@ -250,7 +256,23 @@ final class Abilities_Helper {
 		}
 
 		$safety_class = $this->infer_safety_class( $ability );
-		if ( $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
+		if ( ! $skip_confirmation && $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
+			if ( 'batch' === $confirmation_scope ) {
+				$payload = [
+					'success'               => false,
+					'requires_confirmation' => true,
+					'error'                 => [
+						'code'    => 'clawpress_batch_confirmation_required',
+						'message' => __( 'This destructive action is pending batch confirmation.', 'clawpress' ),
+					],
+					'tool'                  => $normalized_tool_name,
+					'ability'               => $ability_name,
+					'safety_class'          => $safety_class,
+				];
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+				return $payload;
+			}
+
 			$confirm_token    = $this->normalize_confirmation_token( $args['confirm_token'] ?? null );
 			$is_confirmed     = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
 				? clawpress_sanitize_boolean( $args['confirm'] )
