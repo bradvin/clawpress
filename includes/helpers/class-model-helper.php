@@ -21,71 +21,71 @@ final class Model_Helper {
 	 * @var array<string,array<int,array{id:string,label:string}>>
 	 */
 	private const MODEL_OPTIONS = [
-		'openai' => [
+		'openai'    => [
 			[
-				'id'    => 'gpt-5.2-codex',
-				'label' => 'GPT-5.2 Codex',
+				'id'      => 'gpt-5.2-codex',
+				'label'   => 'GPT-5.2 Codex',
 				'context' => '400K',
-				'cost'    => '$1.75/M input tokens | $14/M output tokens'
+				'cost'    => '$1.75/M input tokens | $14/M output tokens',
 			],
 			[
-				'id'    => 'gpt-5.2',
-				'label' => 'GPT-5.2',
+				'id'      => 'gpt-5.2',
+				'label'   => 'GPT-5.2',
 				'context' => '400K',
-				'cost'    => '$1.75/M input tokens | $14/M output tokens'
+				'cost'    => '$1.75/M input tokens | $14/M output tokens',
 			],
 			[
-				'id'    => 'gpt-5.2-chat',
-				'label' => 'GPT-5.2 Chat',
+				'id'      => 'gpt-5.2-chat',
+				'label'   => 'GPT-5.2 Chat',
 				'context' => '128K',
-				'cost'    => '$1.75/M input tokens | $14/M output tokens'
+				'cost'    => '$1.75/M input tokens | $14/M output tokens',
 			],
 			[
 				'id'      => 'gpt-5.2-pro',
 				'label'   => 'GPT-5.2 Pro',
 				'context' => '400K',
-				'cost'    => '$21/M input tokens | $168/M output tokens'
+				'cost'    => '$21/M input tokens | $168/M output tokens',
 			],
 		],
 		'anthropic' => [
 			[
-				'id'    => 'claude-opus-4.6',
-				'label' => 'Claude Opus 4.6',
+				'id'      => 'claude-opus-4.6',
+				'label'   => 'Claude Opus 4.6',
 				'context' => '1M',
-				'cost'    => '$5/M input tokens | $25/M output tokens'
+				'cost'    => '$5/M input tokens | $25/M output tokens',
 			],
 			[
-				'id'    => 'claude-sonnet-4.5',
-				'label' => 'Claude Sonnet 4.5',
+				'id'      => 'claude-sonnet-4.5',
+				'label'   => 'Claude Sonnet 4.5',
 				'context' => '200K',
-				'cost'    => '$1/M input tokens | $5/M output tokens'
+				'cost'    => '$1/M input tokens | $5/M output tokens',
 			],
 			[
-				'id'    => 'claude-haiku-4.5',
-				'label' => 'Claude Haiku 4.5',
+				'id'      => 'claude-haiku-4.5',
+				'label'   => 'Claude Haiku 4.5',
 				'context' => '1M',
-				'cost'    => '$5/M input tokens | $25/M output tokens'
+				'cost'    => '$5/M input tokens | $25/M output tokens',
 			],
 
 		],
-		'google' => [
+		'google'    => [
 			[
-				'id'    => 'gemini-3-pro-preview',
-				'label' => 'Gemini 3 Pro',
+				'id'      => 'gemini-3-pro-preview',
+				'label'   => 'Gemini 3 Pro',
 				'context' => '1.05M',
-				'cost'    => '$2/M input tokens | $12/M output tokens'
+				'cost'    => '$2/M input tokens | $12/M output tokens',
 			],
 			[
-				'id'    => 'gemini-3-flash-preview',
-				'label' => 'Gemini 3 Flash',
+				'id'      => 'gemini-3-flash-preview',
+				'label'   => 'Gemini 3 Flash',
 				'context' => '1.05M',
-				'cost'    => '$0.50/M input tokens | $3/M output tokens'
+				'cost'    => '$0.50/M input tokens | $3/M output tokens',
 			],
 			[
-				'id'    => 'gemini-2.5-pro',
-				'label' => 'Gemini 2.5 Pro',
+				'id'      => 'gemini-2.5-pro',
+				'label'   => 'Gemini 2.5 Pro',
 				'context' => '1.05M',
-				'cost'    => '$1.25/M input tokens | $10/M output tokens'
+				'cost'    => '$1.25/M input tokens | $10/M output tokens',
 			],
 		],
 	];

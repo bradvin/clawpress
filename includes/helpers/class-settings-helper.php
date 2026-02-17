@@ -26,23 +26,23 @@ final class Settings_Helper {
 	 * @var array<string,array<string,mixed>>
 	 */
 	private const SETTINGS = [
-		'provider'             => [
+		'provider'        => [
 			'default'  => '',
 			'sanitize' => 'clawpress_sanitize_provider',
 		],
-		'model'                => [
+		'model'           => [
 			'default'  => '',
 			'sanitize' => 'sanitize_text_field',
 		],
-		'request_timeout'      => [
+		'request_timeout' => [
 			'default'  => 30,
 			'sanitize' => 'clawpress_sanitize_request_timeout',
 		],
-		'agent_user_id'        => [
+		'agent_user_id'   => [
 			'default'  => 0,
 			'sanitize' => 'clawpress_sanitize_int',
 		],
-		'memory_enabled'       => [
+		'memory_enabled'  => [
 			'default'  => false,
 			'sanitize' => 'clawpress_sanitize_boolean',
 		],

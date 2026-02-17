@@ -41,9 +41,9 @@ final class Plugin {
 		new Admin_Page();
 		new Panel();
 		new Heartbeat();
-		
+
 		// Initialize AI client. Goto Settings -> AI Credentials to set up.
-		add_action( 'init', array( 'WordPress\AI_Client\AI_Client', 'init' ) );
+		add_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] );
 	}
 
 	/**

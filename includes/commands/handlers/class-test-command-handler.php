@@ -101,11 +101,11 @@ final class Test_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$settings              = $this->settings_helper->get_settings();
-		$saved_provider        = isset( $settings['provider'] ) ? clawpress_sanitize_provider( $settings['provider'] ) : '';
-		$saved_model           = $this->provider_helper->resolve_model( $settings );
-		$configured_provider   = $this->provider_helper->resolve_provider_from_settings( $settings );
-		$request_timeout       = $this->settings_helper->get_request_timeout( $settings );
+		$settings            = $this->settings_helper->get_settings();
+		$saved_provider      = isset( $settings['provider'] ) ? clawpress_sanitize_provider( $settings['provider'] ) : '';
+		$saved_model         = $this->provider_helper->resolve_model( $settings );
+		$configured_provider = $this->provider_helper->resolve_provider_from_settings( $settings );
+		$request_timeout     = $this->settings_helper->get_request_timeout( $settings );
 
 		if ( '' === $saved_provider ) {
 			return Command_Response::error(

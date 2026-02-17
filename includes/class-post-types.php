@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
  * Post type module.
  */
 final class Post_Types {
-	public const AGENT_FILE_POST_TYPE = 'clawpress_agent_file';
+	public const AGENT_FILE_POST_TYPE   = 'clawpress_agent_file';
 	public const AGENT_MEMORY_POST_TYPE = 'clawpress_agent_mem';
 
 	/**
@@ -133,7 +133,7 @@ final class Post_Types {
 	 * Apply clean editor adjustments for agent post types.
 	 */
 	public function handle_agent_post_type_admin_head(): void {
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$screen                       = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		$editor_adjustment_post_types = [
 			self::AGENT_FILE_POST_TYPE,
 			self::AGENT_MEMORY_POST_TYPE,

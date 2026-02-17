@@ -44,9 +44,10 @@ final class Filesystem_Helper {
 	/**
 	 * Initialize WP_Filesystem and return the instance.
 	 *
-	 * @return \WP_Filesystem_Base|false Filesystem object or false on failure.
+	 * @throws \RuntimeException If WP_Filesystem cannot be initialized.
+	 * @return \WP_Filesystem_Base Filesystem object.
 	 */
-	private function get_filesystem() {
+	private function get_filesystem(): \WP_Filesystem_Base {
 		global $wp_filesystem;
 
 		if ( $wp_filesystem instanceof \WP_Filesystem_Base ) {
@@ -59,7 +60,7 @@ final class Filesystem_Helper {
 
 		$initialized = \WP_Filesystem();
 		if ( ! $initialized || ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
-			return false;
+			throw new \RuntimeException( 'Failed to initialize WP_Filesystem.' );
 		}
 
 		return $wp_filesystem;
@@ -73,10 +74,6 @@ final class Filesystem_Helper {
 	 */
 	public function exists( string $path ): bool {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return file_exists( $path ); // Fallback to native PHP.
-		}
-
 		return $fs->exists( $path );
 	}
 
@@ -88,10 +85,6 @@ final class Filesystem_Helper {
 	 */
 	public function is_file( string $path ): bool {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return is_file( $path ); // Fallback.
-		}
-
 		return $fs->is_file( $path );
 	}
 
@@ -103,10 +96,6 @@ final class Filesystem_Helper {
 	 */
 	public function is_dir( string $path ): bool {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return is_dir( $path ); // Fallback.
-		}
-
 		return $fs->is_dir( $path );
 	}
 
@@ -118,11 +107,6 @@ final class Filesystem_Helper {
 	 */
 	public function get_contents( string $path ) {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Fallback.
-			return file_get_contents( $path );
-		}
-
 		return $fs->get_contents( $path );
 	}
 
@@ -135,15 +119,7 @@ final class Filesystem_Helper {
 	 * @return bool True on success, false on failure.
 	 */
 	public function put_contents( string $path, string $contents, int $mode = 0640 ): bool {
-		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			$result = file_put_contents( $path, $contents ); // Fallback.
-			if ( false !== $result ) {
-				@chmod( $path, $mode );
-			}
-			return false !== $result;
-		}
-
+		$fs     = $this->get_filesystem();
 		$result = $fs->put_contents( $path, $contents, $mode );
 		return false !== $result;
 	}
@@ -156,10 +132,6 @@ final class Filesystem_Helper {
 	 */
 	public function delete( string $path ): bool {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return @unlink( $path ); // Fallback.
-		}
-
 		return $fs->delete( $path );
 	}
 
@@ -167,12 +139,11 @@ final class Filesystem_Helper {
 	 * Create a directory recursively.
 	 *
 	 * @param string $path Absolute directory path.
-	 * @param int    $chmod Optional. Directory permissions (octal).
 	 * @return bool True on success, false on failure.
 	 */
-	public function mkdir( string $path, int $chmod = 0750 ): bool {
-		// Always use wp_mkdir_p for recursive directory creation
-		// WP_Filesystem::mkdir() is not recursive
+	public function mkdir( string $path ): bool {
+		// Always use wp_mkdir_p for recursive directory creation.
+		// WP_Filesystem::mkdir() is not recursive.
 		return wp_mkdir_p( $path );
 	}
 
@@ -184,10 +155,6 @@ final class Filesystem_Helper {
 	 */
 	public function rmdir( string $path ): bool {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return $this->rmdir_recursive_fallback( $path );
-		}
-
 		return $fs->rmdir( $path, true );
 	}
 
@@ -199,10 +166,6 @@ final class Filesystem_Helper {
 	 */
 	public function size( string $path ) {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return @filesize( $path ); // Fallback.
-		}
-
 		return $fs->size( $path );
 	}
 
@@ -215,10 +178,6 @@ final class Filesystem_Helper {
 	 */
 	public function chmod( string $path, int $mode ): bool {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return @chmod( $path, $mode ); // Fallback.
-		}
-
 		return $fs->chmod( $path, $mode );
 	}
 
@@ -232,9 +191,6 @@ final class Filesystem_Helper {
 	 */
 	public function dirlist( string $path, bool $include_hidden = true, bool $recursive = false ) {
 		$fs = $this->get_filesystem();
-		if ( false === $fs ) {
-			return false;
-		}
 
 		$list = $fs->dirlist( $path, $include_hidden, $recursive );
 		if ( false === $list || ! is_array( $list ) ) {
@@ -242,45 +198,5 @@ final class Filesystem_Helper {
 		}
 
 		return $list;
-	}
-
-	/**
-	 * Fallback: Delete directory recursively using native PHP.
-	 *
-	 * @param string $directory Absolute directory path.
-	 * @return bool
-	 */
-	private function rmdir_recursive_fallback( string $directory ): bool {
-		if ( '' === $directory || ! is_dir( $directory ) ) {
-			return false;
-		}
-
-		try {
-			$iterator = new \RecursiveIteratorIterator(
-				new \RecursiveDirectoryIterator(
-					$directory,
-					\FilesystemIterator::SKIP_DOTS
-				),
-				\RecursiveIteratorIterator::CHILD_FIRST
-			);
-
-			foreach ( $iterator as $item ) {
-				if ( $item->isDir() ) {
-					if ( ! @rmdir( (string) $item->getPathname() ) ) {
-						return false;
-					}
-					continue;
-				}
-
-				if ( ! @unlink( (string) $item->getPathname() ) ) {
-					return false;
-				}
-			}
-		} catch ( \Throwable $throwable ) {
-			unset( $throwable );
-			return false;
-		}
-
-		return @rmdir( $directory );
 	}
 }

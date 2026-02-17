@@ -53,25 +53,25 @@ final class Settings_Controller implements Route_Controller {
 				'callback'            => [ $this, 'update_settings' ],
 				'permission_callback' => 'clawpress_check_permissions',
 				'args'                => [
-					'provider'             => [
+					'provider'        => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_provider',
 					],
-					'model'                => [
+					'model'           => [
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
 					],
-					'request_timeout'      => [
+					'request_timeout' => [
 						'required'          => false,
 						'validate_callback' => 'clawpress_validate_request_timeout',
 						'sanitize_callback' => 'clawpress_sanitize_request_timeout',
 					],
-					'agent_user_id'        => [
+					'agent_user_id'   => [
 						'required'          => false,
 						'validate_callback' => 'clawpress_validate_int',
 						'sanitize_callback' => 'clawpress_sanitize_int',
 					],
-					'memory_enabled'       => [
+					'memory_enabled'  => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
@@ -108,11 +108,11 @@ final class Settings_Controller implements Route_Controller {
 
 		$result = $this->settings_helper->update_settings(
 			[
-				'provider'             => $request->get_param( 'provider' ),
-				'model'                => $request->get_param( 'model' ),
-				'request_timeout'      => $request->get_param( 'request_timeout' ),
-				'agent_user_id'        => $agent_user_id,
-				'memory_enabled'       => $request->get_param( 'memory_enabled' ),
+				'provider'        => $request->get_param( 'provider' ),
+				'model'           => $request->get_param( 'model' ),
+				'request_timeout' => $request->get_param( 'request_timeout' ),
+				'agent_user_id'   => $agent_user_id,
+				'memory_enabled'  => $request->get_param( 'memory_enabled' ),
 				'setup_completed' => $request->get_param( 'setup_completed' ),
 			]
 		);

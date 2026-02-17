@@ -244,8 +244,8 @@ final class Setup_Command_Handler implements Command_Handler {
 		);
 		$this->settings_helper->update_settings(
 			[
-				'provider'             => '',
-				'model'                => '',
+				'provider'        => '',
+				'model'           => '',
 				'setup_completed' => false,
 			]
 		);
@@ -294,8 +294,8 @@ final class Setup_Command_Handler implements Command_Handler {
 
 		$this->settings_helper->update_settings(
 			[
-				'provider'             => $provider,
-				'model'                => '',
+				'provider'        => $provider,
+				'model'           => '',
 				'setup_completed' => false,
 			]
 		);
@@ -336,7 +336,7 @@ final class Setup_Command_Handler implements Command_Handler {
 
 		$this->settings_helper->update_settings(
 			[
-				'model'                => $model,
+				'model'           => $model,
 				'setup_completed' => false,
 			]
 		);
@@ -356,10 +356,10 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * Execute connection test step.
 	 */
 	private function test_connection(): Command_Response {
-		$settings       = $this->settings_helper->get_settings();
-		$provider       = clawpress_sanitize_provider( $settings['provider'] ?? '' );
-		$model          = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
-		$model_is_valid = $this->is_model_valid_for_provider( $provider, $model );
+		$settings        = $this->settings_helper->get_settings();
+		$provider        = clawpress_sanitize_provider( $settings['provider'] ?? '' );
+		$model           = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
+		$model_is_valid  = $this->is_model_valid_for_provider( $provider, $model );
 		$request_timeout = $this->settings_helper->get_request_timeout( $settings );
 
 		if ( '' === $provider || '' === $model || ! $model_is_valid ) {
@@ -436,7 +436,7 @@ final class Setup_Command_Handler implements Command_Handler {
 
 		$this->settings_helper->update_settings(
 			[
-				'agent_user_id'        => $user_id,
+				'agent_user_id'   => $user_id,
 				'setup_completed' => false,
 			]
 		);
@@ -474,7 +474,7 @@ final class Setup_Command_Handler implements Command_Handler {
 
 		$this->settings_helper->update_settings(
 			[
-				'agent_user_id'        => $user_id,
+				'agent_user_id'   => $user_id,
 				'setup_completed' => false,
 			]
 		);
@@ -679,7 +679,7 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		$is_completed_state = $step_index === count( self::STEP_ORDER ) - 1;
-		$steps = [];
+		$steps              = [];
 		foreach ( self::STEP_ORDER as $index => $step_key ) {
 			$status = 'pending';
 			if ( $is_completed_state ) {
