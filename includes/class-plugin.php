@@ -68,7 +68,7 @@ final class Plugin {
 			return;
 		}
 
-		if ( ! metadata_exists( 'user', $user_id, 'clawpress_panel_state' ) ) {
+		if ( ! function_exists( 'metadata_exists' ) || ! metadata_exists( 'user', $user_id, 'clawpress_panel_state' ) ) {
 			Panel_Helper::get_instance()->update_panel_state(
 				[
 					'open' => true,
