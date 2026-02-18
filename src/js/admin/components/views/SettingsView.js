@@ -66,7 +66,12 @@ export default function SettingsView() {
 	const [ success, setSuccess ] = useState( '' );
 	const [ provider, setProvider ] = useState( '' );
 	const [ model, setModel ] = useState( '' );
-	const [ requestTimeout, setRequestTimeout ] = useState( 30 );
+	const [ temperature, setTemperature ] = useState( 0.2 );
+	const [ topP, setTopP ] = useState( 0.9 );
+	const [ maxOutputTokens, setMaxOutputTokens ] = useState( 1200 );
+	const [ frequencyPenalty, setFrequencyPenalty ] = useState( 0.2 );
+	const [ presencePenalty, setPresencePenalty ] = useState( 0.0 );
+	const [ requestTimeout, setRequestTimeout ] = useState( 45 );
 	const [ agentUserId, setAgentUserId ] = useState( 0 );
 	const [ memoryEnabled, setMemoryEnabled ] = useState( false );
 	const [ setupCompleted, setSetupCompleted ] = useState( false );
@@ -94,11 +99,37 @@ export default function SettingsView() {
 						? settings.model
 						: ''
 				);
+				setTemperature(
+					Number.isFinite( Number( settings.temperature ) )
+						? Number( settings.temperature )
+						: 0.2
+				);
+				setTopP(
+					Number.isFinite( Number( settings.top_p ) )
+						? Number( settings.top_p )
+						: 0.9
+				);
+				setMaxOutputTokens(
+					Number.isFinite( Number( settings.max_output_tokens ) ) &&
+						Number( settings.max_output_tokens ) > 0
+						? Number( settings.max_output_tokens )
+						: 1200
+				);
+				setFrequencyPenalty(
+					Number.isFinite( Number( settings.frequency_penalty ) )
+						? Number( settings.frequency_penalty )
+						: 0.2
+				);
+				setPresencePenalty(
+					Number.isFinite( Number( settings.presence_penalty ) )
+						? Number( settings.presence_penalty )
+						: 0.0
+				);
 				setRequestTimeout(
 					Number.isFinite( Number( settings.request_timeout ) ) &&
 						Number( settings.request_timeout ) > 0
 						? Number( settings.request_timeout )
-						: 30
+						: 45
 				);
 				setAgentUserId(
 					Number.isFinite( Number( settings.agent_user_id ) )
@@ -142,11 +173,30 @@ export default function SettingsView() {
 				body: {
 					provider,
 					model,
+					temperature: Number.isFinite( Number( temperature ) )
+						? Number( temperature )
+						: 0.2,
+					top_p: Number.isFinite( Number( topP ) )
+						? Number( topP )
+						: 0.9,
+					max_output_tokens:
+						Number.isFinite( Number( maxOutputTokens ) ) &&
+						Number( maxOutputTokens ) > 0
+							? Number( maxOutputTokens )
+							: 1200,
+					frequency_penalty:
+						Number.isFinite( Number( frequencyPenalty ) )
+							? Number( frequencyPenalty )
+							: 0.2,
+					presence_penalty:
+						Number.isFinite( Number( presencePenalty ) )
+							? Number( presencePenalty )
+							: 0.0,
 					request_timeout:
 						Number.isFinite( Number( requestTimeout ) ) &&
 						Number( requestTimeout ) > 0
 							? Number( requestTimeout )
-							: 30,
+							: 45,
 					agent_user_id:
 						Number.isFinite( Number( agentUserId ) ) &&
 						Number( agentUserId ) > 0
@@ -236,6 +286,89 @@ export default function SettingsView() {
 								__nextHasNoMarginBottom
 							/>
 							<TextControl
+								label={ __( 'Temperature', 'clawpress' ) }
+								type="number"
+								step="0.1"
+								min={ 0 }
+								max={ 2 }
+								value={ String( temperature ) }
+								onChange={ ( value ) =>
+									setTemperature(
+										Number.isFinite( Number( value ) )
+											? Number( value )
+											: 0.2
+									)
+								}
+								help={ __( 'Balanced default: 0.2', 'clawpress' ) }
+								__nextHasNoMarginBottom
+							/>
+							<TextControl
+								label={ __( 'Top P', 'clawpress' ) }
+								type="number"
+								step="0.1"
+								min={ 0 }
+								max={ 1 }
+								value={ String( topP ) }
+								onChange={ ( value ) =>
+									setTopP(
+										Number.isFinite( Number( value ) )
+											? Number( value )
+											: 0.9
+									)
+								}
+								help={ __( 'Balanced default: 0.9 (when supported).', 'clawpress' ) }
+								__nextHasNoMarginBottom
+							/>
+							<TextControl
+								label={ __( 'Max Output Tokens', 'clawpress' ) }
+								type="number"
+								min={ 1 }
+								value={ String( maxOutputTokens ) }
+								onChange={ ( value ) =>
+									setMaxOutputTokens(
+										Number.isFinite( Number( value ) ) && Number( value ) > 0
+											? Number( value )
+											: 1200
+									)
+								}
+								help={ __( 'Balanced default: 1200', 'clawpress' ) }
+								__nextHasNoMarginBottom
+							/>
+							<TextControl
+								label={ __( 'Frequency Penalty', 'clawpress' ) }
+								type="number"
+								step="0.1"
+								min={ -2 }
+								max={ 2 }
+								value={ String( frequencyPenalty ) }
+								onChange={ ( value ) =>
+									setFrequencyPenalty(
+										Number.isFinite( Number( value ) )
+											? Number( value )
+											: 0.2
+									)
+								}
+								help={ __( 'Balanced default: 0.2 (when supported).', 'clawpress' ) }
+								__nextHasNoMarginBottom
+							/>
+							<TextControl
+								label={ __( 'Presence Penalty', 'clawpress' ) }
+								type="number"
+								step="0.1"
+								min={ -2 }
+								max={ 2 }
+								value={ String( presencePenalty ) }
+								onChange={ ( value ) =>
+									setPresencePenalty(
+										Number.isFinite( Number( value ) )
+											? Number( value )
+											: 0.0
+									)
+								}
+								help={ __( 'Balanced default: 0.0 (when supported).', 'clawpress' ) }
+								__nextHasNoMarginBottom
+							/>
+							<TextControl
 								label={ __(
 									'Request Timeout (seconds)',
 									'clawpress'
@@ -248,11 +381,11 @@ export default function SettingsView() {
 										Number.isFinite( Number( value ) ) &&
 											Number( value ) > 0
 											? Number( value )
-											: 30
+											: 45
 									)
 								}
 								help={ __(
-									'Maximum time to wait for an AI response. Default is 30 seconds.',
+									'Maximum time to wait for an AI response. Balanced default is 45 seconds.',
 									'clawpress'
 								) }
 								__nextHasNoMarginBottom

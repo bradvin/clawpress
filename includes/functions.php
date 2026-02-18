@@ -45,6 +45,182 @@ if ( ! function_exists( 'clawpress_validate_int' ) ) {
 	}
 }
 
+if ( ! function_exists( 'clawpress_sanitize_generation_float' ) ) {
+	/**
+	 * Sanitize a model-generation float setting.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param float $default Default value.
+	 * @param float $min Minimum allowed value.
+	 * @param float $max Maximum allowed value.
+	 */
+	function clawpress_sanitize_generation_float( $value, float $default, float $min, float $max ): float {
+		if ( ! is_numeric( $value ) ) {
+			return $default;
+		}
+
+		$normalized = (float) $value;
+		if ( $normalized < $min || $normalized > $max ) {
+			return $default;
+		}
+
+		return $normalized;
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_generation_float' ) ) {
+	/**
+	 * Validate a model-generation float setting.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param float $min Minimum allowed value.
+	 * @param float $max Maximum allowed value.
+	 */
+	function clawpress_validate_generation_float( $value, float $min, float $max ): bool {
+		if ( ! is_numeric( $value ) ) {
+			return false;
+		}
+
+		$normalized = (float) $value;
+		return $normalized >= $min && $normalized <= $max;
+	}
+}
+
+if ( ! function_exists( 'clawpress_sanitize_temperature' ) ) {
+	/**
+	 * Sanitize temperature.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_sanitize_temperature( $value ): float {
+		return clawpress_sanitize_generation_float( $value, 0.2, 0.0, 2.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_temperature' ) ) {
+	/**
+	 * Validate temperature.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_temperature( $value ): bool {
+		return clawpress_validate_generation_float( $value, 0.0, 2.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_sanitize_top_p' ) ) {
+	/**
+	 * Sanitize top-p.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_sanitize_top_p( $value ): float {
+		return clawpress_sanitize_generation_float( $value, 0.9, 0.0, 1.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_top_p' ) ) {
+	/**
+	 * Validate top-p.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_top_p( $value ): bool {
+		return clawpress_validate_generation_float( $value, 0.0, 1.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_sanitize_penalty' ) ) {
+	/**
+	 * Sanitize frequency/presence penalties.
+	 *
+	 * @param mixed $value Raw value.
+	 * @param float $default Default value.
+	 */
+	function clawpress_sanitize_penalty( $value, float $default ): float {
+		return clawpress_sanitize_generation_float( $value, $default, -2.0, 2.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_penalty' ) ) {
+	/**
+	 * Validate frequency/presence penalties.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_penalty( $value ): bool {
+		return clawpress_validate_generation_float( $value, -2.0, 2.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_sanitize_frequency_penalty' ) ) {
+	/**
+	 * Sanitize frequency penalty.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_sanitize_frequency_penalty( $value ): float {
+		return clawpress_sanitize_penalty( $value, 0.2 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_frequency_penalty' ) ) {
+	/**
+	 * Validate frequency penalty.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_frequency_penalty( $value ): bool {
+		return clawpress_validate_penalty( $value );
+	}
+}
+
+if ( ! function_exists( 'clawpress_sanitize_presence_penalty' ) ) {
+	/**
+	 * Sanitize presence penalty.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_sanitize_presence_penalty( $value ): float {
+		return clawpress_sanitize_penalty( $value, 0.0 );
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_presence_penalty' ) ) {
+	/**
+	 * Validate presence penalty.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_presence_penalty( $value ): bool {
+		return clawpress_validate_penalty( $value );
+	}
+}
+
+if ( ! function_exists( 'clawpress_sanitize_max_output_tokens' ) ) {
+	/**
+	 * Sanitize max output tokens.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_sanitize_max_output_tokens( $value ): int {
+		$tokens = (int) $value;
+
+		return $tokens > 0 ? $tokens : 1200;
+	}
+}
+
+if ( ! function_exists( 'clawpress_validate_max_output_tokens' ) ) {
+	/**
+	 * Validate max output tokens.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	function clawpress_validate_max_output_tokens( $value ): bool {
+		return is_numeric( $value ) && (int) $value > 0;
+	}
+}
+
 if ( ! function_exists( 'clawpress_sanitize_request_timeout' ) ) {
 	/**
 	 * Sanitize LLM request timeout in seconds.
@@ -54,7 +230,7 @@ if ( ! function_exists( 'clawpress_sanitize_request_timeout' ) ) {
 	function clawpress_sanitize_request_timeout( $value ): int {
 		$timeout = (int) $value;
 
-		return $timeout > 0 ? $timeout : 30;
+		return $timeout > 0 ? $timeout : 45;
 	}
 }
 

@@ -14,6 +14,7 @@ use ClawPress\Commands\Commands;
 use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Builders\MessageBuilder;
+use WordPress\AiClient\Builders\PromptBuilder;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
@@ -188,8 +189,9 @@ final class Chat_Helper {
 		}
 
 		try {
-			$context                    = $this->context_helper->build_model_context( $message );
-			$context['request_timeout'] = $this->settings_helper->get_request_timeout( $settings );
+			$context                       = $this->context_helper->build_model_context( $message );
+			$context['request_timeout']    = $this->settings_helper->get_request_timeout( $settings );
+			$context['generation_settings'] = $this->settings_helper->get_generation_settings( $settings );
 			$online_reply_payload       = $this->normalize_online_reply_payload(
 				call_user_func(
 					$this->online_reply_generator,
@@ -259,7 +261,10 @@ final class Chat_Helper {
 	private function generate_online_reply( array $context, string $provider, string $model ): array {
 		$current_message          = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
 		$system_prompt            = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
-		$request_timeout          = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 30;
+		$request_timeout          = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 45;
+		$generation_settings      = isset( $context['generation_settings'] ) && is_array( $context['generation_settings'] )
+			? $this->normalize_generation_settings( $context['generation_settings'] )
+			: $this->settings_helper->get_generation_settings();
 		$history_messages         = $this->normalize_history_messages( $context );
 		$tool_declarations        = $this->normalize_tool_declarations( $context );
 		$requesting_user_id       = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
@@ -289,6 +294,7 @@ final class Chat_Helper {
 			}
 
 			$builder = $builder->usingRequestOptions( $this->build_request_options( $request_timeout ) );
+			$builder = $this->apply_generation_settings_to_prompt_builder( $builder, $generation_settings );
 			if ( [] !== $tool_declarations ) {
 				$builder = $builder->usingFunctionDeclarations( ...$tool_declarations );
 			}
@@ -850,6 +856,52 @@ final class Chat_Helper {
 		$request_options = new RequestOptions();
 		$request_options->setTimeout( (float) max( 1, $request_timeout ) );
 		return $request_options;
+	}
+
+	/**
+	 * Normalize generation settings payload.
+	 *
+	 * @param array<string,mixed> $generation_settings Raw generation settings.
+	 * @return array{temperature:float,top_p:float,max_output_tokens:int,frequency_penalty:float,presence_penalty:float}
+	 */
+	private function normalize_generation_settings( array $generation_settings ): array {
+		return [
+			'temperature'       => clawpress_sanitize_temperature( $generation_settings['temperature'] ?? 0.2 ),
+			'top_p'             => clawpress_sanitize_top_p( $generation_settings['top_p'] ?? 0.9 ),
+			'max_output_tokens' => clawpress_sanitize_max_output_tokens( $generation_settings['max_output_tokens'] ?? 1200 ),
+			'frequency_penalty' => clawpress_sanitize_frequency_penalty( $generation_settings['frequency_penalty'] ?? 0.2 ),
+			'presence_penalty'  => clawpress_sanitize_presence_penalty( $generation_settings['presence_penalty'] ?? 0.0 ),
+		];
+	}
+
+	/**
+	 * Apply generation settings to prompt builder.
+	 *
+	 * Gracefully ignores unsupported parameters (or provider-specific rejections)
+	 * by catching option-level exceptions and continuing with the remaining options.
+	 *
+	 * @param PromptBuilder $builder Prompt builder.
+	 * @param array<string,mixed> $generation_settings Generation settings.
+	 */
+	private function apply_generation_settings_to_prompt_builder( PromptBuilder $builder, array $generation_settings ): PromptBuilder {
+		$option_setters = [
+			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingTemperature( (float) $generation_settings['temperature'] ),
+			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingTopP( (float) $generation_settings['top_p'] ),
+			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingMaxTokens( (int) $generation_settings['max_output_tokens'] ),
+			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
+			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
+		];
+
+		foreach ( $option_setters as $setter ) {
+			try {
+				$builder = $setter( $builder );
+			} catch ( Throwable $throwable ) {
+				unset( $throwable );
+				continue;
+			}
+		}
+
+		return $builder;
 	}
 
 	/**

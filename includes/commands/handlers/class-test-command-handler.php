@@ -106,6 +106,7 @@ final class Test_Command_Handler implements Command_Handler {
 		$saved_model         = $this->provider_helper->resolve_model( $settings );
 		$configured_provider = $this->provider_helper->resolve_provider_from_settings( $settings );
 		$request_timeout     = $this->settings_helper->get_request_timeout( $settings );
+		$generation_settings = $this->settings_helper->get_generation_settings( $settings );
 
 		if ( '' === $saved_provider ) {
 			return Command_Response::error(
@@ -148,13 +149,13 @@ final class Test_Command_Handler implements Command_Handler {
 			$request_options = new RequestOptions();
 			$request_options->setTimeout( (float) $request_timeout );
 
-			$reply = trim(
-				AiClient::prompt( 'Reply with exactly: OK' )
-					->usingProvider( $configured_provider )
-					->usingModelPreference( [ $configured_provider, $saved_model ] )
-					->usingRequestOptions( $request_options )
-					->generateText()
-			);
+			$builder = AiClient::prompt( 'Reply with exactly: OK' )
+				->usingProvider( $configured_provider )
+				->usingModelPreference( [ $configured_provider, $saved_model ] )
+				->usingRequestOptions( $request_options );
+			$builder = $this->apply_generation_settings( $builder, $generation_settings );
+
+			$reply = trim( $builder->generateText() );
 
 			if ( '' === $reply ) {
 				return Command_Response::error(
@@ -214,5 +215,33 @@ final class Test_Command_Handler implements Command_Handler {
 				[ '/status', '/help' ]
 			);
 		}
+	}
+
+	/**
+	 * Apply generation settings to prompt builder, ignoring unsupported options.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param array<string,mixed> $generation_settings Settings.
+	 * @return object
+	 */
+	private function apply_generation_settings( object $builder, array $generation_settings ): object {
+		$setters = [
+			static fn ( object $current ): object => $current->usingTemperature( (float) $generation_settings['temperature'] ),
+			static fn ( object $current ): object => $current->usingTopP( (float) $generation_settings['top_p'] ),
+			static fn ( object $current ): object => $current->usingMaxTokens( (int) $generation_settings['max_output_tokens'] ),
+			static fn ( object $current ): object => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
+			static fn ( object $current ): object => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
+		];
+
+		foreach ( $setters as $setter ) {
+			try {
+				$builder = $setter( $builder );
+			} catch ( Throwable $throwable ) {
+				unset( $throwable );
+				continue;
+			}
+		}
+
+		return $builder;
 	}
 }

@@ -53,15 +53,40 @@ final class Settings_Controller implements Route_Controller {
 				'callback'            => [ $this, 'update_settings' ],
 				'permission_callback' => 'clawpress_check_permissions',
 				'args'                => [
-					'provider'        => [
+					'provider'          => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_provider',
 					],
-					'model'           => [
+					'model'             => [
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
 					],
-					'request_timeout' => [
+					'temperature'       => [
+						'required'          => false,
+						'validate_callback' => 'clawpress_validate_temperature',
+						'sanitize_callback' => 'clawpress_sanitize_temperature',
+					],
+					'top_p'             => [
+						'required'          => false,
+						'validate_callback' => 'clawpress_validate_top_p',
+						'sanitize_callback' => 'clawpress_sanitize_top_p',
+					],
+					'max_output_tokens' => [
+						'required'          => false,
+						'validate_callback' => 'clawpress_validate_max_output_tokens',
+						'sanitize_callback' => 'clawpress_sanitize_max_output_tokens',
+					],
+					'frequency_penalty' => [
+						'required'          => false,
+						'validate_callback' => 'clawpress_validate_frequency_penalty',
+						'sanitize_callback' => 'clawpress_sanitize_frequency_penalty',
+					],
+					'presence_penalty'  => [
+						'required'          => false,
+						'validate_callback' => 'clawpress_validate_presence_penalty',
+						'sanitize_callback' => 'clawpress_sanitize_presence_penalty',
+					],
+					'request_timeout'   => [
 						'required'          => false,
 						'validate_callback' => 'clawpress_validate_request_timeout',
 						'sanitize_callback' => 'clawpress_sanitize_request_timeout',
@@ -108,12 +133,17 @@ final class Settings_Controller implements Route_Controller {
 
 		$result = $this->settings_helper->update_settings(
 			[
-				'provider'        => $request->get_param( 'provider' ),
-				'model'           => $request->get_param( 'model' ),
-				'request_timeout' => $request->get_param( 'request_timeout' ),
-				'agent_user_id'   => $agent_user_id,
-				'memory_enabled'  => $request->get_param( 'memory_enabled' ),
-				'setup_completed' => $request->get_param( 'setup_completed' ),
+				'provider'          => $request->get_param( 'provider' ),
+				'model'             => $request->get_param( 'model' ),
+				'temperature'       => $request->get_param( 'temperature' ),
+				'top_p'             => $request->get_param( 'top_p' ),
+				'max_output_tokens' => $request->get_param( 'max_output_tokens' ),
+				'frequency_penalty' => $request->get_param( 'frequency_penalty' ),
+				'presence_penalty'  => $request->get_param( 'presence_penalty' ),
+				'request_timeout'   => $request->get_param( 'request_timeout' ),
+				'agent_user_id'     => $agent_user_id,
+				'memory_enabled'    => $request->get_param( 'memory_enabled' ),
+				'setup_completed'   => $request->get_param( 'setup_completed' ),
 			]
 		);
 
