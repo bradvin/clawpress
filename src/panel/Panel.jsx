@@ -148,8 +148,11 @@ const Panel = () => {
             ? item.id
             : `history-${createdAt}-${index}`;
         const card = normalizeCard(item.card);
+        const toolCalls = Array.isArray(item.tool_calls)
+          ? item.tool_calls.filter((call) => call && typeof call === 'object')
+          : [];
 
-        return { id, role, content, card, createdAt };
+        return { id, role, content, card, tool_calls: toolCalls, createdAt };
       });
   };
 

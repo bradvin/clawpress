@@ -72,10 +72,11 @@ final class Chat_History_Helper {
 	 *
 	 * @param string                   $role Message role.
 	 * @param string                   $content Message content.
-	 * @param array<string,mixed>|null $card Optional card metadata.
-	 * @param int|null                 $user_id User ID.
+	 * @param array<string,mixed>|null      $card Optional card metadata.
+	 * @param array<int,array<string,mixed>>|null $tool_calls Optional tool-call trace rows.
+	 * @param int|null                      $user_id User ID.
 	 */
-	public function append_history_message( string $role, string $content, ?array $card = null, ?int $user_id = null ): void {
+	public function append_history_message( string $role, string $content, ?array $card = null, ?array $tool_calls = null, ?int $user_id = null ): void {
 		$items      = $this->get_history_items( $user_id );
 		$created_at = (int) round( microtime( true ) * 1000 );
 
@@ -88,6 +89,11 @@ final class Chat_History_Helper {
 		$card = $this->normalize_card( $card );
 		if ( null !== $card ) {
 			$item['card'] = $card;
+		}
+
+		$normalized_tool_calls = $this->normalize_tool_calls( $tool_calls );
+		if ( [] !== $normalized_tool_calls ) {
+			$item['tool_calls'] = $normalized_tool_calls;
 		}
 
 		$items[] = $item;
@@ -140,11 +146,12 @@ final class Chat_History_Helper {
 			: sprintf( 'msg-%d-%d', $created, $index );
 
 		return [
-			'id'        => $id,
-			'role'      => $role,
-			'content'   => $content,
-			'createdAt' => $created,
-			'card'      => $this->normalize_card( isset( $item['card'] ) && is_array( $item['card'] ) ? $item['card'] : null ),
+			'id'         => $id,
+			'role'       => $role,
+			'content'    => $content,
+			'createdAt'  => $created,
+			'card'       => $this->normalize_card( isset( $item['card'] ) && is_array( $item['card'] ) ? $item['card'] : null ),
+			'tool_calls' => $this->normalize_tool_calls( isset( $item['tool_calls'] ) && is_array( $item['tool_calls'] ) ? $item['tool_calls'] : null ),
 		];
 	}
 
@@ -171,5 +178,72 @@ final class Chat_History_Helper {
 		}
 
 		return $normalized;
+	}
+
+	/**
+	 * Normalize tool-call trace payload for persistence.
+	 *
+	 * @param array<int,array<string,mixed>>|null $tool_calls Raw tool-call trace rows.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function normalize_tool_calls( ?array $tool_calls ): array {
+		if ( ! is_array( $tool_calls ) ) {
+			return [];
+		}
+
+		$normalized = [];
+		foreach ( $tool_calls as $tool_call ) {
+			if ( ! is_array( $tool_call ) ) {
+				continue;
+			}
+
+			$normalized_row = $this->normalize_tool_call_row( $tool_call );
+			if ( null === $normalized_row ) {
+				continue;
+			}
+
+			$normalized[] = $normalized_row;
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize one persisted tool-call row.
+	 *
+	 * @param array<string,mixed> $tool_call Raw tool-call row.
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_tool_call_row( array $tool_call ): ?array {
+		$name = isset( $tool_call['name'] ) ? strtolower( sanitize_text_field( (string) $tool_call['name'] ) ) : '';
+		$name = (string) preg_replace( '/[^a-z0-9_\-]/', '', $name );
+		if ( '' === $name ) {
+			return null;
+		}
+
+		$ability = isset( $tool_call['ability'] ) ? sanitize_text_field( (string) $tool_call['ability'] ) : '';
+		$status  = isset( $tool_call['status'] ) ? strtolower( sanitize_text_field( (string) $tool_call['status'] ) ) : 'success';
+		$status  = in_array( $status, [ 'success', 'error', 'requires_confirmation' ], true ) ? $status : 'success';
+		$message = isset( $tool_call['message'] ) ? sanitize_text_field( (string) $tool_call['message'] ) : '';
+		$args    = isset( $tool_call['args'] ) && is_array( $tool_call['args'] ) ? $tool_call['args'] : [];
+		$round    = isset( $tool_call['round'] ) ? max( 1, (int) $tool_call['round'] ) : 1;
+		$sequence = isset( $tool_call['sequence'] ) ? max( 1, (int) $tool_call['sequence'] ) : 1;
+		$recorded_at = isset( $tool_call['recorded_at'] ) && is_numeric( $tool_call['recorded_at'] )
+			? max( 0, (int) $tool_call['recorded_at'] )
+			: null;
+
+		return [
+			'name'                  => $name,
+			'ability'               => '' !== $ability ? $ability : null,
+			'args'                  => $args,
+			'status'                => $status,
+			'requires_confirmation' => isset( $tool_call['requires_confirmation'] )
+				? (bool) $tool_call['requires_confirmation']
+				: ( 'requires_confirmation' === $status ),
+			'message'               => '' !== $message ? $message : null,
+			'round'                 => $round,
+			'sequence'              => $sequence,
+			'recorded_at'           => $recorded_at,
+		];
 	}
 }
