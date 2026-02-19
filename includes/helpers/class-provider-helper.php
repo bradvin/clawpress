@@ -153,6 +153,31 @@ final class Provider_Helper {
 	}
 
 	/**
+	 * Whether a provider/model combination should use `max_completion_tokens`.
+	 *
+	 * Some OpenAI model families reject legacy `max_tokens` and require
+	 * `max_completion_tokens` instead.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	public function should_use_max_completion_tokens( string $provider, string $model ): bool {
+		if ( 'openai' !== clawpress_sanitize_provider( $provider ) ) {
+			return false;
+		}
+
+		$normalized_model = strtolower( trim( $model ) );
+		if ( '' === $normalized_model ) {
+			return false;
+		}
+
+		return str_starts_with( $normalized_model, 'o1' )
+			|| str_starts_with( $normalized_model, 'o3' )
+			|| str_starts_with( $normalized_model, 'o4' )
+			|| str_starts_with( $normalized_model, 'gpt-5' );
+	}
+
+	/**
 	 * Check whether credentials exist for a provider.
 	 *
 	 * @param string $provider Provider ID.

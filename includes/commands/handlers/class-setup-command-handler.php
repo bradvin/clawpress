@@ -22,6 +22,7 @@ use ClawPress\PostTypes\Post_Types;
 use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
+use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -377,7 +378,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				->usingProvider( $provider )
 				->usingModelPreference( [ $provider, $model ] )
 				->usingRequestOptions( $request_options );
-			$builder = $this->apply_generation_settings( $builder, $generation_settings );
+			$builder = $this->apply_generation_settings( $builder, $generation_settings, $provider, $model );
 
 			$reply = trim( $builder->generateText() );
 
@@ -1121,13 +1122,15 @@ final class Setup_Command_Handler implements Command_Handler {
 	 *
 	 * @param object $builder Prompt builder instance.
 	 * @param array<string,mixed> $generation_settings Settings.
+	 * @param string              $provider Provider identifier.
+	 * @param string              $model Model identifier.
 	 * @return object
 	 */
-	private function apply_generation_settings( object $builder, array $generation_settings ): object {
+	private function apply_generation_settings( object $builder, array $generation_settings, string $provider, string $model ): object {
 		$setters = [
 			static fn ( object $current ): object => $current->usingTemperature( (float) $generation_settings['temperature'] ),
 			static fn ( object $current ): object => $current->usingTopP( (float) $generation_settings['top_p'] ),
-			static fn ( object $current ): object => $current->usingMaxTokens( (int) $generation_settings['max_output_tokens'] ),
+			fn ( object $current ): object => $this->apply_max_output_tokens( $current, (int) $generation_settings['max_output_tokens'], $provider, $model ),
 			static fn ( object $current ): object => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
 			static fn ( object $current ): object => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
 		];
@@ -1142,6 +1145,34 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		return $builder;
+	}
+
+	/**
+	 * Apply max output token setting to prompt builder.
+	 *
+	 * Uses `max_completion_tokens` for OpenAI model families that reject
+	 * legacy `max_tokens`.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param int    $max_output_tokens Max output tokens.
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 * @return object
+	 */
+	private function apply_max_output_tokens( object $builder, int $max_output_tokens, string $provider, string $model ): object {
+		if ( $this->provider_helper->should_use_max_completion_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
+			$model_config = ModelConfig::fromArray(
+				[
+					ModelConfig::KEY_CUSTOM_OPTIONS => [
+						'max_completion_tokens' => $max_output_tokens,
+					],
+				]
+			);
+
+			return $builder->usingModelConfig( $model_config );
+		}
+
+		return $builder->usingMaxTokens( $max_output_tokens );
 	}
 
 	/**
