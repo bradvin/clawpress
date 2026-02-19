@@ -4,11 +4,9 @@ import {
 	CardBody,
 	CardHeader,
 	Notice,
-	SelectControl,
 	Spinner,
-	TextControl,
-	ToggleControl,
 } from '@wordpress/components';
+import { DataForm } from '@wordpress/dataviews/wp';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
@@ -59,22 +57,58 @@ const requestJson = async ( path, { method = 'GET', body } = {} ) => {
 	return payload;
 };
 
+const DEFAULT_SETTINGS = {
+	provider: '',
+	model: '',
+	temperature: 0.2,
+	top_p: 0.9,
+	max_output_tokens: 1200,
+	frequency_penalty: 0.2,
+	presence_penalty: 0.0,
+	request_timeout: 45,
+	agent_user_id: 0,
+	memory_enabled: false,
+	setup_completed: false,
+};
+
+const normalizeSettings = ( settings = {} ) => ( {
+	provider: typeof settings.provider === 'string' ? settings.provider : '',
+	model: typeof settings.model === 'string' ? settings.model : '',
+	temperature: Number.isFinite( Number( settings.temperature ) )
+		? Number( settings.temperature )
+		: 0.2,
+	top_p: Number.isFinite( Number( settings.top_p ) )
+		? Number( settings.top_p )
+		: 0.9,
+	max_output_tokens:
+		Number.isFinite( Number( settings.max_output_tokens ) ) &&
+		Number( settings.max_output_tokens ) > 0
+			? Number( settings.max_output_tokens )
+			: 1200,
+	frequency_penalty: Number.isFinite( Number( settings.frequency_penalty ) )
+		? Number( settings.frequency_penalty )
+		: 0.2,
+	presence_penalty: Number.isFinite( Number( settings.presence_penalty ) )
+		? Number( settings.presence_penalty )
+		: 0.0,
+	request_timeout:
+		Number.isFinite( Number( settings.request_timeout ) ) &&
+		Number( settings.request_timeout ) > 0
+			? Number( settings.request_timeout )
+			: 45,
+	agent_user_id: Number.isFinite( Number( settings.agent_user_id ) )
+		? Number( settings.agent_user_id )
+		: 0,
+	memory_enabled: Boolean( settings.memory_enabled ),
+	setup_completed: Boolean( settings.setup_completed ),
+} );
+
 export default function SettingsView() {
 	const [ loading, setLoading ] = useState( true );
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
 	const [ success, setSuccess ] = useState( '' );
-	const [ provider, setProvider ] = useState( '' );
-	const [ model, setModel ] = useState( '' );
-	const [ temperature, setTemperature ] = useState( 0.2 );
-	const [ topP, setTopP ] = useState( 0.9 );
-	const [ maxOutputTokens, setMaxOutputTokens ] = useState( 1200 );
-	const [ frequencyPenalty, setFrequencyPenalty ] = useState( 0.2 );
-	const [ presencePenalty, setPresencePenalty ] = useState( 0.0 );
-	const [ requestTimeout, setRequestTimeout ] = useState( 45 );
-	const [ agentUserId, setAgentUserId ] = useState( 0 );
-	const [ memoryEnabled, setMemoryEnabled ] = useState( false );
-	const [ setupCompleted, setSetupCompleted ] = useState( false );
+	const [ settings, setSettings ] = useState( DEFAULT_SETTINGS );
 
 	useEffect( () => {
 		let mounted = true;
@@ -88,65 +122,13 @@ export default function SettingsView() {
 					return;
 				}
 
-				const settings = data?.settings || {};
-				setProvider(
-					typeof settings.provider === 'string'
-						? settings.provider
-						: ''
-				);
-				setModel(
-					typeof settings.model === 'string'
-						? settings.model
-						: ''
-				);
-				setTemperature(
-					Number.isFinite( Number( settings.temperature ) )
-						? Number( settings.temperature )
-						: 0.2
-				);
-				setTopP(
-					Number.isFinite( Number( settings.top_p ) )
-						? Number( settings.top_p )
-						: 0.9
-				);
-				setMaxOutputTokens(
-					Number.isFinite( Number( settings.max_output_tokens ) ) &&
-						Number( settings.max_output_tokens ) > 0
-						? Number( settings.max_output_tokens )
-						: 1200
-				);
-				setFrequencyPenalty(
-					Number.isFinite( Number( settings.frequency_penalty ) )
-						? Number( settings.frequency_penalty )
-						: 0.2
-				);
-				setPresencePenalty(
-					Number.isFinite( Number( settings.presence_penalty ) )
-						? Number( settings.presence_penalty )
-						: 0.0
-				);
-				setRequestTimeout(
-					Number.isFinite( Number( settings.request_timeout ) ) &&
-						Number( settings.request_timeout ) > 0
-						? Number( settings.request_timeout )
-						: 45
-				);
-				setAgentUserId(
-					Number.isFinite( Number( settings.agent_user_id ) )
-						? Number( settings.agent_user_id )
-						: 0
-				);
-				setMemoryEnabled( Boolean( settings.memory_enabled ) );
-				setSetupCompleted(
-					Boolean( settings.setup_completed )
-				);
+				setSettings( normalizeSettings( data?.settings || {} ) );
 			} catch ( e ) {
 				if ( ! mounted ) {
 					return;
 				}
 				setError(
-					e?.message ||
-						__( 'Unable to load settings.', 'clawpress' )
+					e?.message || __( 'Unable to load settings.', 'clawpress' )
 				);
 			} finally {
 				if ( mounted ) {
@@ -171,51 +153,210 @@ export default function SettingsView() {
 			await requestJson( 'settings', {
 				method: 'POST',
 				body: {
-					provider,
-					model,
-					temperature: Number.isFinite( Number( temperature ) )
-						? Number( temperature )
+					provider: settings.provider,
+					model: settings.model,
+					temperature: Number.isFinite(
+						Number( settings.temperature )
+					)
+						? Number( settings.temperature )
 						: 0.2,
-					top_p: Number.isFinite( Number( topP ) )
-						? Number( topP )
+					top_p: Number.isFinite( Number( settings.top_p ) )
+						? Number( settings.top_p )
 						: 0.9,
 					max_output_tokens:
-						Number.isFinite( Number( maxOutputTokens ) ) &&
-						Number( maxOutputTokens ) > 0
-							? Number( maxOutputTokens )
+						Number.isFinite(
+							Number( settings.max_output_tokens )
+						) && Number( settings.max_output_tokens ) > 0
+							? Number( settings.max_output_tokens )
 							: 1200,
-					frequency_penalty:
-						Number.isFinite( Number( frequencyPenalty ) )
-							? Number( frequencyPenalty )
-							: 0.2,
-					presence_penalty:
-						Number.isFinite( Number( presencePenalty ) )
-							? Number( presencePenalty )
-							: 0.0,
+					frequency_penalty: Number.isFinite(
+						Number( settings.frequency_penalty )
+					)
+						? Number( settings.frequency_penalty )
+						: 0.2,
+					presence_penalty: Number.isFinite(
+						Number( settings.presence_penalty )
+					)
+						? Number( settings.presence_penalty )
+						: 0.0,
 					request_timeout:
-						Number.isFinite( Number( requestTimeout ) ) &&
-						Number( requestTimeout ) > 0
-							? Number( requestTimeout )
+						Number.isFinite( Number( settings.request_timeout ) ) &&
+						Number( settings.request_timeout ) > 0
+							? Number( settings.request_timeout )
 							: 45,
 					agent_user_id:
-						Number.isFinite( Number( agentUserId ) ) &&
-						Number( agentUserId ) > 0
-							? Number( agentUserId )
+						Number.isFinite( Number( settings.agent_user_id ) ) &&
+						Number( settings.agent_user_id ) > 0
+							? Number( settings.agent_user_id )
 							: 0,
-					memory_enabled: memoryEnabled,
-					setup_completed: setupCompleted,
+					memory_enabled: Boolean( settings.memory_enabled ),
+					setup_completed: Boolean( settings.setup_completed ),
 				},
 			} );
 
 			setSuccess( __( 'Settings saved.', 'clawpress' ) );
 		} catch ( e ) {
 			setError(
-				e?.message ||
-					__( 'Unable to save settings.', 'clawpress' )
+				e?.message || __( 'Unable to save settings.', 'clawpress' )
 			);
 		} finally {
 			setSaving( false );
 		}
+	};
+
+	const fields = [
+		{
+			id: 'provider',
+			type: 'text',
+			label: __( 'Provider', 'clawpress' ),
+			description: __(
+				'Choose which AI service ClawPress should use.',
+				'clawpress'
+			),
+			Edit: 'select',
+			elements: [
+				{
+					label: __( 'Select a provider', 'clawpress' ),
+					value: '',
+				},
+				{
+					label: __( 'OpenAI', 'clawpress' ),
+					value: 'openai',
+				},
+				{
+					label: __( 'Anthropic', 'clawpress' ),
+					value: 'anthropic',
+				},
+				{
+					label: __( 'Google', 'clawpress' ),
+					value: 'google',
+				},
+			],
+		},
+		{
+			id: 'model',
+			type: 'text',
+			label: __( 'Model', 'clawpress' ),
+			description: __(
+				'Enter the model name you want to use for replies.',
+				'clawpress'
+			),
+			placeholder: 'gpt-4.1-mini',
+		},
+		{
+			id: 'temperature',
+			type: 'number',
+			label: __( 'Temperature', 'clawpress' ),
+			description: __(
+				'Lower values make replies more focused and consistent. Higher values make replies more creative and varied.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'top_p',
+			type: 'number',
+			label: __( 'Top P', 'clawpress' ),
+			description: __(
+				'Lower values keep replies more predictable. Higher values allow more variety in wording and ideas.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'max_output_tokens',
+			type: 'integer',
+			label: __( 'Max Output Tokens', 'clawpress' ),
+			description: __(
+				'Sets the maximum reply length. Higher values allow longer answers; lower values keep answers shorter.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'frequency_penalty',
+			type: 'number',
+			label: __( 'Frequency Penalty', 'clawpress' ),
+			description: __(
+				'Higher values reduce repeated words and phrases. Lower values allow more repetition.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'presence_penalty',
+			type: 'number',
+			label: __( 'Presence Penalty', 'clawpress' ),
+			description: __(
+				'Higher values encourage fresh ideas. Lower values keep replies closer to what has already been said.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'request_timeout',
+			type: 'integer',
+			label: __( 'Request Timeout (seconds)', 'clawpress' ),
+			description: __(
+				'How long ClawPress waits for a reply before stopping the request.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'agent_user_id',
+			type: 'integer',
+			label: __( 'Agent User ID', 'clawpress' ),
+			description: __(
+				'Use 0 if this is not configured yet.',
+				'clawpress'
+			),
+		},
+		{
+			id: 'memory_enabled',
+			type: 'boolean',
+			label: __( 'Enable Memory', 'clawpress' ),
+			description: __(
+				'When enabled, ClawPress can remember useful details from earlier chats.',
+				'clawpress'
+			),
+			Edit: 'toggle',
+		},
+		{
+			id: 'setup_completed',
+			type: 'boolean',
+			label: __( 'Setup Completed', 'clawpress' ),
+			description: __(
+				'Turn this on after you finish the initial setup.',
+				'clawpress'
+			),
+			Edit: 'toggle',
+		},
+	];
+
+	const form = {
+		layout: {
+			type: 'regular',
+			labelPosition: 'top',
+		},
+		fields: [
+			'provider',
+			'model',
+			'request_timeout',
+			'agent_user_id',
+			'memory_enabled',
+			'setup_completed',
+			{
+				id: 'generation_settings',
+				label: __( 'LLM Reply Settings', 'clawpress' ),
+				layout: {
+					type: 'card',
+					isOpened: true,
+					withHeader: true,
+				},
+				children: [
+					'temperature',
+					'top_p',
+					'max_output_tokens',
+					'frequency_penalty',
+					'presence_penalty',
+				],
+			},
+		],
 	};
 
 	return (
@@ -239,207 +380,26 @@ export default function SettingsView() {
 						<Spinner />
 					) : (
 						<div>
-							<SelectControl
-								label={ __( 'Provider', 'clawpress' ) }
-								value={ provider }
-								options={ [
-									{
-										label: __(
-											'Select a provider',
-											'clawpress'
-										),
-										value: '',
-									},
-										{
-											label: __(
-												'OpenAI',
-												'clawpress'
-											),
-											value: 'openai',
-										},
-										{
-											label: __(
-												'Anthropic',
-												'clawpress'
-											),
-											value: 'anthropic',
-										},
-										{
-											label: __(
-												'Google',
-												'clawpress'
-											),
-											value: 'google',
-										},
-									] }
-								onChange={ setProvider }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __( 'Model', 'clawpress' ) }
-								value={ model }
-								onChange={ setModel }
-								help={ __(
-									'Example: gpt-4.1-mini',
-									'clawpress'
-								) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __( 'Temperature', 'clawpress' ) }
-								type="number"
-								step="0.1"
-								min={ 0 }
-								max={ 2 }
-								value={ String( temperature ) }
-								onChange={ ( value ) =>
-									setTemperature(
-										Number.isFinite( Number( value ) )
-											? Number( value )
-											: 0.2
-									)
+							<DataForm
+								data={ settings }
+								fields={ fields }
+								form={ form }
+								onChange={ ( edits ) =>
+									setSettings( ( current ) => ( {
+										...current,
+										...edits,
+									} ) )
 								}
-								help={ __( 'Balanced default: 0.2', 'clawpress' ) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __( 'Top P', 'clawpress' ) }
-								type="number"
-								step="0.1"
-								min={ 0 }
-								max={ 1 }
-								value={ String( topP ) }
-								onChange={ ( value ) =>
-									setTopP(
-										Number.isFinite( Number( value ) )
-											? Number( value )
-											: 0.9
-									)
-								}
-								help={ __( 'Balanced default: 0.9 (when supported).', 'clawpress' ) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __( 'Max Output Tokens', 'clawpress' ) }
-								type="number"
-								min={ 1 }
-								value={ String( maxOutputTokens ) }
-								onChange={ ( value ) =>
-									setMaxOutputTokens(
-										Number.isFinite( Number( value ) ) && Number( value ) > 0
-											? Number( value )
-											: 1200
-									)
-								}
-								help={ __( 'Balanced default: 1200', 'clawpress' ) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __( 'Frequency Penalty', 'clawpress' ) }
-								type="number"
-								step="0.1"
-								min={ -2 }
-								max={ 2 }
-								value={ String( frequencyPenalty ) }
-								onChange={ ( value ) =>
-									setFrequencyPenalty(
-										Number.isFinite( Number( value ) )
-											? Number( value )
-											: 0.2
-									)
-								}
-								help={ __( 'Balanced default: 0.2 (when supported).', 'clawpress' ) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __( 'Presence Penalty', 'clawpress' ) }
-								type="number"
-								step="0.1"
-								min={ -2 }
-								max={ 2 }
-								value={ String( presencePenalty ) }
-								onChange={ ( value ) =>
-									setPresencePenalty(
-										Number.isFinite( Number( value ) )
-											? Number( value )
-											: 0.0
-									)
-								}
-								help={ __( 'Balanced default: 0.0 (when supported).', 'clawpress' ) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __(
-									'Request Timeout (seconds)',
-									'clawpress'
-								) }
-								type="number"
-								min={ 1 }
-								value={ String( requestTimeout ) }
-								onChange={ ( value ) =>
-									setRequestTimeout(
-										Number.isFinite( Number( value ) ) &&
-											Number( value ) > 0
-											? Number( value )
-											: 45
-									)
-								}
-								help={ __(
-									'Maximum time to wait for an AI response. Balanced default is 45 seconds.',
-									'clawpress'
-								) }
-								__nextHasNoMarginBottom
-							/>
-							<TextControl
-								label={ __(
-									'Agent User ID',
-									'clawpress'
-								) }
-								type="number"
-								min={ 0 }
-								value={ String( agentUserId ) }
-								onChange={ ( value ) =>
-									setAgentUserId(
-										Number.isFinite( Number( value ) )
-											? Number( value )
-											: 0
-									)
-								}
-								help={ __(
-									'Use 0 to mark as not configured.',
-									'clawpress'
-								) }
-								__nextHasNoMarginBottom
-							/>
-							<ToggleControl
-								label={ __(
-									'Enable Memory',
-									'clawpress'
-								) }
-								checked={ memoryEnabled }
-								onChange={ setMemoryEnabled }
-								__nextHasNoMarginBottom
-							/>
-							<ToggleControl
-								label={ __(
-									'Setup Completed',
-									'clawpress'
-								) }
-								checked={ setupCompleted }
-								onChange={ setSetupCompleted }
-								__nextHasNoMarginBottom
 							/>
 							<Button
+								className="clawpress-settings__save-button"
 								variant="primary"
 								onClick={ saveSettings }
 								isBusy={ saving }
 								disabled={ saving }
 							>
 								{ saving
-									? __(
-											'Saving…',
-											'clawpress'
-									  )
+									? __( 'Saving…', 'clawpress' )
 									: __( 'Save Settings', 'clawpress' ) }
 							</Button>
 						</div>
