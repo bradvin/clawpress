@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-19T17:08:13+00:00\n"
+"POT-Creation-Date: 2026-02-19T17:14:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -319,12 +319,12 @@ msgid "Confirmed batch `%1$s`. Executing %2$d tool call(s):"
 msgstr ""
 
 #: includes/commands/class-commands.php:245
-#: src/panel/Panel.jsx:443
+#: src/panel/Panel.jsx:145
 msgid "success"
 msgstr ""
 
 #: includes/commands/class-commands.php:246
-#: src/panel/Panel.jsx:445
+#: src/panel/Panel.jsx:147
 msgid "error"
 msgstr ""
 
@@ -1458,12 +1458,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:641
+#: src/panel/Panel.jsx:671
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:642
+#: src/panel/Panel.jsx:672
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1579,16 +1579,16 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:98
+#: src/panel/components/PanelMessages.jsx:117
 msgid "System"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:98
-#: src/panel/components/PanelMessages.jsx:140
+#: src/panel/components/PanelMessages.jsx:117
+#: src/panel/components/PanelMessages.jsx:159
 msgid "AGENT"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:134
+#: src/panel/components/PanelMessages.jsx:153
 msgid "Thinking"
 msgstr ""
 
@@ -1683,57 +1683,57 @@ msgstr ""
 msgid "Chat request failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:447
+#: src/panel/Panel.jsx:149
 msgid "confirmation required"
 msgstr ""
 
 #. translators: 1: tool name, 2: tool call status
-#: src/panel/Panel.jsx:452
+#: src/panel/Panel.jsx:154
 #, js-format
 msgid "Tool call `%1$s` (%2$s)"
 msgstr ""
 
 #. translators: 1: tool call position, 2: total tool calls, 3: tool summary text
-#: src/panel/Panel.jsx:460
+#: src/panel/Panel.jsx:162
 #, js-format
 msgid "[%1$d/%2$d] %3$s"
 msgstr ""
 
-#: src/panel/Panel.jsx:473
+#: src/panel/Panel.jsx:503
 msgid "Preparing tool plan..."
 msgstr ""
 
-#: src/panel/Panel.jsx:486
+#: src/panel/Panel.jsx:516
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:647
+#: src/panel/Panel.jsx:677
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:668
+#: src/panel/Panel.jsx:698
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:732
+#: src/panel/Panel.jsx:762
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:770
+#: src/panel/Panel.jsx:800
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:828
-#: src/panel/Panel.jsx:845
+#: src/panel/Panel.jsx:858
+#: src/panel/Panel.jsx:875
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:836
+#: src/panel/Panel.jsx:866
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:883
+#: src/panel/Panel.jsx:913
 #, js-format
 msgid "Mock: %s"
 msgstr ""
