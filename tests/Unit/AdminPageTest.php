@@ -19,9 +19,10 @@ final class AdminPageTest extends TestCase {
 
 		$hooks = array_column( WordPress_Stubs::$actions, 'hook' );
 
-		$this->assertCount( 2, WordPress_Stubs::$actions );
+		$this->assertCount( 4, WordPress_Stubs::$actions );
 		$this->assertContains( 'admin_menu', $hooks );
 		$this->assertContains( 'admin_enqueue_scripts', $hooks );
+		$this->assertContains( 'admin_head', $hooks );
 	}
 
 	public function test_register_admin_page_registers_menu_item(): void {
