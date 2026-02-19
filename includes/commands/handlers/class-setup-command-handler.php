@@ -360,7 +360,8 @@ final class Setup_Command_Handler implements Command_Handler {
 		$provider        = clawpress_sanitize_provider( $settings['provider'] ?? '' );
 		$model           = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
 		$model_is_valid  = $this->is_model_valid_for_provider( $provider, $model );
-		$request_timeout = $this->settings_helper->get_request_timeout( $settings );
+		$request_timeout    = $this->settings_helper->get_request_timeout( $settings );
+		$generation_settings = $this->settings_helper->get_generation_settings( $settings );
 
 		if ( '' === $provider || '' === $model || ! $model_is_valid ) {
 			return $this->build_error_response(
@@ -372,13 +373,13 @@ final class Setup_Command_Handler implements Command_Handler {
 			$request_options = new RequestOptions();
 			$request_options->setTimeout( (float) $request_timeout );
 
-			$reply = trim(
-				AiClient::prompt( 'Reply with exactly: OK' )
-					->usingProvider( $provider )
-					->usingModelPreference( [ $provider, $model ] )
-					->usingRequestOptions( $request_options )
-					->generateText()
-			);
+			$builder = AiClient::prompt( 'Reply with exactly: OK' )
+				->usingProvider( $provider )
+				->usingModelPreference( [ $provider, $model ] )
+				->usingRequestOptions( $request_options );
+			$builder = $this->apply_generation_settings( $builder, $generation_settings );
+
+			$reply = trim( $builder->generateText() );
 
 			if ( '' === $reply ) {
 				return $this->build_error_response(
@@ -1113,6 +1114,34 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		return $normalized_path;
+	}
+
+	/**
+	 * Apply generation settings to prompt builder, ignoring unsupported options.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param array<string,mixed> $generation_settings Settings.
+	 * @return object
+	 */
+	private function apply_generation_settings( object $builder, array $generation_settings ): object {
+		$setters = [
+			static fn ( object $current ): object => $current->usingTemperature( (float) $generation_settings['temperature'] ),
+			static fn ( object $current ): object => $current->usingTopP( (float) $generation_settings['top_p'] ),
+			static fn ( object $current ): object => $current->usingMaxTokens( (int) $generation_settings['max_output_tokens'] ),
+			static fn ( object $current ): object => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
+			static fn ( object $current ): object => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
+		];
+
+		foreach ( $setters as $setter ) {
+			try {
+				$builder = $setter( $builder );
+			} catch ( Throwable $throwable ) {
+				unset( $throwable );
+				continue;
+			}
+		}
+
+		return $builder;
 	}
 
 	/**

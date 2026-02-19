@@ -79,15 +79,40 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame(
 			array(
-				'provider'             => 'openai',
-				'model'                => 'gpt-4.1-mini',
-				'request_timeout'      => 30,
-				'agent_user_id'        => 0,
-				'memory_enabled'       => false,
-				'setup_completed' => false,
+				'provider'          => 'openai',
+				'model'             => 'gpt-4.1-mini',
+				'temperature'       => 0.2,
+				'top_p'             => 0.9,
+				'max_output_tokens' => 1200,
+				'frequency_penalty' => 0.2,
+				'presence_penalty'  => 0.0,
+				'request_timeout'   => 45,
+				'agent_user_id'     => 0,
+				'memory_enabled'    => false,
+				'setup_completed'   => false,
 			),
 			$data['settings']
 		);
+	}
+
+	public function test_get_settings_backfills_new_generation_defaults_for_existing_settings(): void {
+		$settings_controller                        = new Settings_Controller();
+		WordPress_Stubs::$options['clawpress_settings'] = array(
+			'provider'        => 'openai',
+			'model'           => 'gpt-4.1-mini',
+			'request_timeout' => 30,
+		);
+
+		$response = $settings_controller->get_settings();
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 30, $data['settings']['request_timeout'] );
+		$this->assertSame( 0.2, $data['settings']['temperature'] );
+		$this->assertSame( 0.9, $data['settings']['top_p'] );
+		$this->assertSame( 1200, $data['settings']['max_output_tokens'] );
+		$this->assertSame( 0.2, $data['settings']['frequency_penalty'] );
+		$this->assertSame( 0.0, $data['settings']['presence_penalty'] );
 	}
 
 	public function test_update_settings_rejects_legacy_option_payload(): void {
@@ -113,12 +138,17 @@ final class RestApiTest extends TestCase {
 		$response            = $settings_controller->update_settings(
 			new \WP_REST_Request(
 				array(
-					'provider'             => 'openai',
-					'model'                => 'gpt-4.1-mini',
-					'request_timeout'      => 45,
-					'agent_user_id'        => 12,
-					'memory_enabled'       => true,
-					'setup_completed' => true,
+					'provider'          => 'openai',
+					'model'             => 'gpt-4.1-mini',
+					'temperature'       => 0.4,
+					'top_p'             => 0.8,
+					'max_output_tokens' => 1300,
+					'frequency_penalty' => 0.1,
+					'presence_penalty'  => -0.1,
+					'request_timeout'   => 50,
+					'agent_user_id'     => 12,
+					'memory_enabled'    => true,
+					'setup_completed'   => true,
 				)
 			)
 		);
@@ -128,12 +158,22 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( true, $data['success'] );
 		$this->assertSame( 'openai', $data['settings']['provider'] );
 		$this->assertSame( 'gpt-4.1-mini', $data['settings']['model'] );
-		$this->assertSame( 45, $data['settings']['request_timeout'] );
+		$this->assertSame( 0.4, $data['settings']['temperature'] );
+		$this->assertSame( 0.8, $data['settings']['top_p'] );
+		$this->assertSame( 1300, $data['settings']['max_output_tokens'] );
+		$this->assertSame( 0.1, $data['settings']['frequency_penalty'] );
+		$this->assertSame( -0.1, $data['settings']['presence_penalty'] );
+		$this->assertSame( 50, $data['settings']['request_timeout'] );
 		$this->assertSame( 12, $data['settings']['agent_user_id'] );
 		$this->assertSame( true, $data['settings']['memory_enabled'] );
 		$this->assertSame( true, $data['settings']['setup_completed'] );
 		$this->assertSame( 'openai', WordPress_Stubs::$options['clawpress_settings']['provider'] );
-		$this->assertSame( 45, WordPress_Stubs::$options['clawpress_settings']['request_timeout'] );
+		$this->assertSame( 0.4, WordPress_Stubs::$options['clawpress_settings']['temperature'] );
+		$this->assertSame( 0.8, WordPress_Stubs::$options['clawpress_settings']['top_p'] );
+		$this->assertSame( 1300, WordPress_Stubs::$options['clawpress_settings']['max_output_tokens'] );
+		$this->assertSame( 0.1, WordPress_Stubs::$options['clawpress_settings']['frequency_penalty'] );
+		$this->assertSame( -0.1, WordPress_Stubs::$options['clawpress_settings']['presence_penalty'] );
+		$this->assertSame( 50, WordPress_Stubs::$options['clawpress_settings']['request_timeout'] );
 		$this->assertSame( 12, WordPress_Stubs::$options['clawpress_settings']['agent_user_id'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['memory_enabled'] );
 		$this->assertSame( true, WordPress_Stubs::$options['clawpress_settings']['setup_completed'] );
