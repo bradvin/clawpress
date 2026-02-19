@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE_REF="${BASE_REF:-origin/develop}"
+
+if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+  git fetch origin develop --depth=1
+fi
+
+CHANGED=$(git diff --name-only --diff-filter=ACMRT "$BASE_REF"...HEAD)
+PHP_FILES=$(echo "$CHANGED" | grep -E '\.php$' || true)
+JS_FILES=$(echo "$CHANGED" | grep -E '\.(js|jsx|mjs|cjs)$' || true)
+
+if [[ -n "$PHP_FILES" ]]; then
+  # shellcheck disable=SC2086
+  vendor/bin/phpcs $PHP_FILES
+else
+  echo "No changed PHP files"
+fi
+
+if [[ -n "$JS_FILES" ]]; then
+  # shellcheck disable=SC2086
+  npx wp-scripts lint-js $JS_FILES
+else
+  echo "No changed JS files"
+fi

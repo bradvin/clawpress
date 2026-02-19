@@ -8,16 +8,15 @@ This document is a lightweight contributor guide for day-to-day development on t
 
 - PHP 8.1+
 - WordPress 6.9+
-- Composer
-- Node.js 18+ and npm
+- Composer 2+
+- Node.js 20+ and npm 10+
 
 ## Local Setup
 
 From the plugin root:
 
 ```bash
-composer install
-npm install
+make bootstrap
 npm run build
 ```
 
@@ -37,12 +36,20 @@ npm run start
 npm run build
 ```
 
+## Canonical task commands
+
+```bash
+make test
+make lint
+make lint-changed
+```
+
 ## Code Quality
 
 Run linters before opening a PR:
 
 ```bash
-npm run lint
+make lint
 ```
 
 Useful targeted commands:
@@ -52,6 +59,7 @@ npm run lint:js
 npm run lint:css
 npm run lint:php
 npm run lint:php:fix
+npm run lint:changed
 ```
 
 ## Tests
@@ -59,7 +67,7 @@ npm run lint:php:fix
 Run PHP unit tests:
 
 ```bash
-composer test
+make test
 ```
 
 Optional coverage run:
