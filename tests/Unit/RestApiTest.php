@@ -463,6 +463,56 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'Echo: Persist me', $history_data['items'][1]['content'] );
 	}
 
+	public function test_chat_send_message_persists_tool_calls_in_history(): void {
+		$chat_controller = new Chat_Controller(
+			static function ( string $message ): array {
+				return array(
+					'reply'      => 'Tools done: ' . $message,
+					'mode'       => 'online',
+					'provider'   => 'openai',
+					'model'      => 'gpt-4.1-mini',
+					'tool_calls' => array(
+						array(
+							'name' => 'file_read',
+							'args' => array( 'path' => '/tmp/demo.txt' ),
+							'status' => 'success',
+							'message' => 'Read file.',
+							'round' => 1,
+							'sequence' => 1,
+						),
+						array(
+							'name' => 'File_Delete',
+							'args' => array( 'path' => '/tmp/old.txt' ),
+							'requires_confirmation' => true,
+							'status' => 'requires_confirmation',
+							'round' => 1,
+							'sequence' => 2,
+						),
+					),
+				);
+			}
+		);
+
+		$chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => 'Run tools',
+				)
+			)
+		);
+
+		$history_data = $chat_controller->get_history()->get_data();
+		$this->assertCount( 2, $history_data['items'] );
+		$this->assertSame( array(), $history_data['items'][0]['tool_calls'] );
+		$this->assertCount( 2, $history_data['items'][1]['tool_calls'] );
+		$this->assertSame( 'file_read', $history_data['items'][1]['tool_calls'][0]['name'] );
+		$this->assertSame( 'success', $history_data['items'][1]['tool_calls'][0]['status'] );
+		$this->assertSame( 'file_delete', $history_data['items'][1]['tool_calls'][1]['name'] );
+		$this->assertSame( true, $history_data['items'][1]['tool_calls'][1]['requires_confirmation'] );
+		$this->assertIsInt( $history_data['items'][1]['tool_calls'][0]['recorded_at'] );
+		$this->assertGreaterThan( 0, $history_data['items'][1]['tool_calls'][0]['recorded_at'] );
+	}
+
 	public function test_status_route_uses_global_manage_options_permission_callback(): void {
 		$status_controller = new Status_Controller();
 		$status_controller->register_routes();

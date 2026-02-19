@@ -23,6 +23,12 @@ final class WordPress_Stubs {
 	public static array $menu_pages = array();
 
 	/** @var array<int,array<string,mixed>> */
+	public static array $submenu_pages = array();
+
+	/** @var array<int,array<string,string>> */
+	public static array $removed_submenu_pages = array();
+
+	/** @var array<int,array<string,mixed>> */
 	public static array $enqueued_scripts = array();
 
 	/** @var array<int,array<string,mixed>> */
@@ -82,6 +88,8 @@ final class WordPress_Stubs {
 		self::$did_actions          = array();
 		self::$doing_actions        = array();
 		self::$menu_pages           = array();
+		self::$submenu_pages        = array();
+		self::$removed_submenu_pages = array();
 		self::$enqueued_scripts     = array();
 		self::$enqueued_styles      = array();
 		self::$localized_scripts    = array();
@@ -242,6 +250,31 @@ namespace {
 				'position'   => $position,
 			);
 			return (string) $menu_slug;
+		}
+	}
+
+	if ( ! function_exists( 'add_submenu_page' ) ) {
+		function add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, $menu_slug, $callback = '', $position = null ): string {
+			WordPress_Stubs::$submenu_pages[] = array(
+				'parent_slug' => $parent_slug,
+				'page_title'  => $page_title,
+				'menu_title'  => $menu_title,
+				'capability'  => $capability,
+				'menu_slug'   => $menu_slug,
+				'callback'    => $callback,
+				'position'    => $position,
+			);
+			return (string) $menu_slug;
+		}
+	}
+
+	if ( ! function_exists( 'remove_submenu_page' ) ) {
+		function remove_submenu_page( string $menu_slug, string $submenu_slug ): bool {
+			WordPress_Stubs::$removed_submenu_pages[] = array(
+				'menu_slug'    => $menu_slug,
+				'submenu_slug' => $submenu_slug,
+			);
+			return true;
 		}
 	}
 
@@ -544,6 +577,22 @@ namespace {
 			}
 
 			return null === $meta_value ? array() : array( $meta_value );
+		}
+	}
+
+	if ( ! function_exists( 'metadata_exists' ) ) {
+		function metadata_exists( string $meta_type, int $object_id, string $meta_key ): bool {
+			if ( 'user' === $meta_type ) {
+				return isset( WordPress_Stubs::$user_meta[ $object_id ] )
+					&& array_key_exists( $meta_key, WordPress_Stubs::$user_meta[ $object_id ] );
+			}
+
+			if ( 'post' === $meta_type ) {
+				return isset( WordPress_Stubs::$post_meta[ $object_id ] )
+					&& array_key_exists( $meta_key, WordPress_Stubs::$post_meta[ $object_id ] );
+			}
+
+			return false;
 		}
 	}
 

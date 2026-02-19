@@ -168,6 +168,23 @@ All user-facing strings must be translatable.
 - **Keep command identifiers/keys untranslated** (e.g., `/help`, option keys, slugs), but translate labels/messages/descriptions shown to users.
 - **When adding new script entry points/handles**, ensure script translations are loaded via `wp_set_script_translations( $handle, 'clawpress', CLAWPRESS_DIR . 'languages' )`.
 
+## Unit Tests And WordPress Stubs
+
+When writing or refactoring PHPUnit tests:
+
+- Keep production code aligned with real WordPress runtime expectations.
+- Do not add test-only `function_exists()` guards for core WordPress APIs just to satisfy PHPUnit.
+- If a test environment is missing a WordPress function, add a deterministic stub in `tests/Support/WordPressStubs.php`.
+- When a stub needs state, store it in `WordPress_Stubs` and reset it in `WordPress_Stubs::reset()` so tests remain isolated.
+- Keep stubs minimal and behavior-focused: enough for assertions without recreating WordPress internals.
+- If behavior is truly optional in production (version-gated or feature-detected APIs), keep runtime guards and prefer covering both paths in tests.
+
+### Verification Expectations
+
+- Run targeted PHPUnit tests for the changed module first.
+- Run the full PHPUnit suite when shared test support files (like `WordPressStubs.php`) are changed.
+- Prefer assertions that verify integration calls happened (for example submenu registration/removal and metadata checks).
+
 ## Important Notes
 
 - Asset files (`build/scripts/*.asset.php`) are auto-generated - never edit manually

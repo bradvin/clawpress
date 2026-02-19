@@ -127,6 +127,48 @@ const Panel = () => {
     };
   };
 
+  const formatToolCallMessage = (rawCall, index = null, total = null) => {
+    if (!rawCall || typeof rawCall !== 'object') {
+      return '';
+    }
+
+    const callName = typeof rawCall.name === 'string' ? rawCall.name.trim() : '';
+    if (!callName) {
+      return '';
+    }
+
+    const callStatus =
+      typeof rawCall.status === 'string' ? rawCall.status.trim().toLowerCase() : 'success';
+    const callMessage =
+      typeof rawCall.message === 'string' ? rawCall.message.trim() : '';
+
+    let statusLabel = __('success', 'clawpress');
+    if (callStatus === 'error') {
+      statusLabel = __('error', 'clawpress');
+    } else if (callStatus === 'requires_confirmation') {
+      statusLabel = __('confirmation required', 'clawpress');
+    }
+
+    let summary = sprintf(
+      /* translators: 1: tool name, 2: tool call status */
+      __('Tool call `%1$s` (%2$s)', 'clawpress'),
+      callName,
+      statusLabel
+    );
+
+    if (Number.isFinite(Number(index)) && Number.isFinite(Number(total))) {
+      summary = sprintf(
+        /* translators: 1: tool call position, 2: total tool calls, 3: tool summary text */
+        __('[%1$d/%2$d] %3$s', 'clawpress'),
+        Math.max(1, Math.round(Number(index))),
+        Math.max(1, Math.round(Number(total))),
+        summary
+      );
+    }
+
+    return callMessage ? `${summary}\n${callMessage}` : summary;
+  };
+
   const normalizeHistoryItems = (items) => {
     if (!Array.isArray(items)) {
       return [];
@@ -134,7 +176,7 @@ const Panel = () => {
 
     return items
       .filter((item) => item && typeof item === 'object')
-      .map((item, index) => {
+      .reduce((normalizedMessages, item, index) => {
         const role =
           item.role === 'user' || item.role === 'assistant' || item.role === 'system'
             ? item.role
@@ -148,9 +190,32 @@ const Panel = () => {
             ? item.id
             : `history-${createdAt}-${index}`;
         const card = normalizeCard(item.card);
+        const toolCalls = Array.isArray(item.tool_calls)
+          ? item.tool_calls.filter((call) => call && typeof call === 'object')
+          : [];
 
-        return { id, role, content, card, createdAt };
-      });
+        toolCalls.forEach((call, callIndex) => {
+          const toolCallText = formatToolCallMessage(
+            call,
+            callIndex + 1,
+            toolCalls.length
+          );
+          if (!toolCallText) {
+            return;
+          }
+
+          normalizedMessages.push({
+            id: `${id}-tool-${callIndex + 1}`,
+            role: 'system',
+            content: toolCallText,
+            card: null,
+            createdAt,
+          });
+        });
+
+        normalizedMessages.push({ id, role, content, card, createdAt });
+        return normalizedMessages;
+      }, []);
   };
 
   const normalizePanelState = (state) => {
@@ -423,49 +488,14 @@ const Panel = () => {
         break;
       case 'tool_call':
         if (parsed?.call && typeof parsed.call === 'object') {
-          const callName =
-            typeof parsed.call.name === 'string' ? parsed.call.name.trim() : '';
-          if (!callName) {
-            break;
-          }
-
-          const callStatus =
-            typeof parsed.call.status === 'string' ? parsed.call.status.trim() : 'success';
-          const callMessage =
-            typeof parsed.call.message === 'string' ? parsed.call.message.trim() : '';
-          const callIndex = Number.isFinite(Number(parsed?.index))
-            ? Math.max(1, Math.round(Number(parsed.index)))
-            : null;
-          const callTotal = Number.isFinite(Number(parsed?.total))
-            ? Math.max(1, Math.round(Number(parsed.total)))
-            : null;
-
-          let statusLabel = __('success', 'clawpress');
-          if (callStatus === 'error') {
-            statusLabel = __('error', 'clawpress');
-          } else if (callStatus === 'requires_confirmation') {
-            statusLabel = __('confirmation required', 'clawpress');
-          }
-
-          let summary = sprintf(
-            /* translators: 1: tool name, 2: tool call status */
-            __('Tool call `%1$s` (%2$s)', 'clawpress'),
-            callName,
-            statusLabel
+          const details = formatToolCallMessage(
+            parsed.call,
+            parsed?.index,
+            parsed?.total
           );
-
-          if (callIndex && callTotal) {
-            summary = sprintf(
-              /* translators: 1: tool call position, 2: total tool calls, 3: tool summary text */
-              __('[%1$d/%2$d] %3$s', 'clawpress'),
-              callIndex,
-              callTotal,
-              summary
-            );
+          if (details) {
+            appendMessage('system', details);
           }
-
-          const details = callMessage ? `${summary}\n${callMessage}` : summary;
-          appendMessage('system', details);
           break;
         }
 
