@@ -42,20 +42,16 @@ final class Admin_Page {
 		);
 
 		// Keep the plugin landing page available when other submenus (for example CPT screens) are added.
-		if ( function_exists( 'remove_submenu_page' ) ) {
-			remove_submenu_page( 'clawpress', 'clawpress' );
-		}
-		if ( function_exists( 'add_submenu_page' ) ) {
-			add_submenu_page(
-				'clawpress',
-				__( 'ClawPress', 'clawpress' ),
-				__( 'ClawPress', 'clawpress' ),
-				'manage_options',
-				'clawpress',
-				[ $this, 'render_admin_page' ],
-				0
-			);
-		}
+		remove_submenu_page( 'clawpress', 'clawpress' );
+		add_submenu_page(
+			'clawpress',
+			__( 'ClawPress', 'clawpress' ),
+			__( 'ClawPress', 'clawpress' ),
+			'manage_options',
+			'clawpress',
+			[ $this, 'render_admin_page' ],
+			0
+		);
 	}
 
 	/**
@@ -88,15 +84,13 @@ final class Admin_Page {
 			}
 		}
 
-		if ( function_exists( 'add_submenu_page' ) ) {
-			add_submenu_page(
-				'clawpress',
-				$menu_title,
-				$menu_title,
-				'manage_options',
-				$menu_slug
-			);
-		}
+		add_submenu_page(
+			'clawpress',
+			$menu_title,
+			$menu_title,
+			'manage_options',
+			$menu_slug
+		);
 	}
 
 	/**
