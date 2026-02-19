@@ -17,6 +17,7 @@ use WordPress\AiClient\Builders\MessageBuilder;
 use WordPress\AiClient\Builders\PromptBuilder;
 use WordPress\AiClient\Messages\DTO\Message;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
+use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
 use WordPress\AiClient\Results\DTO\GenerativeAiResult;
 use WordPress\AiClient\Tools\DTO\FunctionCall;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
@@ -294,7 +295,7 @@ final class Chat_Helper {
 			}
 
 			$builder = $builder->usingRequestOptions( $this->build_request_options( $request_timeout ) );
-			$builder = $this->apply_generation_settings_to_prompt_builder( $builder, $generation_settings );
+			$builder = $this->apply_generation_settings_to_prompt_builder( $builder, $generation_settings, $provider, $model );
 			if ( [] !== $tool_declarations ) {
 				$builder = $builder->usingFunctionDeclarations( ...$tool_declarations );
 			}
@@ -882,12 +883,19 @@ final class Chat_Helper {
 	 *
 	 * @param PromptBuilder $builder Prompt builder.
 	 * @param array<string,mixed> $generation_settings Generation settings.
+	 * @param string              $provider Provider identifier.
+	 * @param string              $model Model identifier.
 	 */
-	private function apply_generation_settings_to_prompt_builder( PromptBuilder $builder, array $generation_settings ): PromptBuilder {
+	private function apply_generation_settings_to_prompt_builder( PromptBuilder $builder, array $generation_settings, string $provider, string $model ): PromptBuilder {
 		$option_setters = [
 			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingTemperature( (float) $generation_settings['temperature'] ),
 			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingTopP( (float) $generation_settings['top_p'] ),
-			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingMaxTokens( (int) $generation_settings['max_output_tokens'] ),
+			fn ( PromptBuilder $current ): PromptBuilder => $this->apply_max_output_tokens_to_prompt_builder(
+				$current,
+				(int) $generation_settings['max_output_tokens'],
+				$provider,
+				$model
+			),
 			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
 			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
 		];
@@ -902,6 +910,33 @@ final class Chat_Helper {
 		}
 
 		return $builder;
+	}
+
+	/**
+	 * Apply max output token setting to prompt builder.
+	 *
+	 * Uses `max_completion_tokens` for OpenAI model families that reject
+	 * legacy `max_tokens`.
+	 *
+	 * @param PromptBuilder $builder Prompt builder instance.
+	 * @param int           $max_output_tokens Max output tokens.
+	 * @param string        $provider Provider identifier.
+	 * @param string        $model Model identifier.
+	 */
+	private function apply_max_output_tokens_to_prompt_builder( PromptBuilder $builder, int $max_output_tokens, string $provider, string $model ): PromptBuilder {
+		if ( $this->provider_helper->should_use_max_completion_tokens( $provider, $model ) ) {
+			$model_config = ModelConfig::fromArray(
+				[
+					ModelConfig::KEY_CUSTOM_OPTIONS => [
+						'max_completion_tokens' => $max_output_tokens,
+					],
+				]
+			);
+
+			return $builder->usingModelConfig( $model_config );
+		}
+
+		return $builder->usingMaxTokens( $max_output_tokens );
 	}
 
 	/**
