@@ -21,6 +21,11 @@ final class Command_Confirmation_Store {
 	private const OPTION_PREFIX = 'clawpress_command_confirmation_';
 
 	/**
+	 * Tool-batch option key prefix.
+	 */
+	private const TOOL_BATCH_OPTION_PREFIX = 'clawpress_tool_confirmation_batch_';
+
+	/**
 	 * Confirmation token TTL in seconds.
 	 */
 	private const TOKEN_TTL = 300;
@@ -86,6 +91,82 @@ final class Command_Confirmation_Store {
 	}
 
 	/**
+	 * Issue and persist one active tool-confirmation batch for a user.
+	 *
+	 * @param array<int,array<string,mixed>> $tool_calls Pending tool calls.
+	 * @param int|null                       $user_id User ID.
+	 * @return array{batch_id:string,created_at:int,expires_at:int,calls:array<int,array<string,mixed>>}
+	 */
+	public function issue_tool_batch( array $tool_calls, ?int $user_id = null ): array {
+		$calls = $this->normalize_tool_batch_calls( $tool_calls );
+
+		$record = [
+			'batch_id'   => $this->generate_batch_id(),
+			'created_at' => time(),
+			'expires_at' => time() + self::TOKEN_TTL,
+			'calls'      => $calls,
+		];
+
+		update_option( $this->get_tool_batch_option_key( $user_id ), $record );
+
+		return $record;
+	}
+
+	/**
+	 * Resolve active tool-confirmation batch for a user.
+	 *
+	 * @param int|null $user_id User ID.
+	 * @return array{batch_id:string,created_at:int,expires_at:int,calls:array<int,array<string,mixed>>}|null
+	 */
+	public function get_tool_batch( ?int $user_id = null ): ?array {
+		$record = $this->normalize_tool_batch_record(
+			get_option( $this->get_tool_batch_option_key( $user_id ), [] )
+		);
+		if ( null === $record ) {
+			return null;
+		}
+
+		if ( $record['expires_at'] < time() ) {
+			$this->clear_tool_batch( $user_id );
+			return null;
+		}
+
+		return $record;
+	}
+
+	/**
+	 * Consume the active tool-confirmation batch.
+	 *
+	 * @param string|null $batch_id Optional expected batch ID.
+	 * @param int|null    $user_id User ID.
+	 * @return array{batch_id:string,created_at:int,expires_at:int,calls:array<int,array<string,mixed>>}|null
+	 */
+	public function consume_tool_batch( ?string $batch_id = null, ?int $user_id = null ): ?array {
+		$record = $this->get_tool_batch( $user_id );
+		if ( null === $record ) {
+			return null;
+		}
+
+		$expected_batch_id = null === $batch_id ? '' : strtolower( trim( $batch_id ) );
+		if ( '' !== $expected_batch_id && ! hash_equals( $record['batch_id'], $expected_batch_id ) ) {
+			return null;
+		}
+
+		$this->clear_tool_batch( $user_id );
+
+		return $record;
+	}
+
+	/**
+	 * Clear active tool-confirmation batch.
+	 *
+	 * @param int|null $user_id User ID.
+	 */
+	public function clear_tool_batch( ?int $user_id = null ): void {
+		update_option( $this->get_tool_batch_option_key( $user_id ), [] );
+	}
+
+	/**
 	 * Clear pending confirmation record.
 	 *
 	 * @param int|null $user_id User ID.
@@ -105,6 +186,101 @@ final class Command_Confirmation_Store {
 	}
 
 	/**
+	 * Resolve option key for active tool-confirmation batch.
+	 *
+	 * @param int|null $user_id User ID.
+	 */
+	private function get_tool_batch_option_key( ?int $user_id = null ): string {
+		$resolved_user_id = null === $user_id ? get_current_user_id() : $user_id;
+		return self::TOOL_BATCH_OPTION_PREFIX . (int) $resolved_user_id;
+	}
+
+	/**
+	 * Normalize raw tool-batch record payload.
+	 *
+	 * @param mixed $record Raw record.
+	 * @return array{batch_id:string,created_at:int,expires_at:int,calls:array<int,array<string,mixed>>}|null
+	 */
+	private function normalize_tool_batch_record( $record ): ?array {
+		if ( ! is_array( $record ) ) {
+			return null;
+		}
+
+		$batch_id   = isset( $record['batch_id'] ) ? strtolower( trim( (string) $record['batch_id'] ) ) : '';
+		$created_at = isset( $record['created_at'] ) ? (int) $record['created_at'] : 0;
+		$expires_at = isset( $record['expires_at'] ) ? (int) $record['expires_at'] : 0;
+		$calls      = isset( $record['calls'] ) && is_array( $record['calls'] )
+			? $this->normalize_tool_batch_calls( $record['calls'] )
+			: [];
+
+		if ( '' === $batch_id || $created_at <= 0 || $expires_at <= 0 || [] === $calls ) {
+			return null;
+		}
+
+		return [
+			'batch_id'   => $batch_id,
+			'created_at' => $created_at,
+			'expires_at' => $expires_at,
+			'calls'      => $calls,
+		];
+	}
+
+	/**
+	 * Normalize one list of pending tool calls.
+	 *
+	 * @param array<int,mixed> $tool_calls Raw calls.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function normalize_tool_batch_calls( array $tool_calls ): array {
+		$normalized = [];
+
+		foreach ( $tool_calls as $tool_call ) {
+			$normalized_call = $this->normalize_tool_batch_call( $tool_call );
+			if ( null === $normalized_call ) {
+				continue;
+			}
+
+			$normalized[] = $normalized_call;
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize one pending tool-call row.
+	 *
+	 * @param mixed $tool_call Raw tool call.
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_tool_batch_call( $tool_call ): ?array {
+		if ( ! is_array( $tool_call ) ) {
+			return null;
+		}
+
+		$tool_name = isset( $tool_call['tool_name'] ) ? strtolower( trim( (string) $tool_call['tool_name'] ) ) : '';
+		if ( '' === $tool_name ) {
+			return null;
+		}
+
+		$args = [];
+		if ( isset( $tool_call['args'] ) && is_array( $tool_call['args'] ) ) {
+			$args = $tool_call['args'];
+		} elseif ( isset( $tool_call['args'] ) && is_object( $tool_call['args'] ) ) {
+			$args = (array) $tool_call['args'];
+		}
+
+		$ability_name = isset( $tool_call['ability_name'] )
+			? trim( (string) $tool_call['ability_name'] )
+			: '';
+
+		return [
+			'tool_name'    => $tool_name,
+			'ability_name' => $ability_name,
+			'args'         => $args,
+		];
+	}
+
+	/**
 	 * Build an opaque confirmation token.
 	 */
 	private function generate_token(): string {
@@ -113,6 +289,18 @@ final class Command_Confirmation_Store {
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );
 			return substr( md5( uniqid( (string) mt_rand(), true ) ), 0, 10 );
+		}
+	}
+
+	/**
+	 * Build an opaque batch ID.
+	 */
+	private function generate_batch_id(): string {
+		try {
+			return bin2hex( random_bytes( 8 ) );
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return substr( md5( uniqid( (string) mt_rand(), true ) ), 0, 16 );
 		}
 	}
 }

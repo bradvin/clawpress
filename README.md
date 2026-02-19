@@ -66,7 +66,7 @@ Current Agent Features:
 
 - Uses modern WordPress patterns for admin pages and REST API.
 - Uses `@automattic/jetpack-autoloader` for autoloading. ([docs](https://github.com/Automattic/jetpack-autoloader))
-- Uses `@wordpress/php-ai-client` for AI client. ([docs](https://github.com/WordPress/php-ai-client))
+- Uses `@wordpress/wp-ai-client` for AI client. ([docs](https://github.com/WordPress/wp-ai-client))
 - Uses `@woocommerce/action-scheduler` for background processing. ([docs](https://github.com/woocommerce/action-scheduler))
 - Includes admin table/grid interface using `@wordpress/dataviews` with WordPress Data Layer.
 - Uses `wp-scripts` for build tooling. ([docs](https://developer.wordpress.org/block-editor/packages/packages-scripts/))
@@ -153,4 +153,4 @@ Custom endpoints with permission callbacks and parameter validation.
 10. Background scheduling model: Action Scheduler (not WP-Cron).
 11. Cards are used to display complex UI in chat panel.
 12. Commands can be used offline.
-13. Cards can have actions, which run commands, or send messages.
+13. Cards can have actions, which run commands, or send messages.# Test pre-push hook

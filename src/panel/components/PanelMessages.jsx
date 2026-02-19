@@ -70,7 +70,26 @@ const PanelMessages = ({
       createdAt: dialog.createdAt ?? 0,
       data: dialog,
     })),
-  ].sort((a, b) => a.createdAt - b.createdAt);
+  ].sort((a, b) => {
+    const createdAtDiff = a.createdAt - b.createdAt;
+    if (createdAtDiff !== 0) {
+      return createdAtDiff;
+    }
+
+    if (a.type === 'message' && b.type === 'message') {
+      return (a.messageIndex ?? 0) - (b.messageIndex ?? 0);
+    }
+
+    if (a.type === 'message') {
+      return -1;
+    }
+
+    if (b.type === 'message') {
+      return 1;
+    }
+
+    return 0;
+  });
 
   return (
     <div className="clawpress-messages" ref={containerRef}>

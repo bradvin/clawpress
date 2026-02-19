@@ -172,15 +172,16 @@ final class Workspace_Helper {
 		}
 
 		$file_path = isset( $resolved_file['file_path'] ) ? (string) $resolved_file['file_path'] : '';
-		if ( '' === $file_path || ! is_file( $file_path ) ) {
+		$fs        = Filesystem_Helper::get_instance();
+
+		if ( '' === $file_path || ! $fs->is_file( $file_path ) ) {
 			return [
 				'success' => false,
 				'error'   => 'file_not_found',
 			];
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Workspace file read operation.
-		$bytes = file_get_contents( $file_path );
+		$bytes = $fs->get_contents( $file_path );
 		if ( false === $bytes ) {
 			return [
 				'success' => false,
@@ -221,9 +222,10 @@ final class Workspace_Helper {
 			];
 		}
 
+		$fs        = Filesystem_Helper::get_instance();
 		$directory = dirname( $file_path );
-		if ( '' === $directory || ! is_dir( $directory ) ) {
-			if ( ! wp_mkdir_p( $directory ) ) {
+		if ( '' === $directory || ! $fs->is_dir( $directory ) ) {
+			if ( ! $fs->mkdir( $directory, self::DIRECTORY_PERMISSIONS ) ) {
 				return [
 					'success' => false,
 					'error'   => 'mkdir_failed',
@@ -231,20 +233,20 @@ final class Workspace_Helper {
 			}
 		}
 
-		$written = file_put_contents( $file_path, $content );
-		if ( false === $written ) {
+		$written = $fs->put_contents( $file_path, $content, self::FILE_PERMISSIONS );
+		if ( ! $written ) {
 			return [
 				'success' => false,
 				'error'   => 'write_failed',
 			];
 		}
 
-		$this->apply_permissions( $file_path, self::FILE_PERMISSIONS );
+		$bytes = $fs->size( $file_path );
 
 		return [
 			'success'      => true,
 			'logical_path' => (string) $resolved_file['logical_path'],
-			'bytes'        => (int) $written,
+			'bytes'        => false !== $bytes ? (int) $bytes : strlen( $content ),
 			'source'       => 'workspace',
 		];
 	}
@@ -266,16 +268,19 @@ final class Workspace_Helper {
 		}
 
 		$file_path = isset( $resolved_file['file_path'] ) ? (string) $resolved_file['file_path'] : '';
-		if ( '' === $file_path || ! file_exists( $file_path ) ) {
+		$fs        = Filesystem_Helper::get_instance();
+
+		if ( '' === $file_path || ! $fs->exists( $file_path ) ) {
 			return [
 				'success' => false,
 				'error'   => 'file_not_found',
 			];
 		}
 
-		$deleted = is_dir( $file_path )
-			? $this->delete_directory_recursively( $file_path )
-			: @unlink( $file_path );
+		$deleted = $fs->is_dir( $file_path )
+			? $fs->rmdir( $file_path )
+			: $fs->delete( $file_path );
+
 		if ( ! $deleted ) {
 			return [
 				'success' => false,
@@ -298,7 +303,9 @@ final class Workspace_Helper {
 	 */
 	public function list_workspace_files( int $user_id ): array {
 		$workspace_path = $this->get_workspace_path_for_agent_user( $user_id );
-		if ( '' === $workspace_path || ! is_dir( $workspace_path ) ) {
+		$fs             = Filesystem_Helper::get_instance();
+
+		if ( '' === $workspace_path || ! $fs->is_dir( $workspace_path ) ) {
 			return [];
 		}
 
@@ -327,13 +334,15 @@ final class Workspace_Helper {
 					continue;
 				}
 
+				$size = $fs->size( $path );
+
 				$entries[] = [
 					'logical_path' => $logical_path,
-					'size'         => (int) $file_info->getSize(),
+					'size'         => false !== $size ? (int) $size : 0,
 					'source'       => 'workspace',
 				];
 			}
-		} catch ( Throwable $throwable ) {
+		} catch ( \Throwable $throwable ) {
 			unset( $throwable );
 			return [];
 		}
@@ -393,7 +402,9 @@ final class Workspace_Helper {
 			return false;
 		}
 
-		if ( ! wp_mkdir_p( $workspace_path ) ) {
+		$fs = Filesystem_Helper::get_instance();
+
+		if ( ! $fs->mkdir( $workspace_path, self::DIRECTORY_PERMISSIONS ) ) {
 			return false;
 		}
 
@@ -402,10 +413,10 @@ final class Workspace_Helper {
 		$this->create_protection_files( $user_workspace_root );
 		$this->create_protection_files( $workspace_path );
 
-		$this->apply_permissions( $user_workspace_root, self::DIRECTORY_PERMISSIONS );
-		$this->apply_permissions( $workspace_path, self::DIRECTORY_PERMISSIONS );
-		$this->apply_permissions( $workspace_path . DIRECTORY_SEPARATOR . 'index.html', self::FILE_PERMISSIONS );
-		$this->apply_permissions( $workspace_path . DIRECTORY_SEPARATOR . '.htaccess', self::FILE_PERMISSIONS );
+		$fs->chmod( $user_workspace_root, self::DIRECTORY_PERMISSIONS );
+		$fs->chmod( $workspace_path, self::DIRECTORY_PERMISSIONS );
+		$fs->chmod( $workspace_path . DIRECTORY_SEPARATOR . 'index.html', self::FILE_PERMISSIONS );
+		$fs->chmod( $workspace_path . DIRECTORY_SEPARATOR . '.htaccess', self::FILE_PERMISSIONS );
 
 		return true;
 	}
@@ -416,36 +427,39 @@ final class Workspace_Helper {
 	 * @param string $directory Absolute directory path.
 	 */
 	private function create_protection_files( string $directory ): void {
-		if ( '' === $directory || ! is_dir( $directory ) ) {
+		if ( '' === $directory ) {
+			return;
+		}
+
+		$fs = Filesystem_Helper::get_instance();
+
+		if ( ! $fs->is_dir( $directory ) ) {
 			return;
 		}
 
 		$index_file_path = $directory . DIRECTORY_SEPARATOR . 'index.html';
-		if ( ! file_exists( $index_file_path ) ) {
-			file_put_contents( $index_file_path, '' );
+		if ( ! $fs->exists( $index_file_path ) ) {
+			$fs->put_contents( $index_file_path, '', self::FILE_PERMISSIONS );
 		}
 
 		$htaccess_path = $directory . DIRECTORY_SEPARATOR . '.htaccess';
-		if ( ! file_exists( $htaccess_path ) ) {
-			file_put_contents(
+		if ( ! $fs->exists( $htaccess_path ) ) {
+			$fs->put_contents(
 				$htaccess_path,
-				"<IfModule mod_autoindex.c>\nOptions -Indexes\n</IfModule>\n"
+				"<IfModule mod_autoindex.c>\nOptions -Indexes\n</IfModule>\n",
+				self::FILE_PERMISSIONS
 			);
 		}
 	}
 
 	/**
-	 * Apply filesystem permissions when possible.
+	 * Determine whether a workspace file should appear in file listings.
 	 *
-	 * @param string $path Absolute path.
-	 * @param int    $permissions Octal permission mask.
+	 * @param string $logical_path Workspace-relative logical path.
 	 */
-	private function apply_permissions( string $path, int $permissions ): void {
-		if ( '' === $path || ! file_exists( $path ) ) {
-			return;
-		}
-
-		@chmod( $path, $permissions );
+	private function is_listable_workspace_file( string $logical_path ): bool {
+		$basename = basename( $logical_path );
+		return ! in_array( $basename, [ 'index.html', '.htaccess' ], true );
 	}
 
 	/**
@@ -523,61 +537,12 @@ final class Workspace_Helper {
 	}
 
 	/**
-	 * Determine whether a workspace file should appear in file listings.
-	 *
-	 * @param string $logical_path Workspace-relative logical path.
-	 */
-	private function is_listable_workspace_file( string $logical_path ): bool {
-		$basename = basename( $logical_path );
-		return ! in_array( $basename, [ 'index.html', '.htaccess' ], true );
-	}
-
-	/**
-	 * Delete a directory recursively.
-	 *
-	 * @param string $directory Absolute directory path.
-	 */
-	private function delete_directory_recursively( string $directory ): bool {
-		if ( '' === $directory || ! is_dir( $directory ) ) {
-			return false;
-		}
-
-		try {
-			$iterator = new \RecursiveIteratorIterator(
-				new \RecursiveDirectoryIterator(
-					$directory,
-					\FilesystemIterator::SKIP_DOTS
-				),
-				\RecursiveIteratorIterator::CHILD_FIRST
-			);
-
-			foreach ( $iterator as $item ) {
-				if ( $item->isDir() ) {
-					if ( ! @rmdir( (string) $item->getPathname() ) ) {
-						return false;
-					}
-					continue;
-				}
-
-				if ( ! @unlink( (string) $item->getPathname() ) ) {
-					return false;
-				}
-			}
-		} catch ( Throwable $throwable ) {
-			unset( $throwable );
-			return false;
-		}
-
-		return @rmdir( $directory );
-	}
-
-	/**
 	 * Generate a random workspace hash.
 	 */
 	private function generate_workspace_hash(): string {
 		try {
 			return bin2hex( random_bytes( self::WORKSPACE_HASH_BYTES ) );
-		} catch ( Throwable $throwable ) {
+		} catch ( \Throwable $throwable ) {
 			unset( $throwable );
 			return substr( hash( 'sha256', wp_generate_password( 64, true, true ) . microtime( true ) ), 0, self::WORKSPACE_HASH_BYTES * 2 );
 		}

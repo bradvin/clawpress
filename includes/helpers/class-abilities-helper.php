@@ -184,6 +184,12 @@ final class Abilities_Helper {
 		$execution_user_id           = isset( $execution_context['execution_user_id'] ) && (int) $execution_context['execution_user_id'] > 0
 			? (int) $execution_context['execution_user_id']
 			: $this->resolve_execution_user_id();
+		$confirmation_scope          = isset( $execution_context['confirmation_scope'] )
+			? strtolower( trim( (string) $execution_context['confirmation_scope'] ) )
+			: '';
+		$skip_confirmation           = isset( $execution_context['skip_confirmation'] ) && function_exists( 'clawpress_sanitize_boolean' )
+			? clawpress_sanitize_boolean( $execution_context['skip_confirmation'] )
+			: false;
 		$has_confirmation_allowlist  = array_key_exists( 'allowed_confirmation_tokens', $execution_context );
 		$allowed_confirmation_tokens = $this->normalize_allowed_confirmation_tokens(
 			$execution_context['allowed_confirmation_tokens'] ?? null
@@ -250,8 +256,24 @@ final class Abilities_Helper {
 		}
 
 		$safety_class = $this->infer_safety_class( $ability );
-		if ( $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
-			$confirm_token    = isset( $args['confirm_token'] ) ? trim( (string) $args['confirm_token'] ) : null;
+		if ( ! $skip_confirmation && $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
+			if ( 'batch' === $confirmation_scope ) {
+				$payload = [
+					'success'               => false,
+					'requires_confirmation' => true,
+					'error'                 => [
+						'code'    => 'clawpress_batch_confirmation_required',
+						'message' => __( 'This destructive action is pending batch confirmation.', 'clawpress' ),
+					],
+					'tool'                  => $normalized_tool_name,
+					'ability'               => $ability_name,
+					'safety_class'          => $safety_class,
+				];
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+				return $payload;
+			}
+
+			$confirm_token    = $this->normalize_confirmation_token( $args['confirm_token'] ?? null );
 			$is_confirmed     = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
 				? clawpress_sanitize_boolean( $args['confirm'] )
 				: false;
@@ -335,6 +357,35 @@ final class Abilities_Helper {
 
 		$decoded = json_decode( $raw_args, true );
 		return is_array( $decoded ) ? $decoded : [];
+	}
+
+	/**
+	 * Normalize a confirmation token argument from model-produced input.
+	 *
+	 * @param mixed $raw_token Raw token value.
+	 */
+	private function normalize_confirmation_token( $raw_token ): ?string {
+		if ( null === $raw_token ) {
+			return null;
+		}
+
+		$token = trim( (string) $raw_token );
+		if ( '' === $token ) {
+			return null;
+		}
+
+		// Some providers echo escaped or quoted token text; normalize before checks.
+		$token = str_replace( [ '\\"', "\\'" ], [ '"', "'" ], $token );
+		$token = trim( $token, " \t\n\r\0\x0B\"'`" );
+		if ( '' === $token ) {
+			return null;
+		}
+
+		if ( preg_match( '/([a-f0-9]{10,64})/i', $token, $matches ) ) {
+			$token = $matches[1];
+		}
+
+		return strtolower( $token );
 	}
 
 	/**

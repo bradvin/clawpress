@@ -46,7 +46,7 @@ final class CommandsTest extends TestCase {
 		$this->assertIsArray( $payload );
 		$this->assertSame( true, $payload['command']['error'] );
 		$this->assertStringContainsString( 'Invalid usage.', $payload['reply'] );
-		$this->assertStringContainsString( 'Available commands:', $payload['reply'] );
+		$this->assertStringContainsString( 'Expected: `/site info`', $payload['reply'] );
 	}
 
 	public function test_memory_clear_is_blocked_when_agent_user_missing(): void {

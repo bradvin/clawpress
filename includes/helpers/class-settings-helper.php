@@ -26,23 +26,43 @@ final class Settings_Helper {
 	 * @var array<string,array<string,mixed>>
 	 */
 	private const SETTINGS = [
-		'provider'             => [
+		'provider'            => [
 			'default'  => '',
 			'sanitize' => 'clawpress_sanitize_provider',
 		],
-		'model'                => [
+		'model'               => [
 			'default'  => '',
 			'sanitize' => 'sanitize_text_field',
 		],
-		'request_timeout'      => [
-			'default'  => 30,
+		'temperature'         => [
+			'default'  => 0.2,
+			'sanitize' => 'clawpress_sanitize_temperature',
+		],
+		'top_p'               => [
+			'default'  => 0.9,
+			'sanitize' => 'clawpress_sanitize_top_p',
+		],
+		'max_output_tokens'   => [
+			'default'  => 1200,
+			'sanitize' => 'clawpress_sanitize_max_output_tokens',
+		],
+		'frequency_penalty'   => [
+			'default'  => 0.2,
+			'sanitize' => 'clawpress_sanitize_frequency_penalty',
+		],
+		'presence_penalty'    => [
+			'default'  => 0.0,
+			'sanitize' => 'clawpress_sanitize_presence_penalty',
+		],
+		'request_timeout'     => [
+			'default'  => 45,
 			'sanitize' => 'clawpress_sanitize_request_timeout',
 		],
-		'agent_user_id'        => [
+		'agent_user_id'   => [
 			'default'  => 0,
 			'sanitize' => 'clawpress_sanitize_int',
 		],
-		'memory_enabled'       => [
+		'memory_enabled'  => [
 			'default'  => false,
 			'sanitize' => 'clawpress_sanitize_boolean',
 		],
@@ -170,6 +190,24 @@ final class Settings_Helper {
 	public function get_request_timeout( ?array $settings = null ): int {
 		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
 		return (int) $settings['request_timeout'];
+	}
+
+	/**
+	 * Get model-generation settings.
+	 *
+	 * @param array<string,mixed>|null $settings Optional settings array.
+	 * @return array{temperature:float,top_p:float,max_output_tokens:int,frequency_penalty:float,presence_penalty:float}
+	 */
+	public function get_generation_settings( ?array $settings = null ): array {
+		$settings = is_array( $settings ) ? $this->normalize_settings_array( $settings ) : $this->get_settings();
+
+		return [
+			'temperature'       => (float) $settings['temperature'],
+			'top_p'             => (float) $settings['top_p'],
+			'max_output_tokens' => (int) $settings['max_output_tokens'],
+			'frequency_penalty' => (float) $settings['frequency_penalty'],
+			'presence_penalty'  => (float) $settings['presence_penalty'],
+		];
 	}
 
 	/**

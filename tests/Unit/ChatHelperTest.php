@@ -65,10 +65,53 @@ final class ChatHelperTest extends TestCase {
 		$this->assertSame( 'openai', $calls[0]['provider'] );
 		$this->assertSame( 'gpt-4.1-mini', $calls[0]['model'] );
 		$this->assertSame( 'Current request', $calls[0]['context']['message'] );
-		$this->assertSame( 30, $calls[0]['context']['request_timeout'] );
+		$this->assertSame( 45, $calls[0]['context']['request_timeout'] );
+		$this->assertSame( 0.2, $calls[0]['context']['generation_settings']['temperature'] );
+		$this->assertSame( 0.9, $calls[0]['context']['generation_settings']['top_p'] );
+		$this->assertSame( 1200, $calls[0]['context']['generation_settings']['max_output_tokens'] );
+		$this->assertSame( 0.2, $calls[0]['context']['generation_settings']['frequency_penalty'] );
+		$this->assertSame( 0.0, $calls[0]['context']['generation_settings']['presence_penalty'] );
 		$this->assertStringContainsString( '# ClawPress', $calls[0]['context']['system_prompt'] );
 		$this->assertStringContainsString( '# Memory', $calls[0]['context']['system_prompt'] );
 		$this->assertCount( 2, $calls[0]['context']['history_messages'] );
+	}
+
+	public function test_generate_ai_reply_injects_configured_generation_settings_into_online_context(): void {
+		update_option(
+			'clawpress_settings',
+			[
+				'request_timeout'   => 63,
+				'temperature'       => 0.6,
+				'top_p'             => 0.7,
+				'max_output_tokens' => 1600,
+				'frequency_penalty' => 0.4,
+				'presence_penalty'  => 0.3,
+			]
+		);
+
+		$calls       = [];
+		$chat_helper = Chat_Helper::create_for_testing(
+			null,
+			static function ( array $context ) use ( &$calls ): string {
+				$calls[] = $context;
+				return 'Configured generation context captured.';
+			},
+			static fn( array $settings ): array => [
+				'provider' => 'openai',
+				'model'    => 'gpt-4.1-mini',
+			]
+		);
+
+		$payload = $chat_helper->generate_ai_reply( 'Use configured generation defaults' );
+
+		$this->assertSame( 'online', $payload['mode'] );
+		$this->assertCount( 1, $calls );
+		$this->assertSame( 63, $calls[0]['request_timeout'] );
+		$this->assertSame( 0.6, $calls[0]['generation_settings']['temperature'] );
+		$this->assertSame( 0.7, $calls[0]['generation_settings']['top_p'] );
+		$this->assertSame( 1600, $calls[0]['generation_settings']['max_output_tokens'] );
+		$this->assertSame( 0.4, $calls[0]['generation_settings']['frequency_penalty'] );
+		$this->assertSame( 0.3, $calls[0]['generation_settings']['presence_penalty'] );
 	}
 
 	public function test_generate_ai_reply_returns_offline_when_no_provider_resolved(): void {

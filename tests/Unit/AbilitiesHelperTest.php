@@ -139,17 +139,20 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertTrue( $blocked['requires_confirmation'] );
 		$this->assertSame( 'clawpress_confirmation_required', $blocked['error']['code'] );
 
+		$replacement_token = (string) ( $blocked['error']['token'] ?? '' );
+		$this->assertNotSame( '', $replacement_token );
+
 		$allowed = Abilities_Helper::get_instance()->execute_tool_call(
 			'file_delete',
 			[
 				'path'          => 'notes.md',
 				'confirm'       => true,
-				'confirm_token' => $token,
+				'confirm_token' => $replacement_token,
 			],
 			[
 				'requesting_user_id'          => 1,
 				'execution_user_id'           => 1,
-				'allowed_confirmation_tokens' => [ $token ],
+				'allowed_confirmation_tokens' => [ $replacement_token ],
 			]
 		);
 

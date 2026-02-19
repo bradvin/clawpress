@@ -131,6 +131,19 @@ final class Chat_Controller implements Route_Controller {
 		$card_meta            = isset( $reply_payload['card'] ) && is_array( $reply_payload['card'] )
 			? $reply_payload['card']
 			: null;
+		$tool_calls_meta      = isset( $reply_payload['tool_calls'] ) && is_array( $reply_payload['tool_calls'] )
+			? array_map(
+				static function ( $tool_call ): array {
+					$normalized = is_array( $tool_call ) ? $tool_call : [];
+					if ( ! isset( $normalized['recorded_at'] ) ) {
+						$normalized['recorded_at'] = (int) round( microtime( true ) * 1000 );
+					}
+
+					return $normalized;
+				},
+				array_values( $reply_payload['tool_calls'] )
+			)
+			: null;
 		$error_meta           = isset( $reply_payload['error'] ) && is_array( $reply_payload['error'] )
 			? $reply_payload['error']
 			: null;
@@ -143,7 +156,8 @@ final class Chat_Controller implements Route_Controller {
 			$this->history_helper->append_history_message(
 				( $is_command_response || $is_error_response ) ? 'system' : 'assistant',
 				$reply,
-				$card_meta
+				$card_meta,
+				$tool_calls_meta
 			);
 		}
 
@@ -184,9 +198,7 @@ final class Chat_Controller implements Route_Controller {
 					'context'     => isset( $reply_payload['context'] ) && is_array( $reply_payload['context'] )
 						? $reply_payload['context']
 						: null,
-					'tool_calls'  => isset( $reply_payload['tool_calls'] ) && is_array( $reply_payload['tool_calls'] )
-						? array_values( $reply_payload['tool_calls'] )
-						: null,
+					'tool_calls'  => $tool_calls_meta,
 				],
 			],
 			200
