@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-17T02:31:39+00:00\n"
+"POT-Creation-Date: 2026-02-19T16:14:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -300,8 +300,62 @@ msgstr ""
 msgid "An unknown error occurred."
 msgstr ""
 
+#: includes/commands/class-commands.php:168
+msgid "There is no active confirmation batch to confirm."
+msgstr ""
+
+#: includes/commands/class-commands.php:180
+msgid "That batch is no longer active. Confirm the current batch from the latest confirmation card."
+msgstr ""
+
+#: includes/commands/class-commands.php:192
+msgid "Unable to confirm this batch. Please request confirmation again."
+msgstr ""
+
+#. translators: 1: batch ID, 2: number of tool calls
+#: includes/commands/class-commands.php:214
+#, php-format
+msgid "Confirmed batch `%1$s`. Executing %2$d tool call(s):"
+msgstr ""
+
+#: includes/commands/class-commands.php:245
+#: src/panel/Panel.jsx:446
+msgid "success"
+msgstr ""
+
+#: includes/commands/class-commands.php:246
+#: src/panel/Panel.jsx:448
+msgid "error"
+msgstr ""
+
+#. translators: 1: sequence number, 2: tool name, 3: status, 4: optional detail
+#: includes/commands/class-commands.php:256
+#, php-format
+msgid "%1$d. `%2$s` -> %3$s%4$s"
+msgstr ""
+
+#. translators: 1: success count, 2: failure count
+#: includes/commands/class-commands.php:266
+#, php-format
+msgid "Batch result: %1$d succeeded, %2$d failed."
+msgstr ""
+
+#: includes/commands/class-commands.php:301
+msgid "There is no active confirmation batch to decline."
+msgstr ""
+
+#: includes/commands/class-commands.php:313
+msgid "That batch is no longer active. Decline the current batch from the latest confirmation card."
+msgstr ""
+
+#. translators: %s: batch ID
+#: includes/commands/class-commands.php:327
+#, php-format
+msgid "Declined confirmation batch `%s`. No pending destructive tool calls were executed."
+msgstr ""
+
 #. translators: 1: command name, 2: help text
-#: includes/commands/class-commands.php:125
+#: includes/commands/class-commands.php:371
 #, php-format
 msgid ""
 "Unknown command: `%1$s`.\n"
@@ -309,7 +363,7 @@ msgid ""
 "%2$s"
 msgstr ""
 
-#: includes/commands/class-commands.php:159
+#: includes/commands/class-commands.php:405
 msgid "Use `/help` to view available commands."
 msgstr ""
 
@@ -609,7 +663,7 @@ msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:391
 #: includes/commands/handlers/class-test-command-handler.php:201
-#: includes/helpers/class-chat-helper.php:1031
+#: includes/helpers/class-chat-helper.php:976
 msgid "Unknown provider error."
 msgstr ""
 
@@ -1034,101 +1088,98 @@ msgstr ""
 msgid "- tool_execution: unavailable (no registered abilities)"
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:200
+#: includes/helpers/class-abilities-helper.php:206
 msgid "The requested tool is not allowlisted."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:213
+#: includes/helpers/class-abilities-helper.php:219
 msgid "The WordPress Abilities API is unavailable."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:228
+#: includes/helpers/class-abilities-helper.php:234
 msgid "The requested ability is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:269
+#: includes/helpers/class-abilities-helper.php:266
+msgid "This destructive action is pending batch confirmation."
+msgstr ""
+
+#: includes/helpers/class-abilities-helper.php:291
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:448
+#: includes/helpers/class-abilities-helper.php:499
 msgid "Tool execution completed."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:689
+#: includes/helpers/class-chat-helper.php:664
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:692
+#: includes/helpers/class-chat-helper.php:667
 msgid "Action required."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:760
-msgid "soon"
-msgstr ""
-
-#. translators: 1: tool name, 2: confirmation token expiry time
-#: includes/helpers/class-chat-helper.php:764
+#. translators: 1: tool name, 2: batch ID, 3: expiry time
+#: includes/helpers/class-chat-helper.php:737
 #, php-format
-msgid "Confirm `%1$s` to continue this destructive action. Confirmation token expires at %2$s."
+msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:776
+#. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
+#: includes/helpers/class-chat-helper.php:745
+#, php-format
+msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
+msgstr ""
+
+#: includes/helpers/class-chat-helper.php:748
+msgid "tools"
+msgstr ""
+
+#: includes/helpers/class-chat-helper.php:756
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:777
-#: src/panel/components/cards/UserConfirmationCard.jsx:12
-msgid "Destructive action pending"
+#: includes/helpers/class-chat-helper.php:757
+msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:782
+#: includes/helpers/class-chat-helper.php:763
+msgid "Confirm All"
+msgstr ""
+
+#: includes/helpers/class-chat-helper.php:764
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:788
+#: includes/helpers/class-chat-helper.php:770
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:792
-msgid "Do not run the pending destructive action."
-msgstr ""
-
-#. translators: 1: tool name, 2: confirmation token, 3: serialized JSON arguments
-#: includes/helpers/class-chat-helper.php:814
-#, php-format
-msgid "Confirm and run the pending `%1$s` tool call now. Re-run it with arguments %3$s and include `confirm=true` plus `confirm_token=\\\"%2$s\\\"`."
-msgstr ""
-
-#. translators: %s: tool name
-#: includes/helpers/class-chat-helper.php:829
-#, php-format
-msgid "Cancel the pending destructive `%s` tool call and do not run it."
-msgstr ""
-
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:970
+#: includes/helpers/class-chat-helper.php:915
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:1037
+#: includes/helpers/class-chat-helper.php:982
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:1042
+#: includes/helpers/class-chat-helper.php:987
 #: src/panel/Panel.jsx:109
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:1043
+#: includes/helpers/class-chat-helper.php:988
 #: src/panel/Panel.jsx:111
 msgid "Provider error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:1065
+#: includes/helpers/class-chat-helper.php:1010
 #: src/panel/components/cards/ErrorCard.jsx:7
 #: src/panel/Panel.jsx:120
 msgid "Request Error"
@@ -1342,17 +1393,21 @@ msgstr ""
 msgid "Use Selected Model"
 msgstr ""
 
+#: src/panel/components/cards/UserConfirmationCard.jsx:12
+msgid "Destructive action pending"
+msgstr ""
+
 #: src/panel/components/cards/UserConfirmationCard.jsx:16
 msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:641
+#: src/panel/Panel.jsx:644
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:642
+#: src/panel/Panel.jsx:645
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1572,65 +1627,57 @@ msgstr ""
 msgid "Chat request failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:443
-msgid "success"
-msgstr ""
-
-#: src/panel/Panel.jsx:445
-msgid "error"
-msgstr ""
-
-#: src/panel/Panel.jsx:447
+#: src/panel/Panel.jsx:450
 msgid "confirmation required"
 msgstr ""
 
 #. translators: 1: tool name, 2: tool call status
-#: src/panel/Panel.jsx:452
+#: src/panel/Panel.jsx:455
 #, js-format
 msgid "Tool call `%1$s` (%2$s)"
 msgstr ""
 
 #. translators: 1: tool call position, 2: total tool calls, 3: tool summary text
-#: src/panel/Panel.jsx:460
+#: src/panel/Panel.jsx:463
 #, js-format
 msgid "[%1$d/%2$d] %3$s"
 msgstr ""
 
-#: src/panel/Panel.jsx:473
+#: src/panel/Panel.jsx:476
 msgid "Preparing tool plan..."
 msgstr ""
 
-#: src/panel/Panel.jsx:486
+#: src/panel/Panel.jsx:489
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:647
+#: src/panel/Panel.jsx:650
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:668
+#: src/panel/Panel.jsx:671
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:732
+#: src/panel/Panel.jsx:735
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:770
+#: src/panel/Panel.jsx:773
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:828
-#: src/panel/Panel.jsx:845
+#: src/panel/Panel.jsx:831
+#: src/panel/Panel.jsx:848
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:836
+#: src/panel/Panel.jsx:839
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:883
+#: src/panel/Panel.jsx:886
 #, js-format
 msgid "Mock: %s"
 msgstr ""
