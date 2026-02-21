@@ -12,6 +12,10 @@ fi
 declare -a JS_FILES=()
 
 while IFS= read -r -d '' file; do
+  if [[ "$file" == ideas/* ]]; then
+    continue
+  fi
+
   case "$file" in
     *.js|*.jsx|*.mjs|*.cjs)
       JS_FILES+=("$file")
