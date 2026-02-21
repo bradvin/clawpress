@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-19T17:14:57+00:00\n"
+"POT-Creation-Date: 2026-02-19T18:29:44+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -206,7 +206,7 @@ msgstr ""
 #: includes/class-post-types.php:45
 #: includes/class-post-types.php:55
 #: includes/class-post-types.php:56
-#: includes/commands/handlers/class-setup-command-handler.php:673
+#: includes/commands/handlers/class-setup-command-handler.php:674
 #: src/js/admin/components/App.js:18
 msgid "Agent Files"
 msgstr ""
@@ -414,7 +414,7 @@ msgid "Create a dedicated contributor user for the agent."
 msgstr ""
 
 #: includes/commands/handlers/class-create-agent-user-command-handler.php:97
-#: includes/commands/handlers/class-setup-command-handler.php:422
+#: includes/commands/handlers/class-setup-command-handler.php:423
 msgid "Could not create agent user."
 msgstr ""
 
@@ -467,7 +467,7 @@ msgid "Agent user is not configured. Set one with `/settings agent_user_id <user
 msgstr ""
 
 #: includes/commands/handlers/class-create-workspace-command-handler.php:121
-#: includes/commands/handlers/class-setup-command-handler.php:509
+#: includes/commands/handlers/class-setup-command-handler.php:510
 msgid "Could not create workspace."
 msgstr ""
 
@@ -597,309 +597,309 @@ msgstr ""
 msgid "Invalid integer value for `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:141
+#: includes/commands/handlers/class-setup-command-handler.php:142
 msgid "Run the setup wizard and manage setup progress."
 msgstr ""
 
 #. translators: %s: expected command usage
-#: includes/commands/handlers/class-setup-command-handler.php:206
+#: includes/commands/handlers/class-setup-command-handler.php:207
 #, php-format
 msgid "Invalid setup action. Expected: `%s`"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:225
+#: includes/commands/handlers/class-setup-command-handler.php:226
 msgid "Setup started."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:232
+#: includes/commands/handlers/class-setup-command-handler.php:233
 msgid "Setup resumed."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:253
+#: includes/commands/handlers/class-setup-command-handler.php:254
 msgid "Setup reset."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:265
+#: includes/commands/handlers/class-setup-command-handler.php:266
 msgid "Already at the first step."
 msgstr ""
 
 #. translators: %s: step key
-#: includes/commands/handlers/class-setup-command-handler.php:274
+#: includes/commands/handlers/class-setup-command-handler.php:275
 #, php-format
 msgid "Moved back to `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:291
+#: includes/commands/handlers/class-setup-command-handler.php:292
 msgid "Selected provider is not available. Refresh providers and try again."
 msgstr ""
 
 #. translators: %s: provider slug
-#: includes/commands/handlers/class-setup-command-handler.php:308
+#: includes/commands/handlers/class-setup-command-handler.php:309
 #, php-format
 msgid "Provider selected: `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:327
+#: includes/commands/handlers/class-setup-command-handler.php:328
 msgid "Select a provider before choosing a model."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:333
+#: includes/commands/handlers/class-setup-command-handler.php:334
 msgid "Selected model is not available for the current provider. Enter a valid model ID and try again."
 msgstr ""
 
 #. translators: %s: model identifier
-#: includes/commands/handlers/class-setup-command-handler.php:349
+#: includes/commands/handlers/class-setup-command-handler.php:350
 #, php-format
 msgid "Model selected: `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:368
+#: includes/commands/handlers/class-setup-command-handler.php:369
 msgid "Select valid provider and model values before testing."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:386
+#: includes/commands/handlers/class-setup-command-handler.php:387
 msgid "Connection test failed: empty provider response."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:392
-#: includes/commands/handlers/class-test-command-handler.php:202
-#: includes/helpers/class-chat-helper.php:1028
+#: includes/commands/handlers/class-setup-command-handler.php:393
+#: includes/commands/handlers/class-test-command-handler.php:203
+#: includes/helpers/class-chat-helper.php:1063
 msgid "Unknown provider error."
 msgstr ""
 
 #. translators: %s: provider error message
-#: includes/commands/handlers/class-setup-command-handler.php:398
-#: includes/commands/handlers/class-test-command-handler.php:208
+#: includes/commands/handlers/class-setup-command-handler.php:399
+#: includes/commands/handlers/class-test-command-handler.php:209
 #, php-format
 msgid "Connection test failed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:411
+#: includes/commands/handlers/class-setup-command-handler.php:412
 msgid "Connection test passed."
 msgstr ""
 
 #. translators: %s: error message
-#: includes/commands/handlers/class-setup-command-handler.php:427
+#: includes/commands/handlers/class-setup-command-handler.php:428
 #, php-format
 msgid "Agent user creation failed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:435
+#: includes/commands/handlers/class-setup-command-handler.php:436
 msgid "Agent user creation returned an invalid user ID."
 msgstr ""
 
 #. translators: %d: user ID
-#: includes/commands/handlers/class-setup-command-handler.php:449
+#: includes/commands/handlers/class-setup-command-handler.php:450
 #, php-format
 msgid "Agent user configured: `%d`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:463
+#: includes/commands/handlers/class-setup-command-handler.php:464
 msgid "Provide a valid user ID for the agent user step."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:468
+#: includes/commands/handlers/class-setup-command-handler.php:469
 msgid "Invalid agent user ID."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:473
+#: includes/commands/handlers/class-setup-command-handler.php:474
 msgid "Agent user does not exist."
 msgstr ""
 
 #. translators: 1: user login, 2: user ID
-#: includes/commands/handlers/class-setup-command-handler.php:487
+#: includes/commands/handlers/class-setup-command-handler.php:488
 #, php-format
 msgid "Using agent user `%1$s` (ID `%2$d`)."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:502
+#: includes/commands/handlers/class-setup-command-handler.php:503
 msgid "Set an agent user before creating a workspace."
 msgstr ""
 
 #. translators: %s: error message
-#: includes/commands/handlers/class-setup-command-handler.php:514
+#: includes/commands/handlers/class-setup-command-handler.php:515
 #, php-format
 msgid "Workspace creation failed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:521
+#: includes/commands/handlers/class-setup-command-handler.php:522
 msgid "Workspace created."
 msgstr ""
 
 #. translators: %d: error count
-#: includes/commands/handlers/class-setup-command-handler.php:535
+#: includes/commands/handlers/class-setup-command-handler.php:536
 #, php-format
 msgid "Agent file bootstrap failed with %d error(s)."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:542
+#: includes/commands/handlers/class-setup-command-handler.php:543
 msgid "Agent files created."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:668
+#: includes/commands/handlers/class-setup-command-handler.php:669
 #: src/js/admin/components/views/SettingsView.js:211
 msgid "Provider"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:669
+#: includes/commands/handlers/class-setup-command-handler.php:670
 #: src/js/admin/components/views/SettingsView.js:239
 msgid "Model"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:670
-#: includes/commands/handlers/class-setup-command-handler.php:795
+#: includes/commands/handlers/class-setup-command-handler.php:671
+#: includes/commands/handlers/class-setup-command-handler.php:796
 msgid "Test Connection"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:671
+#: includes/commands/handlers/class-setup-command-handler.php:672
 msgid "Agent User"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:672
+#: includes/commands/handlers/class-setup-command-handler.php:673
 msgid "Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:674
+#: includes/commands/handlers/class-setup-command-handler.php:675
 msgid "Done"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:702
+#: includes/commands/handlers/class-setup-command-handler.php:703
 #: src/panel/components/cards/SetupCard.jsx:55
 msgid "Setup Wizard"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:721
+#: includes/commands/handlers/class-setup-command-handler.php:722
 msgid "No configured providers found. Open provider settings, add credentials, then refresh."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:725
+#: includes/commands/handlers/class-setup-command-handler.php:726
 msgid "Open Provider Settings"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:731
-#: includes/commands/handlers/class-setup-command-handler.php:757
+#: includes/commands/handlers/class-setup-command-handler.php:732
+#: includes/commands/handlers/class-setup-command-handler.php:758
 msgid "Refresh Providers"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:739
+#: includes/commands/handlers/class-setup-command-handler.php:740
 msgid "Choose a configured provider to continue."
 msgstr ""
 
 #. translators: %s: provider display label
 #. translators: %s: model identifier
-#: includes/commands/handlers/class-setup-command-handler.php:744
-#: includes/commands/handlers/class-setup-command-handler.php:777
+#: includes/commands/handlers/class-setup-command-handler.php:745
+#: includes/commands/handlers/class-setup-command-handler.php:778
 #, php-format
 msgid "Use %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:751
+#: includes/commands/handlers/class-setup-command-handler.php:752
 msgid "Provider Settings"
 msgstr ""
 
 #. translators: %s: provider
-#: includes/commands/handlers/class-setup-command-handler.php:769
+#: includes/commands/handlers/class-setup-command-handler.php:770
 #, php-format
 msgid "Choose a model for `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:784
+#: includes/commands/handlers/class-setup-command-handler.php:785
 msgid "Refresh"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:791
+#: includes/commands/handlers/class-setup-command-handler.php:792
 msgid "Run a live test with the selected provider and model."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:801
+#: includes/commands/handlers/class-setup-command-handler.php:802
 #: src/panel/utils/toolDialogHelpers.js:7
 #: src/panel/utils/tools/updatePostsFindReplace.js:112
 msgid "Retry"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:811
+#: includes/commands/handlers/class-setup-command-handler.php:812
 msgid "Select the user account the agent will use. All actions taken by the agent will be performed as this user. A dedicated Contributor user is recommended to start, and more access can be granted later."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:815
+#: includes/commands/handlers/class-setup-command-handler.php:816
 msgid "Create Agent User"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:824
+#: includes/commands/handlers/class-setup-command-handler.php:825
 msgid "Use Current User"
 msgstr ""
 
 #. translators: %s: user login
-#: includes/commands/handlers/class-setup-command-handler.php:843
+#: includes/commands/handlers/class-setup-command-handler.php:844
 #, php-format
 msgid "Use Existing (%s)"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:855
+#: includes/commands/handlers/class-setup-command-handler.php:856
 msgid "Create a secure workspace for the agent to read/write files."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:859
+#: includes/commands/handlers/class-setup-command-handler.php:860
 msgid "Yes"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:860
+#: includes/commands/handlers/class-setup-command-handler.php:861
 msgid "No"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:862
+#: includes/commands/handlers/class-setup-command-handler.php:863
 msgid "Workspace path is not available until an agent user is selected."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:868
+#: includes/commands/handlers/class-setup-command-handler.php:869
 msgid "Use Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:869
+#: includes/commands/handlers/class-setup-command-handler.php:870
 msgid "Create Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:880
+#: includes/commands/handlers/class-setup-command-handler.php:881
 msgid "Clawpress uses a couple of agent files which you can edit to customize how your ClawPress agent behaves:"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:882
+#: includes/commands/handlers/class-setup-command-handler.php:883
 msgid "AGENTS.md - core agent operating guide for how your agent behaves."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:883
+#: includes/commands/handlers/class-setup-command-handler.php:884
 msgid "SOUL.md - core behavior and boundaries for your agent"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:884
+#: includes/commands/handlers/class-setup-command-handler.php:885
 msgid "USER.md - user profile, working relationship, so your agent knows who it is interacting with"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:885
+#: includes/commands/handlers/class-setup-command-handler.php:886
 msgid "HEARTBEAT.md - list of tasks for your agent to perform proactively on a regular basis"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:891
+#: includes/commands/handlers/class-setup-command-handler.php:892
 msgid "Create Agent Files"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:900
+#: includes/commands/handlers/class-setup-command-handler.php:901
 msgid "Setup is complete. ClawPress is ready to use."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:904
+#: includes/commands/handlers/class-setup-command-handler.php:905
 msgid "View Settings"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:910
+#: includes/commands/handlers/class-setup-command-handler.php:911
 msgid "View Agent Files"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:916
+#: includes/commands/handlers/class-setup-command-handler.php:917
 msgid "Say Hi to Your Agent"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:929
+#: includes/commands/handlers/class-setup-command-handler.php:930
 #: src/panel/components/cards/SetupCard.jsx:133
 msgid "Back"
 msgstr ""
@@ -951,7 +951,7 @@ msgid "Show plugin, provider, memory, and permissions status."
 msgstr ""
 
 #: includes/commands/handlers/class-status-command-handler.php:80
-#: includes/commands/handlers/class-test-command-handler.php:95
+#: includes/commands/handlers/class-test-command-handler.php:96
 msgid "Invalid usage. No arguments expected."
 msgstr ""
 
@@ -990,14 +990,14 @@ msgstr ""
 #. translators: %s: provider identifier
 #. translators: %s: provider slug
 #: includes/commands/handlers/class-status-command-handler.php:104
-#: includes/commands/handlers/class-test-command-handler.php:178
+#: includes/commands/handlers/class-test-command-handler.php:179
 #, php-format
 msgid "- Provider: %s"
 msgstr ""
 
 #. translators: %s: model identifier
 #: includes/commands/handlers/class-status-command-handler.php:109
-#: includes/commands/handlers/class-test-command-handler.php:183
+#: includes/commands/handlers/class-test-command-handler.php:184
 #, php-format
 msgid "- Model: %s"
 msgstr ""
@@ -1020,34 +1020,34 @@ msgstr ""
 msgid "- Setup completed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:63
+#: includes/commands/handlers/class-test-command-handler.php:64
 msgid "Test the saved provider and model connection."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:113
+#: includes/commands/handlers/class-test-command-handler.php:114
 msgid "No provider is saved. Set one with `/settings provider <provider>`."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:124
+#: includes/commands/handlers/class-test-command-handler.php:125
 msgid "No model is saved. Set one with `/settings model <model>`."
 msgstr ""
 
 #. translators: %s: provider slug
-#: includes/commands/handlers/class-test-command-handler.php:137
+#: includes/commands/handlers/class-test-command-handler.php:138
 #, php-format
 msgid "Saved provider `%s` is not configured with valid credentials."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:162
+#: includes/commands/handlers/class-test-command-handler.php:163
 msgid "Connection test failed: empty response from provider."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:175
+#: includes/commands/handlers/class-test-command-handler.php:176
 msgid "Connection test succeeded."
 msgstr ""
 
 #. translators: %s: short provider reply
-#: includes/commands/handlers/class-test-command-handler.php:188
+#: includes/commands/handlers/class-test-command-handler.php:189
 #, php-format
 msgid "- Reply: %s"
 msgstr ""
@@ -1112,74 +1112,74 @@ msgstr ""
 msgid "Tool execution completed."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:670
+#: includes/helpers/class-chat-helper.php:671
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:673
+#: includes/helpers/class-chat-helper.php:674
 msgid "Action required."
 msgstr ""
 
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-chat-helper.php:743
+#: includes/helpers/class-chat-helper.php:744
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-chat-helper.php:751
+#: includes/helpers/class-chat-helper.php:752
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:754
+#: includes/helpers/class-chat-helper.php:755
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:762
+#: includes/helpers/class-chat-helper.php:763
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:763
+#: includes/helpers/class-chat-helper.php:764
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:769
+#: includes/helpers/class-chat-helper.php:770
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:770
+#: includes/helpers/class-chat-helper.php:771
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:776
+#: includes/helpers/class-chat-helper.php:777
 msgid "Decline"
 msgstr ""
 
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:967
+#: includes/helpers/class-chat-helper.php:1002
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:1034
+#: includes/helpers/class-chat-helper.php:1069
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:1039
+#: includes/helpers/class-chat-helper.php:1074
 #: src/panel/Panel.jsx:109
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:1040
+#: includes/helpers/class-chat-helper.php:1075
 #: src/panel/Panel.jsx:111
 msgid "Provider error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:1062
+#: includes/helpers/class-chat-helper.php:1097
 #: src/panel/components/cards/ErrorCard.jsx:7
 #: src/panel/Panel.jsx:120
 msgid "Request Error"
