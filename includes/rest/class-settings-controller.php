@@ -91,16 +91,16 @@ final class Settings_Controller implements Route_Controller {
 						'validate_callback' => 'clawpress_validate_request_timeout',
 						'sanitize_callback' => 'clawpress_sanitize_request_timeout',
 					],
-					'agent_user_id'   => [
+					'agent_user_id'     => [
 						'required'          => false,
 						'validate_callback' => 'clawpress_validate_int',
 						'sanitize_callback' => 'clawpress_sanitize_int',
 					],
-					'memory_enabled'  => [
+					'memory_enabled'    => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
-					'setup_completed' => [
+					'setup_completed'   => [
 						'required'          => false,
 						'sanitize_callback' => 'clawpress_sanitize_boolean',
 					],
