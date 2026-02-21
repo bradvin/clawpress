@@ -25,6 +25,7 @@
     "lint:php": "composer lint",
     "test": "composer test",
     "lint:php:fix": "composer lint:fix",
+    "lint:changed": "bin/lint-changed",
     "lint:changed:js": "bin/lint-changed",
     "composer:cleanup": "composer install --prefer-dist --optimize-autoloader --no-dev",
     "predeploy": "npm run lint && npm run build && npm run composer:cleanup",

@@ -9,9 +9,16 @@ The AI for WordPress that actually does things
 ## Quick Start
 
 ```bash
-composer install
-npm install
+make bootstrap
 npm run build
+```
+
+## Common dev commands
+
+```bash
+make test
+make lint
+make lint-changed
 ```
 
 ## Key Features
@@ -115,7 +122,9 @@ Custom endpoints with permission callbacks and parameter validation.
 
 - PHP 8.1+
 - WordPress 6.9+
-- Node.js 18+
+- Composer 2+
+- Node.js 20+
+- npm 10+
 
 ## TODO
 
