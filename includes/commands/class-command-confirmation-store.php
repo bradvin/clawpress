@@ -288,7 +288,7 @@ final class Command_Confirmation_Store {
 			return bin2hex( random_bytes( 5 ) );
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );
-			return substr( md5( uniqid( (string) mt_rand(), true ) ), 0, 10 );
+			return substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 10 );
 		}
 	}
 
@@ -300,7 +300,7 @@ final class Command_Confirmation_Store {
 			return bin2hex( random_bytes( 8 ) );
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );
-			return substr( md5( uniqid( (string) mt_rand(), true ) ), 0, 16 );
+			return substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 16 );
 		}
 	}
 }

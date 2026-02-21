@@ -680,7 +680,7 @@ final class Setup_Command_Handler implements Command_Handler {
 			$step_index = 0;
 		}
 
-		$is_completed_state = $step_index === count( self::STEP_ORDER ) - 1;
+		$is_completed_state = ( count( self::STEP_ORDER ) - 1 ) === $step_index;
 		$steps              = [];
 		foreach ( self::STEP_ORDER as $index => $step_key ) {
 			$status = 'pending';

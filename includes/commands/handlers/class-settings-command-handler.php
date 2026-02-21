@@ -255,11 +255,7 @@ final class Settings_Command_Handler implements Command_Handler {
 			return (string) $value;
 		}
 
-		if ( function_exists( 'wp_json_encode' ) ) {
-			return wp_json_encode( $value ) ?: '';
-		}
-
-		$encoded = json_encode( $value );
-		return false === $encoded ? '' : $encoded;
+		$encoded_value = wp_json_encode( $value );
+		return false === $encoded_value ? '' : $encoded_value;
 	}
 }
