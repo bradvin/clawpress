@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+echo "[bootstrap] ClawPress environment bootstrap"
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "[bootstrap] Missing required command: $1" >&2
+    exit 1
+  }
+}
+
+need_cmd php
+need_cmd composer
+need_cmd node
+need_cmd npm
+
+PHP_VERSION="$(php -r 'echo PHP_VERSION;')"
+NODE_VERSION="$(node -v)"
+
+echo "[bootstrap] PHP:  $PHP_VERSION (required >= 8.1)"
+echo "[bootstrap] Node: $NODE_VERSION (required >= 20)"
+
+php -r 'exit(version_compare(PHP_VERSION, "8.1", ">=") ? 0 : 1);' || {
+  echo "[bootstrap] PHP 8.1+ is required" >&2
+  exit 1
+}
+
+node -e 'const major=parseInt(process.versions.node.split(".")[0],10); process.exit(major>=20?0:1)' || {
+  echo "[bootstrap] Node.js 20+ is required" >&2
+  exit 1
+}
+
+echo "[bootstrap] Installing Composer dependencies"
+composer install --no-interaction --prefer-dist
+
+echo "[bootstrap] Installing npm dependencies"
+npm ci
+
+echo "[bootstrap] Done"

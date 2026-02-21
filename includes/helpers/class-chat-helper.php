@@ -190,10 +190,10 @@ final class Chat_Helper {
 		}
 
 		try {
-			$context                       = $this->context_helper->build_model_context( $message );
-			$context['request_timeout']    = $this->settings_helper->get_request_timeout( $settings );
+			$context                        = $this->context_helper->build_model_context( $message );
+			$context['request_timeout']     = $this->settings_helper->get_request_timeout( $settings );
 			$context['generation_settings'] = $this->settings_helper->get_generation_settings( $settings );
-			$online_reply_payload       = $this->normalize_online_reply_payload(
+			$online_reply_payload           = $this->normalize_online_reply_payload(
 				call_user_func(
 					$this->online_reply_generator,
 					$context,
@@ -201,10 +201,10 @@ final class Chat_Helper {
 					$model
 				)
 			);
-			$reply                      = trim( (string) $online_reply_payload['reply'] );
-			$card                       = $online_reply_payload['card'];
-			$context_usage              = $online_reply_payload['context'];
-			$tool_calls                 = $online_reply_payload['tool_calls'];
+			$reply                          = trim( (string) $online_reply_payload['reply'] );
+			$card                           = $online_reply_payload['card'];
+			$context_usage                  = $online_reply_payload['context'];
+			$tool_calls                     = $online_reply_payload['tool_calls'];
 
 			if ( '' === $reply && null === $card ) {
 				return [
@@ -260,16 +260,16 @@ final class Chat_Helper {
 	 * }
 	 */
 	private function generate_online_reply( array $context, string $provider, string $model ): array {
-		$current_message          = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
-		$system_prompt            = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
-		$request_timeout          = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 45;
-		$generation_settings      = isset( $context['generation_settings'] ) && is_array( $context['generation_settings'] )
+		$current_message     = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
+		$system_prompt       = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
+		$request_timeout     = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 45;
+		$generation_settings = isset( $context['generation_settings'] ) && is_array( $context['generation_settings'] )
 			? $this->normalize_generation_settings( $context['generation_settings'] )
 			: $this->settings_helper->get_generation_settings();
-		$history_messages         = $this->normalize_history_messages( $context );
-		$tool_declarations        = $this->normalize_tool_declarations( $context );
-		$requesting_user_id       = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
-		$execution_user_id        = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
+		$history_messages    = $this->normalize_history_messages( $context );
+		$tool_declarations   = $this->normalize_tool_declarations( $context );
+		$requesting_user_id  = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
+		$execution_user_id   = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
 		$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
 
 		$conversation = $history_messages;
@@ -710,7 +710,7 @@ final class Chat_Helper {
 			return null;
 		}
 
-		$batch_id  = isset( $confirmation_batch['batch_id'] ) ? strtolower( trim( (string) $confirmation_batch['batch_id'] ) ) : '';
+		$batch_id   = isset( $confirmation_batch['batch_id'] ) ? strtolower( trim( (string) $confirmation_batch['batch_id'] ) ) : '';
 		$expires_at = isset( $confirmation_batch['expires_at'] ) ? (int) $confirmation_batch['expires_at'] : 0;
 		$calls      = isset( $confirmation_batch['calls'] ) && is_array( $confirmation_batch['calls'] )
 			? array_values( $confirmation_batch['calls'] )
@@ -720,7 +720,7 @@ final class Chat_Helper {
 			return null;
 		}
 
-		$tool_names = array_values(
+		$tool_names    = array_values(
 			array_unique(
 				array_filter(
 					array_map(
@@ -732,8 +732,8 @@ final class Chat_Helper {
 				)
 			)
 		);
-		$total_calls = count( $calls );
-		$expires_at  = $expires_at > 0 ? $expires_at : time();
+		$total_calls   = count( $calls );
+		$expires_at    = $expires_at > 0 ? $expires_at : time();
 		$expires_label = function_exists( 'wp_date' )
 			? wp_date( 'Y-m-d H:i:s', $expires_at )
 			: gmdate( 'Y-m-d H:i:s', $expires_at );
@@ -881,7 +881,7 @@ final class Chat_Helper {
 	 * Gracefully ignores unsupported parameters (or provider-specific rejections)
 	 * by catching option-level exceptions and continuing with the remaining options.
 	 *
-	 * @param PromptBuilder $builder Prompt builder.
+	 * @param PromptBuilder       $builder Prompt builder.
 	 * @param array<string,mixed> $generation_settings Generation settings.
 	 * @param string              $provider Provider identifier.
 	 * @param string              $model Model identifier.

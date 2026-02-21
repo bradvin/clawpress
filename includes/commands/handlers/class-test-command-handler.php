@@ -221,7 +221,7 @@ final class Test_Command_Handler implements Command_Handler {
 	/**
 	 * Apply generation settings to prompt builder, ignoring unsupported options.
 	 *
-	 * @param object $builder Prompt builder instance.
+	 * @param object              $builder Prompt builder instance.
 	 * @param array<string,mixed> $generation_settings Settings.
 	 * @param string              $provider Provider identifier.
 	 * @param string              $model Model identifier.

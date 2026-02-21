@@ -66,6 +66,8 @@ final class Reset_Command_Handler implements Command_Handler {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @param Command_Request $request Command request.
 	 */
 	public function handle( Command_Request $request ): Command_Response {
 		if ( '' !== $request->get_argument( 0 ) ) {
