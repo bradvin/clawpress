@@ -119,7 +119,7 @@ final class Commands {
 		if ( ! $response instanceof Command_Response ) {
 			$response = $this->dispatch( $request );
 		}
-		$reply    = clawpress_sanitize_multiline_text( $response->get_text() );
+		$reply = clawpress_sanitize_multiline_text( $response->get_text() );
 
 		return [
 			'reply'       => $reply,

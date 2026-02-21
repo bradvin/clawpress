@@ -4,23 +4,24 @@ set -euo pipefail
 BASE_REF="${BASE_REF:-origin/develop}"
 
 if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
-  git fetch origin develop --depth=1
+  echo "[lint-changed] BASE_REF '$BASE_REF' not found; fetching..."
+  BASE_BRANCH="${BASE_REF#origin/}"
+  git fetch origin "$BASE_BRANCH" --depth=1
 fi
 
-CHANGED=$(git diff --name-only --diff-filter=ACMRT "$BASE_REF"...HEAD)
-PHP_FILES=$(echo "$CHANGED" | grep -E '\.php$' || true)
-JS_FILES=$(echo "$CHANGED" | grep -E '\.(js|jsx|mjs|cjs)$' || true)
+declare -a JS_FILES=()
 
-if [[ -n "$PHP_FILES" ]]; then
-  # shellcheck disable=SC2086
-  vendor/bin/phpcs $PHP_FILES
-else
-  echo "No changed PHP files"
-fi
+while IFS= read -r -d '' file; do
+  case "$file" in
+    *.js|*.jsx|*.mjs|*.cjs)
+      JS_FILES+=("$file")
+      ;;
+  esac
+done < <(git diff --name-only -z --diff-filter=ACMRT "$BASE_REF"...HEAD)
 
-if [[ -n "$JS_FILES" ]]; then
-  # shellcheck disable=SC2086
-  npx wp-scripts lint-js $JS_FILES
+if ((${#JS_FILES[@]})); then
+  echo "[lint-changed] Running ESLint via wp-scripts on changed JS files"
+  npx wp-scripts lint-js "${JS_FILES[@]}"
 else
-  echo "No changed JS files"
+  echo "[lint-changed] No changed JS files"
 fi

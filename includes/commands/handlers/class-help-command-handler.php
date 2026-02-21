@@ -109,6 +109,8 @@ final class Help_Command_Handler implements Command_Handler {
 
 	/**
 	 * {@inheritDoc}
+	 *
+	 * @param Command_Request $request Command request.
 	 */
 	public function handle( Command_Request $request ): Command_Response {
 		unset( $request );

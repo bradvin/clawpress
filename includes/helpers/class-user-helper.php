@@ -165,6 +165,7 @@ final class User_Helper {
 				'orderby'  => 'ID',
 				'order'    => 'ASC',
 				'fields'   => 'ids',
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Agent users are identified via this dedicated meta key.
 				'meta_key' => self::AGENT_USER_META_KEY,
 			]
 		);
