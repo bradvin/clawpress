@@ -28,13 +28,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - id: changed-js
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            js:
+              - '**/*.js'
+              - '**/*.jsx'
+              - '**/*.mjs'
+              - '**/*.cjs'
       - uses: actions/setup-node@v4
+        if: steps.changed-js.outputs.js == 'true'
         with:
           node-version: '20'
           cache: npm
       - name: Install dependencies
+        if: steps.changed-js.outputs.js == 'true'
         run: npm ci
       - name: Lint changed JS files only
+        if: steps.changed-js.outputs.js == 'true'
         env:
           BASE_REF: origin/${{ github.base_ref }}
         run: npm run lint:changed:js
+      - name: Skip JS lint (no JS changes)
+        if: steps.changed-js.outputs.js != 'true'
+        run: echo "No JS changes; skipping JS lint."
