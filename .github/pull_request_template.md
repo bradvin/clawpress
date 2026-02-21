@@ -4,8 +4,8 @@
 
 ## Validation
 - [ ] `composer test`
-- [ ] `vendor/bin/phpcs`
-- [ ] `npm run lint:js`
+- [ ] `composer lint`
+- [ ] `npm run lint:changed:js`
 
 Commands/output notes:
 
