@@ -13,6 +13,8 @@ use ClawPress\Abilities\Abilities;
 use ClawPress\AdminPage\Admin_Page;
 use ClawPress\Heartbeat\Heartbeat;
 use ClawPress\Helpers\Action_Log_Helper;
+use ClawPress\Helpers\Agent_Run_Store;
+use ClawPress\Helpers\Agent_Session_Store;
 use ClawPress\Helpers\Panel_Helper;
 use ClawPress\Panel\Panel;
 use ClawPress\PostTypes\Post_Types;
@@ -62,6 +64,8 @@ final class Plugin {
 	 */
 	public static function activate(): void {
 		Action_Log_Helper::get_instance()->create_table();
+		Agent_Session_Store::get_instance()->create_table();
+		Agent_Run_Store::get_instance()->create_table();
 
 		$user_id = get_current_user_id();
 		if ( $user_id <= 0 ) {
