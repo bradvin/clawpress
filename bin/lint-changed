@@ -5,7 +5,8 @@ BASE_REF="${BASE_REF:-origin/develop}"
 
 if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
   echo "[lint-changed] BASE_REF '$BASE_REF' not found; fetching..."
-  git fetch origin develop --depth=1
+  BASE_BRANCH="${BASE_REF#origin/}"
+  git fetch origin "$BASE_BRANCH" --depth=1
 fi
 
 CHANGED=$(git diff --name-only --diff-filter=ACMRT "$BASE_REF"...HEAD)
