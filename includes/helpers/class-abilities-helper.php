@@ -65,12 +65,20 @@ final class Abilities_Helper {
 	private Action_Log_Helper $action_log_helper;
 
 	/**
+	 * Policy helper.
+	 *
+	 * @var Policy_Helper
+	 */
+	private Policy_Helper $policy_helper;
+
+	/**
 	 * Constructor.
 	 */
 	private function __construct() {
 		$this->settings_helper   = Settings_Helper::get_instance();
 		$this->security          = Security::get_instance();
 		$this->action_log_helper = Action_Log_Helper::get_instance();
+		$this->policy_helper     = Policy_Helper::get_instance();
 	}
 
 	/**
@@ -194,6 +202,20 @@ final class Abilities_Helper {
 		$allowed_confirmation_tokens = $this->normalize_allowed_confirmation_tokens(
 			$execution_context['allowed_confirmation_tokens'] ?? null
 		);
+		$trigger_type                = isset( $execution_context['trigger_type'] )
+			? (string) $execution_context['trigger_type']
+			: 'chat';
+		$runtime_policy              = isset( $execution_context['runtime_policy'] ) && is_array( $execution_context['runtime_policy'] )
+			? $execution_context['runtime_policy']
+			: $this->policy_helper->resolve_runtime_policy(
+				$trigger_type,
+				isset( $execution_context['session_metadata'] ) && is_array( $execution_context['session_metadata'] )
+					? $execution_context['session_metadata']
+					: [],
+				isset( $execution_context['policy_overrides'] ) && is_array( $execution_context['policy_overrides'] )
+					? $execution_context['policy_overrides']
+					: []
+			);
 
 		$args_json = wp_json_encode( $args );
 		$args_hash = false !== $args_json ? hash( 'sha256', (string) $args_json ) : '';
@@ -255,8 +277,52 @@ final class Abilities_Helper {
 			return $payload;
 		}
 
-		$safety_class = $this->infer_safety_class( $ability );
-		if ( ! $skip_confirmation && $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
+		$safety_class   = $this->infer_safety_class( $ability );
+		$is_destructive = 'destructive' === $safety_class;
+
+		if ( ! $this->is_policy_enabled( $runtime_policy['allow_tools'] ?? true ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_tools_denied',
+				__( 'Tool execution is blocked by runtime policy.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_tools'
+			);
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+			return $payload;
+		}
+
+		if ( $is_destructive && ! $this->is_policy_enabled( $runtime_policy['allow_destructive_tools'] ?? true ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_destructive_tools_denied',
+				__( 'Destructive tools are not allowed for this runtime trigger.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_destructive_tools'
+			);
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+			return $payload;
+		}
+
+		if ( 'file_delete' === $normalized_tool_name && ! $this->is_policy_enabled( $runtime_policy['allow_file_delete'] ?? true ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_file_delete_denied',
+				__( 'File delete is blocked by runtime policy.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_file_delete'
+			);
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+			return $payload;
+		}
+
+		if ( $is_destructive && ! $skip_confirmation && $this->is_policy_enabled( $runtime_policy['require_confirmation_for_destructive'] ?? true ) && $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
 			if ( 'batch' === $confirmation_scope ) {
 				$payload = [
 					'success'               => false,
@@ -467,6 +533,56 @@ final class Abilities_Helper {
 		}
 
 		return 'write';
+	}
+
+	/**
+	 * Check whether a policy field is enabled.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	private function is_policy_enabled( $value ): bool {
+		return function_exists( 'clawpress_sanitize_boolean' )
+			? clawpress_sanitize_boolean( $value )
+			: (bool) $value;
+	}
+
+	/**
+	 * Build a structured policy-violation payload.
+	 *
+	 * @param string              $code Error code.
+	 * @param string              $message Error message.
+	 * @param string              $tool_name Tool name.
+	 * @param string              $ability_name Ability ID.
+	 * @param string              $safety_class Safety class.
+	 * @param array<string,mixed> $runtime_policy Resolved runtime policy.
+	 * @param string              $decision Decision outcome.
+	 * @return array<string,mixed>
+	 */
+	private function build_policy_violation_payload(
+		string $code,
+		string $message,
+		string $tool_name,
+		string $ability_name,
+		string $safety_class,
+		array $runtime_policy,
+		string $decision
+	): array {
+		return [
+			'success'      => false,
+			'error'        => [
+				'code'    => $code,
+				'message' => $message,
+			],
+			'tool'         => $tool_name,
+			'ability'      => $ability_name,
+			'safety_class' => $safety_class,
+			'policy'       => [
+				'trigger_type'   => isset( $runtime_policy['trigger_type'] ) ? (string) $runtime_policy['trigger_type'] : 'chat',
+				'policy_profile' => isset( $runtime_policy['policy_profile'] ) ? (string) $runtime_policy['policy_profile'] : 'default',
+				'on_violation'   => isset( $runtime_policy['on_policy_violation'] ) ? (string) $runtime_policy['on_policy_violation'] : 'deny',
+				'decision'       => $decision,
+			],
+		];
 	}
 
 	/**
