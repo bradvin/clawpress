@@ -357,11 +357,11 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * Execute connection test step.
 	 */
 	private function test_connection(): Command_Response {
-		$settings        = $this->settings_helper->get_settings();
-		$provider        = clawpress_sanitize_provider( $settings['provider'] ?? '' );
-		$model           = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
-		$model_is_valid  = $this->is_model_valid_for_provider( $provider, $model );
-		$request_timeout    = $this->settings_helper->get_request_timeout( $settings );
+		$settings            = $this->settings_helper->get_settings();
+		$provider            = clawpress_sanitize_provider( $settings['provider'] ?? '' );
+		$model               = $this->sanitize_model_id( (string) ( $settings['model'] ?? '' ) );
+		$model_is_valid      = $this->is_model_valid_for_provider( $provider, $model );
+		$request_timeout     = $this->settings_helper->get_request_timeout( $settings );
 		$generation_settings = $this->settings_helper->get_generation_settings( $settings );
 
 		if ( '' === $provider || '' === $model || ! $model_is_valid ) {
@@ -680,7 +680,7 @@ final class Setup_Command_Handler implements Command_Handler {
 			$step_index = 0;
 		}
 
-		$is_completed_state = $step_index === count( self::STEP_ORDER ) - 1;
+		$is_completed_state = ( count( self::STEP_ORDER ) - 1 ) === $step_index;
 		$steps              = [];
 		foreach ( self::STEP_ORDER as $index => $step_key ) {
 			$status = 'pending';
@@ -1120,7 +1120,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	/**
 	 * Apply generation settings to prompt builder, ignoring unsupported options.
 	 *
-	 * @param object $builder Prompt builder instance.
+	 * @param object              $builder Prompt builder instance.
 	 * @param array<string,mixed> $generation_settings Settings.
 	 * @param string              $provider Provider identifier.
 	 * @param string              $model Model identifier.

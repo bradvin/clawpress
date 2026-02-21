@@ -26,47 +26,47 @@ final class Settings_Helper {
 	 * @var array<string,array<string,mixed>>
 	 */
 	private const SETTINGS = [
-		'provider'            => [
+		'provider'          => [
 			'default'  => '',
 			'sanitize' => 'clawpress_sanitize_provider',
 		],
-		'model'               => [
+		'model'             => [
 			'default'  => '',
 			'sanitize' => 'sanitize_text_field',
 		],
-		'temperature'         => [
+		'temperature'       => [
 			'default'  => 0.2,
 			'sanitize' => 'clawpress_sanitize_temperature',
 		],
-		'top_p'               => [
+		'top_p'             => [
 			'default'  => 0.9,
 			'sanitize' => 'clawpress_sanitize_top_p',
 		],
-		'max_output_tokens'   => [
+		'max_output_tokens' => [
 			'default'  => 1200,
 			'sanitize' => 'clawpress_sanitize_max_output_tokens',
 		],
-		'frequency_penalty'   => [
+		'frequency_penalty' => [
 			'default'  => 0.2,
 			'sanitize' => 'clawpress_sanitize_frequency_penalty',
 		],
-		'presence_penalty'    => [
+		'presence_penalty'  => [
 			'default'  => 0.0,
 			'sanitize' => 'clawpress_sanitize_presence_penalty',
 		],
-		'request_timeout'     => [
+		'request_timeout'   => [
 			'default'  => 45,
 			'sanitize' => 'clawpress_sanitize_request_timeout',
 		],
-		'agent_user_id'   => [
+		'agent_user_id'     => [
 			'default'  => 0,
 			'sanitize' => 'clawpress_sanitize_int',
 		],
-		'memory_enabled'  => [
+		'memory_enabled'    => [
 			'default'  => false,
 			'sanitize' => 'clawpress_sanitize_boolean',
 		],
-		'setup_completed' => [
+		'setup_completed'   => [
 			'default'  => false,
 			'sanitize' => 'clawpress_sanitize_boolean',
 		],

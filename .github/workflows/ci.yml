@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  php:
+    name: PHP (Unit tests + lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Run PHP Unit tests
+        run: composer test
+      - name: Run PHP CodeSniffer
+        run: composer lint
+
+  lint-changed-js:
+    name: JS Lint (changed files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: changed-js
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            js:
+              - '**/*.js'
+              - '**/*.jsx'
+              - '**/*.mjs'
+              - '**/*.cjs'
+      - uses: actions/setup-node@v4
+        if: steps.changed-js.outputs.js == 'true'
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        if: steps.changed-js.outputs.js == 'true'
+        run: npm ci
+      - name: Lint changed JS files only
+        if: steps.changed-js.outputs.js == 'true'
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: npm run lint:changed:js
+      - name: Skip JS lint (no JS changes)
+        if: steps.changed-js.outputs.js != 'true'
+        run: echo "No JS changes; skipping JS lint."

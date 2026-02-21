@@ -50,18 +50,18 @@ if ( ! function_exists( 'clawpress_sanitize_generation_float' ) ) {
 	 * Sanitize a model-generation float setting.
 	 *
 	 * @param mixed $value Raw value.
-	 * @param float $default Default value.
+	 * @param float $default_value Default value.
 	 * @param float $min Minimum allowed value.
 	 * @param float $max Maximum allowed value.
 	 */
-	function clawpress_sanitize_generation_float( $value, float $default, float $min, float $max ): float {
+	function clawpress_sanitize_generation_float( $value, float $default_value, float $min, float $max ): float {
 		if ( ! is_numeric( $value ) ) {
-			return $default;
+			return $default_value;
 		}
 
 		$normalized = (float) $value;
 		if ( $normalized < $min || $normalized > $max ) {
-			return $default;
+			return $default_value;
 		}
 
 		return $normalized;
@@ -135,10 +135,10 @@ if ( ! function_exists( 'clawpress_sanitize_penalty' ) ) {
 	 * Sanitize frequency/presence penalties.
 	 *
 	 * @param mixed $value Raw value.
-	 * @param float $default Default value.
+	 * @param float $default_value Default value.
 	 */
-	function clawpress_sanitize_penalty( $value, float $default ): float {
-		return clawpress_sanitize_generation_float( $value, $default, -2.0, 2.0 );
+	function clawpress_sanitize_penalty( $value, float $default_value ): float {
+		return clawpress_sanitize_generation_float( $value, $default_value, -2.0, 2.0 );
 	}
 }
 

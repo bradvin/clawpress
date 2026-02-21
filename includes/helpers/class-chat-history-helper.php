@@ -70,11 +70,11 @@ final class Chat_History_Helper {
 	/**
 	 * Append a message to a user's history.
 	 *
-	 * @param string                   $role Message role.
-	 * @param string                   $content Message content.
-	 * @param array<string,mixed>|null      $card Optional card metadata.
+	 * @param string                              $role Message role.
+	 * @param string                              $content Message content.
+	 * @param array<string,mixed>|null            $card Optional card metadata.
 	 * @param array<int,array<string,mixed>>|null $tool_calls Optional tool-call trace rows.
-	 * @param int|null                      $user_id User ID.
+	 * @param int|null                            $user_id User ID.
 	 */
 	public function append_history_message( string $role, string $content, ?array $card = null, ?array $tool_calls = null, ?int $user_id = null ): void {
 		$items      = $this->get_history_items( $user_id );
@@ -221,13 +221,13 @@ final class Chat_History_Helper {
 			return null;
 		}
 
-		$ability = isset( $tool_call['ability'] ) ? sanitize_text_field( (string) $tool_call['ability'] ) : '';
-		$status  = isset( $tool_call['status'] ) ? strtolower( sanitize_text_field( (string) $tool_call['status'] ) ) : 'success';
-		$status  = in_array( $status, [ 'success', 'error', 'requires_confirmation' ], true ) ? $status : 'success';
-		$message = isset( $tool_call['message'] ) ? sanitize_text_field( (string) $tool_call['message'] ) : '';
-		$args    = isset( $tool_call['args'] ) && is_array( $tool_call['args'] ) ? $tool_call['args'] : [];
-		$round    = isset( $tool_call['round'] ) ? max( 1, (int) $tool_call['round'] ) : 1;
-		$sequence = isset( $tool_call['sequence'] ) ? max( 1, (int) $tool_call['sequence'] ) : 1;
+		$ability     = isset( $tool_call['ability'] ) ? sanitize_text_field( (string) $tool_call['ability'] ) : '';
+		$status      = isset( $tool_call['status'] ) ? strtolower( sanitize_text_field( (string) $tool_call['status'] ) ) : 'success';
+		$status      = in_array( $status, [ 'success', 'error', 'requires_confirmation' ], true ) ? $status : 'success';
+		$message     = isset( $tool_call['message'] ) ? sanitize_text_field( (string) $tool_call['message'] ) : '';
+		$args        = isset( $tool_call['args'] ) && is_array( $tool_call['args'] ) ? $tool_call['args'] : [];
+		$round       = isset( $tool_call['round'] ) ? max( 1, (int) $tool_call['round'] ) : 1;
+		$sequence    = isset( $tool_call['sequence'] ) ? max( 1, (int) $tool_call['sequence'] ) : 1;
 		$recorded_at = isset( $tool_call['recorded_at'] ) && is_numeric( $tool_call['recorded_at'] )
 			? max( 0, (int) $tool_call['recorded_at'] )
 			: null;
