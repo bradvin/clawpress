@@ -175,7 +175,7 @@ final class Test_Command_Handler implements Command_Handler {
 					[
 						__( 'Connection test succeeded.', 'clawpress' ),
 						sprintf(
-							/* translators: %s: provider slug */
+							/* translators: %s: provider ID or slug */
 							__( '- Provider: %s', 'clawpress' ),
 							$configured_provider
 						),
