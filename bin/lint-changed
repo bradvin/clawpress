@@ -12,7 +12,7 @@ fi
 declare -a JS_FILES=()
 
 while IFS= read -r -d '' file; do
-  if [[ "$file" == ideas/* ]]; then
+  if [[ "$file" == ideas/* || "$file" == build/* ]]; then
     continue
   fi
 
