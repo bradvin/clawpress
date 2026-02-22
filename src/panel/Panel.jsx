@@ -1,3 +1,6 @@
+/* eslint-env browser */
+/* global CLAWPRESS_PANEL */
+
 import { Fragment, useEffect, useRef, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import PanelHeader from './components/PanelHeader';
