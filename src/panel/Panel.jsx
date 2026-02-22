@@ -66,6 +66,10 @@ const Panel = () => {
 	const typingTimerRef = useRef( null );
 	const panelStateSyncTimerRef = useRef( null );
 	const welcomeCardSeenRef = useRef( false );
+	const appendMessageRef = useRef( null );
+	const normalizeHistoryItemsRef = useRef( null );
+	const buildClientRef = useRef( null );
+	const requestStatusRef = useRef( null );
 
 	const currentStreamTextRef = useRef( currentStreamText );
 	const toolPlansRef = useRef( toolPlans );
@@ -340,16 +344,6 @@ const Panel = () => {
 		ephemeralStatusIdRef.current = null;
 	};
 
-	const syncAdminBarState = () => {
-		const link = document.querySelector(
-			'#wp-admin-bar-clawpress-toggle > a'
-		);
-		if ( ! link ) {
-			return;
-		}
-		link.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
-	};
-
 	useEffect(
 		() => localStorage.setItem( 'clawpress_open', JSON.stringify( open ) ),
 		[ open ]
@@ -364,7 +358,12 @@ const Panel = () => {
 			'--clawpress-panel-width',
 			`${ width }px`
 		);
-		syncAdminBarState();
+		const link = document.querySelector(
+			'#wp-admin-bar-clawpress-toggle > a'
+		);
+		if ( link ) {
+			link.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
+		}
 	}, [ open, width ] );
 	useEffect( () => {
 		localStorage.setItem( 'clawpress_theme', themeMode );
@@ -701,12 +700,19 @@ const Panel = () => {
 			setStatusLoading( false );
 		}
 	};
+	appendMessageRef.current = appendMessage;
+	normalizeHistoryItemsRef.current = normalizeHistoryItems;
+	buildClientRef.current = buildClient;
+	requestStatusRef.current = requestStatus;
 
 	useEffect( () => {
 		let mounted = true;
 
 		const initializePanelState = async () => {
-			const client = buildClient();
+			const client = buildClientRef.current?.();
+			if ( ! client ) {
+				return;
+			}
 
 			try {
 				const panelStateResponse = await client.getPanelState?.();
@@ -761,9 +767,10 @@ const Panel = () => {
 					return;
 				}
 
-				const historyMessages = normalizeHistoryItems(
-					historyResponse?.items || []
-				);
+				const historyMessages =
+					normalizeHistoryItemsRef.current?.(
+						historyResponse?.items || []
+					) || [];
 				const shouldShowWelcomeCard =
 					historyMessages.length === 0 &&
 					! welcomeCardSeenRef.current;
@@ -815,7 +822,7 @@ const Panel = () => {
 				if ( ! mounted ) {
 					return;
 				}
-				appendMessage(
+				appendMessageRef.current?.(
 					'system',
 					__( 'Unable to load chat history.', 'clawpress' )
 				);
@@ -837,10 +844,10 @@ const Panel = () => {
 		if ( ! open ) {
 			return;
 		}
-		requestStatus( true );
+		requestStatusRef.current?.( true );
 
 		const intervalId = setInterval( () => {
-			requestStatus( true );
+			requestStatusRef.current?.( true );
 		}, 15000 );
 
 		return () => clearInterval( intervalId );
@@ -864,9 +871,8 @@ const Panel = () => {
 		}
 
 		panelStateSyncTimerRef.current = setTimeout( () => {
-			buildClient()
-				.setPanelState?.( payload )
-				.catch( () => {} );
+			const client = buildClientRef.current?.();
+			client?.setPanelState?.( payload ).catch( () => {} );
 		}, 350 );
 
 		return () => {
