@@ -5,7 +5,6 @@ const ToolDialogForm = ( {
 	fields,
 	initialValues,
 	onSubmit,
-	onPreview,
 	onRun,
 	onCancel,
 	disabled,
@@ -61,6 +60,64 @@ const ToolDialogForm = ( {
 					);
 				}
 
+				let inputControl = null;
+				if ( field.type === 'textarea' ) {
+					inputControl = (
+						<textarea
+							{ ...common }
+							className="clawpress-tool-dialog-input"
+							rows={ field.rows || 3 }
+							value={ value ?? '' }
+							onChange={ ( e ) =>
+								updateValue( field.name, e.target.value )
+							}
+						/>
+					);
+				} else if ( field.type === 'select' ) {
+					inputControl = (
+						<select
+							{ ...common }
+							className="clawpress-tool-dialog-input"
+							value={ value ?? '' }
+							onChange={ ( e ) =>
+								updateValue( field.name, e.target.value )
+							}
+						>
+							{ field.options?.map( ( option ) => (
+								<option
+									key={ option.value }
+									value={ option.value }
+								>
+									{ option.label }
+								</option>
+							) ) }
+						</select>
+					);
+				} else if ( field.type === 'checkbox' ) {
+					inputControl = (
+						<input
+							{ ...common }
+							type="checkbox"
+							checked={ Boolean( value ) }
+							onChange={ ( e ) =>
+								updateValue( field.name, e.target.checked )
+							}
+						/>
+					);
+				} else {
+					inputControl = (
+						<input
+							{ ...common }
+							className="clawpress-tool-dialog-input"
+							type={ field.type || 'text' }
+							value={ value ?? '' }
+							onChange={ ( e ) =>
+								updateValue( field.name, e.target.value )
+							}
+						/>
+					);
+				}
+
 				return (
 					<label
 						key={ field.name }
@@ -70,54 +127,7 @@ const ToolDialogForm = ( {
 						<span className="clawpress-tool-dialog-label">
 							{ field.label }
 						</span>
-						{ field.type === 'textarea' ? (
-							<textarea
-								{ ...common }
-								className="clawpress-tool-dialog-input"
-								rows={ field.rows || 3 }
-								value={ value ?? '' }
-								onChange={ ( e ) =>
-									updateValue( field.name, e.target.value )
-								}
-							/>
-						) : field.type === 'select' ? (
-							<select
-								{ ...common }
-								className="clawpress-tool-dialog-input"
-								value={ value ?? '' }
-								onChange={ ( e ) =>
-									updateValue( field.name, e.target.value )
-								}
-							>
-								{ field.options?.map( ( option ) => (
-									<option
-										key={ option.value }
-										value={ option.value }
-									>
-										{ option.label }
-									</option>
-								) ) }
-							</select>
-						) : field.type === 'checkbox' ? (
-							<input
-								{ ...common }
-								type="checkbox"
-								checked={ Boolean( value ) }
-								onChange={ ( e ) =>
-									updateValue( field.name, e.target.checked )
-								}
-							/>
-						) : (
-							<input
-								{ ...common }
-								className="clawpress-tool-dialog-input"
-								type={ field.type || 'text' }
-								value={ value ?? '' }
-								onChange={ ( e ) =>
-									updateValue( field.name, e.target.value )
-								}
-							/>
-						) }
+						{ inputControl }
 						{ field.help ? (
 							<span className="clawpress-tool-dialog-help">
 								{ field.help }

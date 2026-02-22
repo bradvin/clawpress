@@ -282,11 +282,14 @@ const SetupCard = ( { card, onSendAction, isBusy = false } ) => {
 		actionsWithBack.length > 0;
 	const hasButtonsSection =
 		showProviderPicker || showModelPicker || showActionButtons;
-	const selectedModelPrompt = isCustomModelSelected
-		? customModelValue
+	let selectedModelPrompt = '';
+	if ( isCustomModelSelected ) {
+		selectedModelPrompt = customModelValue
 			? `/setup model ${ customModelValue }`
-			: ''
-		: selectedModelAction?.prompt || '';
+			: '';
+	} else {
+		selectedModelPrompt = selectedModelAction?.prompt || '';
+	}
 	const primaryActionPrompt =
 		step === 'provider'
 			? selectedProviderAction?.prompt || ''

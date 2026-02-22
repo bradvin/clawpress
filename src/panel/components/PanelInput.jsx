@@ -58,21 +58,24 @@ const PanelInput = ( {
 		normalizedContextWindowTokens > 0
 			? Math.round( normalizedContextWindowTokens )
 			: 0;
-	const resolvedPercentUsed =
-		Number.isFinite( normalizedPercentUsed ) && normalizedPercentUsed >= 0
-			? Math.max(
-					0,
-					Math.min( 100, Math.round( normalizedPercentUsed ) )
-			  )
-			: contextWindowTokens > 0
-			? Math.max(
-					0,
-					Math.min(
-						100,
-						Math.round( ( usedTokens / contextWindowTokens ) * 100 )
-					)
-			  )
-			: null;
+	let resolvedPercentUsed = null;
+	if (
+		Number.isFinite( normalizedPercentUsed ) &&
+		normalizedPercentUsed >= 0
+	) {
+		resolvedPercentUsed = Math.max(
+			0,
+			Math.min( 100, Math.round( normalizedPercentUsed ) )
+		);
+	} else if ( contextWindowTokens > 0 ) {
+		resolvedPercentUsed = Math.max(
+			0,
+			Math.min(
+				100,
+				Math.round( ( usedTokens / contextWindowTokens ) * 100 )
+			)
+		);
+	}
 	const resolvedPercentLeft =
 		resolvedPercentUsed === null
 			? null

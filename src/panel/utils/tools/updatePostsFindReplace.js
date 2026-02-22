@@ -20,7 +20,6 @@ export const Renderer = ( {
 	const search = args.search ?? '';
 	const replace = args.replace ?? '';
 	const postStatus = args.post_status ?? 'any';
-	const dryRun = args.dry_run !== undefined ? args.dry_run : true;
 	const status = toolDialog.status || 'idle';
 	const error = toolDialog.error || null;
 	const result = toolDialog.result || null;
@@ -72,33 +71,11 @@ export const Renderer = ( {
 		status === 'cancelled'
 			? __( 'Update Posts - Find and Replace (Cancelled)', 'clawpress' )
 			: __( 'Update Posts - Find and Replace', 'clawpress' );
+	let dialogContent = null;
 
-	return (
-		<ToolDialogShell
-			status={ status }
-			title={ title }
-			canRerun={ canRerun }
-			policy={ toolPolicy }
-			isOpen={ isOpen }
-			error={ error }
-			showActions={ false }
-			onRun={ ( e ) => {
-				e.preventDefault();
-				e.stopPropagation();
-				handleRun( {
-					search,
-					replace,
-					post_status: postStatus,
-					dry_run: false,
-				} );
-			} }
-			onCancel={ ( e ) => {
-				e.preventDefault();
-				e.stopPropagation();
-				onCancel( toolDialog.id );
-			} }
-		>
-			{ status === 'cancelled' ? null : isError ? (
+	if ( status !== 'cancelled' ) {
+		if ( isError ) {
+			dialogContent = (
 				<div className="clawpress-tool-result-actions">
 					<button
 						className="button button-primary"
@@ -120,7 +97,9 @@ export const Renderer = ( {
 						{ __( 'Cancel', 'clawpress' ) }
 					</button>
 				</div>
-			) : status !== 'done' ? (
+			);
+		} else if ( status !== 'done' ) {
+			dialogContent = (
 				<ToolDialogForm
 					fields={ fields }
 					initialValues={ {
@@ -144,7 +123,9 @@ export const Renderer = ( {
 					}
 					onCancel={ () => onCancel( toolDialog.id ) }
 				/>
-			) : (
+			);
+		} else {
+			dialogContent = (
 				<div className="clawpress-tool-result">
 					<div className="clawpress-tool-result-summary">
 						<span>
@@ -221,7 +202,36 @@ export const Renderer = ( {
 						</div>
 					) : null }
 				</div>
-			) }
+			);
+		}
+	}
+
+	return (
+		<ToolDialogShell
+			status={ status }
+			title={ title }
+			canRerun={ canRerun }
+			policy={ toolPolicy }
+			isOpen={ isOpen }
+			error={ error }
+			showActions={ false }
+			onRun={ ( e ) => {
+				e.preventDefault();
+				e.stopPropagation();
+				handleRun( {
+					search,
+					replace,
+					post_status: postStatus,
+					dry_run: false,
+				} );
+			} }
+			onCancel={ ( e ) => {
+				e.preventDefault();
+				e.stopPropagation();
+				onCancel( toolDialog.id );
+			} }
+		>
+			{ dialogContent }
 		</ToolDialogShell>
 	);
 };

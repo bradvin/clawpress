@@ -126,19 +126,19 @@ export const startMockStream = ( {
 			'clawpress'
 		);
 
-	const responseText =
-		mode === 'tool' || mode === 'tool_error'
-			? __(
-					'I found a tool that can update posts. Here is the proposed change.',
-					'clawpress'
-			  )
-			: mode === 'long'
-			? longText
-			: sprintf(
-					/* translators: %s: user prompt */
-					__( 'Here is a mock response for: "%s"', 'clawpress' ),
-					prompt
-			  );
+	let responseText = sprintf(
+		/* translators: %s: user prompt */
+		__( 'Here is a mock response for: "%s"', 'clawpress' ),
+		prompt
+	);
+	if ( mode === 'tool' || mode === 'tool_error' ) {
+		responseText = __(
+			'I found a tool that can update posts. Here is the proposed change.',
+			'clawpress'
+		);
+	} else if ( mode === 'long' ) {
+		responseText = longText;
+	}
 
 	const tokens = tokenize( responseText );
 	let time = 150;
