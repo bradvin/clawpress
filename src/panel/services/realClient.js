@@ -131,12 +131,6 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			( promptTokens > 0 ? promptTokens : totalTokens );
 		const contextWindowTokens =
 			toPositiveNumber( rawContext.context_window_tokens ) ?? null;
-		const percentUsed = toNullablePercent( rawContext.percent_used );
-		const percentLeft = toNullablePercent( rawContext.percent_left );
-		const windowIsEstimated =
-			typeof rawContext.window_is_estimated === 'boolean'
-				? rawContext.window_is_estimated
-				: null;
 
 		if (
 			promptTokens === 0 &&
@@ -147,6 +141,13 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 		) {
 			return null;
 		}
+
+		const percentUsed = toNullablePercent( rawContext.percent_used );
+		const percentLeft = toNullablePercent( rawContext.percent_left );
+		const windowIsEstimated =
+			typeof rawContext.window_is_estimated === 'boolean'
+				? rawContext.window_is_estimated
+				: null;
 
 		return {
 			promptTokens,

@@ -65,6 +65,7 @@ const Panel = () => {
 	const isTypingRef = useRef( false );
 	const typingTimerRef = useRef( null );
 	const panelStateSyncTimerRef = useRef( null );
+	const welcomeCardSeenRef = useRef( false );
 
 	const currentStreamTextRef = useRef( currentStreamText );
 	const toolPlansRef = useRef( toolPlans );
@@ -382,12 +383,13 @@ const Panel = () => {
 				return;
 			}
 
-			const activeTag = document.activeElement?.tagName?.toLowerCase();
+			const activeElement = e.target?.ownerDocument?.activeElement;
+			const activeTag = activeElement?.tagName?.toLowerCase();
 			if (
 				activeTag === 'input' ||
 				activeTag === 'textarea' ||
 				activeTag === 'select' ||
-				document.activeElement?.isContentEditable
+				activeElement?.isContentEditable
 			) {
 				return;
 			}
@@ -705,7 +707,6 @@ const Panel = () => {
 
 		const initializePanelState = async () => {
 			const client = buildClient();
-			let resolvedPanelState = normalizePanelState( null );
 
 			try {
 				const panelStateResponse = await client.getPanelState?.();
@@ -713,7 +714,8 @@ const Panel = () => {
 					return;
 				}
 
-				resolvedPanelState = normalizePanelState( panelStateResponse );
+				const resolvedPanelState =
+					normalizePanelState( panelStateResponse );
 				if ( typeof resolvedPanelState.open === 'boolean' ) {
 					setOpen( resolvedPanelState.open );
 				}
@@ -723,6 +725,8 @@ const Panel = () => {
 				) {
 					setWidth( resolvedPanelState.width );
 				}
+				welcomeCardSeenRef.current =
+					resolvedPanelState.welcomeCardSeen === true;
 			} catch {
 				// Keep localStorage fallback.
 			}
@@ -762,7 +766,7 @@ const Panel = () => {
 				);
 				const shouldShowWelcomeCard =
 					historyMessages.length === 0 &&
-					resolvedPanelState.welcomeCardSeen !== true;
+					! welcomeCardSeenRef.current;
 
 				if ( shouldShowWelcomeCard ) {
 					const now = Date.now();
@@ -1147,9 +1151,11 @@ const Panel = () => {
 					statusLabel={ buildStatusLabel( statusSnapshot ) }
 					statusLoading={ statusLoading }
 				/>
-				<div
+				<button
+					type="button"
 					className="clawpress-drag-handle"
 					onMouseDown={ startDrag }
+					aria-label={ __( 'Resize panel', 'clawpress' ) }
 				/>
 				<PanelMessages
 					messages={ messages }
