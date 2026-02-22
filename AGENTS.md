@@ -172,18 +172,21 @@ All user-facing strings must be translatable.
 
 When writing or refactoring PHPUnit tests:
 
-- Keep production code aligned with real WordPress runtime expectations.
-- Do not add test-only `function_exists()` guards for core WordPress APIs just to satisfy PHPUnit.
-- If a test environment is missing a WordPress function, add a deterministic stub in `tests/Support/WordPressStubs.php`.
+- Never add test-only logic, boot contracts, or test-oriented exceptions/messages to plugin runtime code in `includes/` or `clawpress.php`.
+- Do not introduce production `assert_*` helpers, runtime throws, or `function_exists()` guards solely to make tests pass.
+- If PHPUnit needs a missing WordPress API, add a deterministic stub in `tests/Support/WordPressStubs.php` instead of changing plugin behavior.
 - When a stub needs state, store it in `WordPress_Stubs` and reset it in `WordPress_Stubs::reset()` so tests remain isolated.
 - Keep stubs minimal and behavior-focused: enough for assertions without recreating WordPress internals.
-- If behavior is truly optional in production (version-gated or feature-detected APIs), keep runtime guards and prefer covering both paths in tests.
+- Tests must validate real plugin behavior and observable outcomes, not internal test scaffolding.
+- Prefer exercising registered hooks with `do_action()`/`apply_filters()` and asserting side effects (registered menus/routes, enqueued assets, persisted meta/options, scheduler calls).
+- Avoid low-value tests that only assert stub presence (for example `function_exists()` contract lists) or only test helper assertions without behavior coverage.
+- If behavior is truly optional in production (version-gated or feature-detected APIs), keep runtime guards and cover both paths in tests.
 
 ### Verification Expectations
 
 - Run targeted PHPUnit tests for the changed module first.
 - Run the full PHPUnit suite when shared test support files (like `WordPressStubs.php`) are changed.
-- Prefer assertions that verify integration calls happened (for example submenu registration/removal and metadata checks).
+- Prefer assertions that verify integration calls and state transitions happened (for example submenu registration/removal and metadata checks).
 
 ## Important Notes
 
