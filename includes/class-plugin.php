@@ -45,7 +45,6 @@ final class Plugin {
 		// Initialize AI client. Goto Settings -> AI Credentials to set up.
 		add_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] );
 	}
-
 	/**
 	 * Get singleton instance.
 	 */

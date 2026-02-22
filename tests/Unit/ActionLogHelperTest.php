@@ -31,6 +31,7 @@ namespace ClawPress\Tests\Unit {
 use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Plugin;
 use ClawPress\Tests\Support\TestCase;
+use ClawPress\Tests\Support\WordPress_Stubs;
 
 /**
  * Minimal wpdb stub for action log helper tests.
@@ -144,6 +145,56 @@ final class ActionLogHelperTest extends TestCase {
 
 		$this->assertNotEmpty( $GLOBALS['clawpress_test_dbdelta_queries'] );
 		$this->assertStringContainsString( 'clawpress_action_logs', (string) $GLOBALS['clawpress_test_dbdelta_queries'][0] );
+	}
+
+	public function test_plugin_activation_initializes_default_panel_state_for_current_user_when_missing(): void {
+		WordPress_Stubs::$current_user_id = 27;
+
+		Plugin::activate();
+
+		$this->assertArrayHasKey( 27, WordPress_Stubs::$user_meta );
+		$this->assertArrayHasKey( 'clawpress_panel_state', WordPress_Stubs::$user_meta[27] );
+		$this->assertSame(
+			[
+				'open'              => true,
+				'width'             => 420,
+				'last_history_id'   => '',
+				'welcome_card_seen' => false,
+			],
+			WordPress_Stubs::$user_meta[27]['clawpress_panel_state']
+		);
+	}
+
+	public function test_plugin_activation_does_not_overwrite_existing_panel_state(): void {
+		WordPress_Stubs::$current_user_id = 48;
+		WordPress_Stubs::$user_meta[48]   = [
+			'clawpress_panel_state' => [
+				'open'              => false,
+				'width'             => 600,
+				'last_history_id'   => 'history-2',
+				'welcome_card_seen' => true,
+			],
+		];
+
+		Plugin::activate();
+
+		$this->assertSame(
+			[
+				'open'              => false,
+				'width'             => 600,
+				'last_history_id'   => 'history-2',
+				'welcome_card_seen' => true,
+			],
+			WordPress_Stubs::$user_meta[48]['clawpress_panel_state']
+		);
+	}
+
+	public function test_plugin_activation_skips_panel_state_when_no_authenticated_user(): void {
+		WordPress_Stubs::$current_user_id = 0;
+
+		Plugin::activate();
+
+		$this->assertArrayNotHasKey( 0, WordPress_Stubs::$user_meta );
 	}
 
 	public function test_log_event_persists_row_into_action_log_table(): void {
