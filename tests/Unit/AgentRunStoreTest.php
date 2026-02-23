@@ -337,5 +337,18 @@ final class AgentRunStoreTest extends TestCase {
 		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'success', null ) );
 		$this->assertSame( 0, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
 	}
+
+	public function test_complete_run_rejects_non_terminal_status(): void {
+		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
+		$claim      = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$lock_token = (string) $claim['lock_token'];
+
+		$completed = Agent_Run_Store::get_instance()->complete_run( $run_id, $lock_token, 'running' );
+
+		$this->assertFalse( $completed );
+		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
+		$this->assertSame( $lock_token, $GLOBALS['wpdb']->runs[ $run_id ]['lock_token'] );
+	}
 }
 }

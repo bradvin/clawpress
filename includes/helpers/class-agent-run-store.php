@@ -21,6 +21,13 @@ final class Agent_Run_Store {
 	private const TABLE_SUFFIX = 'clawpress_agent_runs';
 
 	/**
+	 * Allowed terminal run statuses.
+	 *
+	 * @var array<int,string>
+	 */
+	private const TERMINAL_STATUSES = [ 'success', 'failed', 'cancelled', 'canceled' ];
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var ?self
@@ -238,6 +245,9 @@ final class Agent_Run_Store {
 		global $wpdb;
 
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'update' ) || ! method_exists( $wpdb, 'query' ) ) {
+			return false;
+		}
+		if ( ! in_array( $status, self::TERMINAL_STATUSES, true ) ) {
 			return false;
 		}
 
