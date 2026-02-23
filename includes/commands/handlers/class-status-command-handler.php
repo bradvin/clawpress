@@ -102,7 +102,7 @@ final class Status_Command_Handler implements Command_Handler {
 				$mode
 			),
 			sprintf(
-				/* translators: %s: provider identifier */
+				/* translators: %s: provider ID or slug */
 				__( '- Provider: %s', 'clawpress' ),
 				(string) ( $status['provider']['id'] ?? $empty )
 			),

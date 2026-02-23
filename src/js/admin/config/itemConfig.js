@@ -22,8 +22,7 @@ export const fields = [
 		getValue: ( { item } ) => item.title?.rendered || '',
 		render: ( { item } ) => (
 			<a href={ item.link } target="_blank" rel="noopener noreferrer">
-				{ item.title?.rendered ||
-					__( '(no title)', 'clawpress' ) }
+				{ item.title?.rendered || __( '(no title)', 'clawpress' ) }
 			</a>
 		),
 	},
@@ -143,10 +142,7 @@ export const actions = () => [
 							isDestructive
 							onClick={ handleTrash }
 						>
-							{ __(
-								'Move to Trash',
-								'clawpress'
-							) }
+							{ __( 'Move to Trash', 'clawpress' ) }
 						</Button>
 					</Flex>
 				</div>
