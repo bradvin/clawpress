@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\TestCase;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 
 /**
- * Minimal wpdb stub for abilities helper action-log writes.
+ * Minimal wpdb stub for abilities helper agent-event writes.
  */
 final class AbilitiesHelperTestWpdb {
 	/**
@@ -101,9 +101,12 @@ final class AbilitiesHelperTest extends TestCase {
 
 		$this->assertTrue( $result['success'] );
 		$this->assertNotEmpty( $GLOBALS['wpdb']->insert_calls );
-		$this->assertSame( 12, $GLOBALS['wpdb']->insert_calls[0]['data']['requesting_user_id'] );
-		$this->assertSame( 9, $GLOBALS['wpdb']->insert_calls[0]['data']['execution_user_id'] );
+		$this->assertSame( 'wp_clawpress_agent_events', $GLOBALS['wpdb']->insert_calls[0]['table'] );
 		$this->assertSame( 'tool_call', $GLOBALS['wpdb']->insert_calls[0]['data']['event_type'] );
+		$payload = json_decode( (string) $GLOBALS['wpdb']->insert_calls[0]['data']['payload_json'], true );
+		$this->assertIsArray( $payload );
+		$this->assertSame( 12, $payload['requesting_user_id'] );
+		$this->assertSame( 9, $payload['execution_user_id'] );
 	}
 
 	public function test_destructive_tools_are_denied_for_heartbeat_trigger_policy(): void {

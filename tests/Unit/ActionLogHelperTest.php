@@ -30,6 +30,7 @@ namespace ClawPress\Tests\Unit {
 
 use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Plugin;
+use ClawPress\Stores\Action_Log_Store;
 use ClawPress\Tests\Support\TestCase;
 use ClawPress\Tests\Support\WordPress_Stubs;
 
@@ -129,15 +130,19 @@ final class ActionLogHelperTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function test_create_table_registers_clawpress_action_logs_schema(): void {
-		$helper = Action_Log_Helper::get_instance();
-		$result = $helper->create_table();
+	public function test_store_create_table_registers_clawpress_action_logs_schema(): void {
+		$result = Action_Log_Store::get_instance()->create_table();
 
 		$this->assertTrue( $result );
 		$this->assertIsArray( $GLOBALS['clawpress_test_dbdelta_queries'] );
 		$this->assertNotEmpty( $GLOBALS['clawpress_test_dbdelta_queries'] );
 		$this->assertStringContainsString( 'clawpress_action_logs', (string) $GLOBALS['clawpress_test_dbdelta_queries'][0] );
 		$this->assertStringContainsString( 'action_name', (string) $GLOBALS['clawpress_test_dbdelta_queries'][0] );
+	}
+
+	public function test_helper_does_not_expose_schema_methods(): void {
+		$this->assertFalse( method_exists( Action_Log_Helper::class, 'create_table' ) );
+		$this->assertFalse( method_exists( Action_Log_Helper::class, 'get_table_name' ) );
 	}
 
 	public function test_plugin_activation_creates_action_log_table(): void {
