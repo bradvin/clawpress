@@ -9,17 +9,14 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use ClawPress\Stores\Action_Log_Store;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
  * Central action log helper for writing/querying action/event records.
  */
 final class Action_Log_Helper {
-	/**
-	 * Database table suffix.
-	 */
-	private const TABLE_SUFFIX = 'clawpress_action_logs';
-
 	/**
 	 * Supported log status values.
 	 *
@@ -35,9 +32,16 @@ final class Action_Log_Helper {
 	private static ?self $instance = null;
 
 	/**
+	 * Store instance for DB access.
+	 */
+	private Action_Log_Store $store;
+
+	/**
 	 * Constructor.
 	 */
-	private function __construct() {}
+	private function __construct() {
+		$this->store = Action_Log_Store::get_instance();
+	}
 
 	/**
 	 * Get singleton instance.
@@ -54,59 +58,14 @@ final class Action_Log_Helper {
 	 * Resolve full action log table name.
 	 */
 	public function get_table_name(): string {
-		global $wpdb;
-
-		if ( ! $this->is_wpdb_ready( $wpdb ) ) {
-			return self::TABLE_SUFFIX;
-		}
-
-		return $wpdb->prefix . self::TABLE_SUFFIX;
+		return $this->store->get_table_name();
 	}
 
 	/**
 	 * Create/update action log table schema.
 	 */
 	public function create_table(): bool {
-		global $wpdb;
-
-		if ( ! $this->is_wpdb_ready( $wpdb ) ) {
-			return false;
-		}
-
-		$table_name      = $this->get_table_name();
-		$charset_collate = method_exists( $wpdb, 'get_charset_collate' )
-			? (string) $wpdb->get_charset_collate()
-			: '';
-
-		$sql = "CREATE TABLE {$table_name} (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			event_type varchar(64) NOT NULL DEFAULT 'event',
-			action_name varchar(191) NOT NULL,
-			status varchar(20) NOT NULL DEFAULT 'info',
-			message text NULL,
-			requesting_user_id bigint(20) unsigned NULL,
-			execution_user_id bigint(20) unsigned NULL,
-			context longtext NULL,
-			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			PRIMARY KEY  (id),
-			KEY event_type (event_type),
-			KEY action_name (action_name),
-			KEY status (status),
-			KEY requesting_user_id (requesting_user_id),
-			KEY execution_user_id (execution_user_id),
-			KEY created_at (created_at)
-		) {$charset_collate};";
-
-		if ( ! function_exists( 'dbDelta' ) ) {
-			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-		}
-
-		if ( ! function_exists( 'dbDelta' ) ) {
-			return false;
-		}
-
-		dbDelta( $sql );
-		return true;
+		return $this->store->create_table();
 	}
 
 	/**
@@ -116,12 +75,6 @@ final class Action_Log_Helper {
 	 * @param array<string,mixed> $args        Optional log payload.
 	 */
 	public function log_event( string $action_name, array $args = [] ): bool {
-		global $wpdb;
-
-		if ( ! $this->is_wpdb_ready( $wpdb ) || ! method_exists( $wpdb, 'insert' ) ) {
-			return false;
-		}
-
 		$normalized_action_name = $this->sanitize_action_name( $action_name );
 		if ( '' === $normalized_action_name ) {
 			return false;
@@ -156,9 +109,7 @@ final class Action_Log_Helper {
 			}
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- centralized logging insert for plugin action ledger.
-		$inserted = $wpdb->insert(
-			$this->get_table_name(),
+		return $this->store->insert_log(
 			[
 				'event_type'         => $event_type,
 				'action_name'        => $normalized_action_name,
@@ -167,19 +118,8 @@ final class Action_Log_Helper {
 				'requesting_user_id' => $requesting_user_id > 0 ? $requesting_user_id : null,
 				'execution_user_id'  => $execution_user_id > 0 ? $execution_user_id : null,
 				'context'            => $encoded_context,
-			],
-			[
-				'%s',
-				'%s',
-				'%s',
-				'%s',
-				'%d',
-				'%d',
-				'%s',
 			]
 		);
-
-		return false !== $inserted;
 	}
 
 	/**
@@ -189,68 +129,39 @@ final class Action_Log_Helper {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function get_recent_logs( array $args = [] ): array {
-		global $wpdb;
-
-		if ( ! $this->is_wpdb_ready( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_results' ) ) {
-			return [];
-		}
-
 		$limit  = isset( $args['limit'] ) ? (int) $args['limit'] : 50;
 		$offset = isset( $args['offset'] ) ? (int) $args['offset'] : 0;
 		$limit  = $limit > 0 ? min( $limit, 500 ) : 50;
 		$offset = $offset >= 0 ? $offset : 0;
 
-		$where_clauses = [];
-		$where_values  = [];
+		$query_args = [
+			'limit'  => $limit,
+			'offset' => $offset,
+		];
 
 		if ( isset( $args['event_type'] ) ) {
 			$event_type = $this->sanitize_event_type( (string) $args['event_type'] );
 			if ( '' !== $event_type ) {
-				$where_clauses[] = 'event_type = %s';
-				$where_values[]  = $event_type;
+				$query_args['event_type'] = $event_type;
 			}
 		}
 
 		if ( isset( $args['status'] ) ) {
 			$status = $this->sanitize_status( (string) $args['status'] );
 			if ( '' !== $status ) {
-				$where_clauses[] = 'status = %s';
-				$where_values[]  = $status;
+				$query_args['status'] = $status;
 			}
 		}
 
 		if ( isset( $args['requesting_user_id'] ) && (int) $args['requesting_user_id'] > 0 ) {
-			$where_clauses[] = 'requesting_user_id = %d';
-			$where_values[]  = (int) $args['requesting_user_id'];
+			$query_args['requesting_user_id'] = (int) $args['requesting_user_id'];
 		}
 
 		if ( isset( $args['execution_user_id'] ) && (int) $args['execution_user_id'] > 0 ) {
-			$where_clauses[] = 'execution_user_id = %d';
-			$where_values[]  = (int) $args['execution_user_id'];
+			$query_args['execution_user_id'] = (int) $args['execution_user_id'];
 		}
 
-		$where_sql      = [] !== $where_clauses ? 'WHERE ' . implode( ' AND ', $where_clauses ) : '';
-		$where_values[] = $limit;
-		$where_values[] = $offset;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-		$query = "SELECT id, event_type, action_name, status, message, requesting_user_id, execution_user_id, context, created_at
-			FROM {$this->get_table_name()}
-			{$where_sql}
-			ORDER BY id DESC
-			LIMIT %d OFFSET %d";
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- query is prepared via `$wpdb->prepare()` on this line.
-		$prepared_query = $wpdb->prepare( $query, $where_values );
-		if ( ! is_string( $prepared_query ) || '' === $prepared_query ) {
-			return [];
-		}
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- log queries are intentional and already bounded.
-		$rows = $wpdb->get_results( $prepared_query, 'ARRAY_A' );
-		if ( ! is_array( $rows ) ) {
-			return [];
-		}
+		$rows = $this->store->get_recent_logs( $query_args );
 
 		return array_values(
 			array_map( [ $this, 'normalize_log_row' ], $rows )
@@ -324,14 +235,5 @@ final class Action_Log_Helper {
 		}
 
 		return 'info';
-	}
-
-	/**
-	 * Check whether a usable `$wpdb` object is present.
-	 *
-	 * @param mixed $wpdb Candidate wpdb object.
-	 */
-	private function is_wpdb_ready( $wpdb ): bool {
-		return is_object( $wpdb ) && isset( $wpdb->prefix );
 	}
 }
