@@ -58,12 +58,20 @@ Build one reusable loop runtime that provides:
 ## Final Architecture
 
 ### 1) Explicit layers
-Implement four clear layers:
+Implement clear layers:
 
 1. **Loop Engine**: pure execution logic; no DB, no HTTP, no scheduler coupling.
-2. **Stores**: DB-backed persistence for threads/sessions/runs/events and locking metadata.
-3. **Runner**: Action Scheduler tick executor that claims work and runs slices.
-4. **Transport**: delivery channel for progress/events (`polling` now, `streaming` later).
+2. **Stores**: DB-backed persistence for sessions/runs/events and locking metadata.
+   - session store: `ClawPress\Stores\Agent_Session_Store`
+   - run store: `ClawPress\Stores\Agent_Run_Store`
+   - event store: `ClawPress\Stores\Agent_Event_Store` for append-only run/session events
+3. **Helpers**: orchestration-facing APIs over stores.
+   - session helper: `ClawPress\Helpers\Agent_Session_Helper`
+   - run helper: `ClawPress\Helpers\Agent_Run_Helper`
+   - event helper: `ClawPress\Helpers\Agent_Event_Helper`
+   - rule: loop/runner/transport/controllers call helpers; helpers call stores; stores own DB logic.
+4. **Runner**: Action Scheduler tick executor that claims work and runs slices.
+5. **Transport**: delivery channel for progress/events (`polling` now, `streaming` later).
 
 ### 2) Loop Engine responsibilities
 Extract loop responsibilities from `Chat_Helper` into `includes/helpers/class-agent-loop-helper.php` (name flexible):
@@ -95,7 +103,7 @@ Define internal transport interface:
 
 Implementations:
 
-- **PollingTransport** (default now): append events to persistent event store.
+- **PollingTransport** (default now): append events via `ClawPress\Helpers\Agent_Event_Helper` backed by `ClawPress\Stores\Agent_Event_Store`.
 - **StreamingTransport** (future): emits deltas live; may still persist events for observability.
 
 The loop engine must not branch by transport-specific behavior.
@@ -107,7 +115,7 @@ The loop engine must not branch by transport-specific behavior.
 ### TurnRequest
 Required/common fields:
 
-- `thread_id` (or session id)
+- `session_id`
 - `trigger` (`chat`, `heartbeat`, `spawned_agent`, ...)
 - `message` (optional for heartbeat-driven turns)
 - `requesting_user_id`
@@ -154,15 +162,21 @@ Additions for resumability and UI polling:
 
 ## Persistence Model
 
-### agent_threads (long-lived)
-- `thread_id`
+### agent_sessions (long-lived)
+Backed by: `ClawPress\Stores\Agent_Session_Store`
+Accessed via: `ClawPress\Helpers\Agent_Session_Helper`
+
+- `session_id`
 - `status` (`idle|running|paused|error|dead`)
 - policy profile
 - schedule fields (`last_run_at`, `next_run_at`)
 - lock/lease metadata (or lock table)
 
 ### agent_runs (per attempt)
-- `run_id`, `thread_id`
+Backed by: `ClawPress\Stores\Agent_Run_Store`
+Accessed via: `ClawPress\Helpers\Agent_Run_Helper`
+
+- `run_id`, `session_id`
 - `trigger`
 - `status` (`queued|running|waiting_llm|waiting_tools|paused|done|error`)
 - `attempt`, retry/backoff fields
@@ -170,8 +184,11 @@ Additions for resumability and UI polling:
 - usage totals and error classification
 
 ### agent_events (append-only)
+Backed by: `ClawPress\Stores\Agent_Event_Store`
+Accessed via: `ClawPress\Helpers\Agent_Event_Helper`
+
 - monotonic `event_id`
-- `run_id`, `thread_id`
+- `run_id`, `session_id`
 - `type`
 - JSON `payload`
 - `created_at`
@@ -184,7 +201,7 @@ UI polls event stream incrementally via cursor.
 
 Runner algorithm per tick:
 
-1. Find and claim runnable threads/runs.
+1. Find and claim runnable sessions/runs.
 2. Acquire lock/lease.
 3. Load or create run state.
 4. Execute one bounded slice.
@@ -218,10 +235,10 @@ Consume `clawpress_run_scheduled_tasks` and execute slices through runner.
 ### Spawn adapter
 Spawn endpoint should:
 
-1. create thread/session,
+1. create session,
 2. seed initial context/message,
 3. enqueue first run,
-4. return thread/run identifiers.
+4. return session/run identifiers.
 
 No loop internals in spawn endpoint.
 
@@ -232,7 +249,7 @@ No loop internals in spawn endpoint.
 ### Policy by trigger
 - `chat`: interactive confirmation behavior.
 - `heartbeat` / `spawned`: destructive tools denied or queued by default.
-- optional per-thread policy profiles.
+- optional per-session policy profiles.
 
 ### Guardrails
 - max wall time per run/slice,
@@ -246,7 +263,7 @@ No loop internals in spawn endpoint.
 ## Observability
 Log structured run data (reuse/extend action log + run/event records):
 
-- `run_id`, `thread_id`, trigger,
+- `run_id`, `session_id`, trigger,
 - tool trace + statuses,
 - provider/model and usage,
 - error type + retry count,
@@ -274,7 +291,10 @@ Minimum endpoints:
 - Emit structured events.
 
 ### Phase 2: Persistence + lock manager
-- Finalize thread/run/event persistence and lock/lease handling.
+- Extend/finalize `Agent_Session_Helper` + `Agent_Session_Store` for full session requirements.
+- Extend/finalize `Agent_Run_Helper` + `Agent_Run_Store` for full run requirements.
+- Use `Agent_Event_Helper` + `Agent_Event_Store` for append-only run/session events.
+- Finalize lock/lease handling across stores.
 - Ensure stale recovery and idempotency.
 
 ### Phase 3: Time-sliced runner
@@ -299,7 +319,7 @@ Minimum endpoints:
 - Chat uses shared loop runtime (no duplicated loop logic).
 - Runner supports multi-slice execution with `in_progress` and `resume_cursor`.
 - Background runs complete safely without long-lived HTTP requests.
-- Per-thread concurrency safety: no duplicate concurrent execution.
+- Per-session concurrency safety: no duplicate concurrent execution.
 - Event persistence supports incremental UI polling.
 - Destructive tool behavior is explicitly policy-controlled by trigger.
 - Transport mode is pluggable (`polling` now, `streaming` later) without core loop rewrite.
@@ -310,5 +330,5 @@ Minimum endpoints:
 
 - One agent brain across all transports/triggers.
 - Clean async/autonomous execution path.
-- Safe path to spawned parallel threads.
+- Safe path to spawned parallel sessions.
 - Lower long-term maintenance cost than duplicating chat logic in background adapters.
