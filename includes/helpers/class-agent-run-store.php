@@ -237,16 +237,22 @@ final class Agent_Run_Store {
 	public function complete_run( int $run_id, string $lock_token, string $status, array $args = [] ): bool {
 		global $wpdb;
 
-		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'update' ) ) {
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'update' ) || ! method_exists( $wpdb, 'query' ) ) {
+			return false;
+		}
+
+		if ( ! $this->begin_transaction() ) {
 			return false;
 		}
 
 		$run = $this->get_run( $run_id );
 		if ( [] === $run || 'running' !== (string) $run['status'] ) {
+			$this->rollback_transaction();
 			return false;
 		}
 
 		if ( (string) ( $run['lock_token'] ?? '' ) !== $lock_token ) {
+			$this->rollback_transaction();
 			return false;
 		}
 
@@ -280,14 +286,27 @@ final class Agent_Run_Store {
 		);
 
 		if ( false === $updated || 0 === $updated ) {
+			$this->rollback_transaction();
 			return false;
 		}
 
-		return Agent_Session_Store::get_instance()->apply_run_completion(
+		$session_updated = Agent_Session_Store::get_instance()->apply_run_completion(
 			(int) $run['session_id'],
 			$status,
 			isset( $args['next_run_at_gmt'] ) ? (string) $args['next_run_at_gmt'] : null
 		);
+
+		if ( ! $session_updated ) {
+			$this->rollback_transaction();
+			return false;
+		}
+
+		if ( ! $this->commit_transaction() ) {
+			$this->rollback_transaction();
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -328,5 +347,47 @@ final class Agent_Run_Store {
 			substr( $seed, 16, 4 ),
 			substr( $seed, 20, 12 )
 		);
+	}
+
+	/**
+	 * Begin transaction for multi-table completion updates.
+	 */
+	private function begin_transaction(): bool {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- bounded transaction control statement.
+		return false !== $wpdb->query( 'START TRANSACTION' );
+	}
+
+	/**
+	 * Commit transaction for completion updates.
+	 */
+	private function commit_transaction(): bool {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- bounded transaction control statement.
+		return false !== $wpdb->query( 'COMMIT' );
+	}
+
+	/**
+	 * Roll back completion transaction.
+	 */
+	private function rollback_transaction(): void {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- bounded transaction control statement.
+		$wpdb->query( 'ROLLBACK' );
 	}
 }

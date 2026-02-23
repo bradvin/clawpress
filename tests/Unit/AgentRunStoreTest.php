@@ -50,6 +50,13 @@ final class AgentRunStoreTestWpdb {
 	/** @var array<int,mixed> */
 	public array $last_prepare_args = [];
 
+	public bool $fail_session_update = false;
+
+	private bool $in_transaction = false;
+
+	/** @var array{sessions:array<int,array<string,mixed>>,runs:array<int,array<string,mixed>>,insert_id:int}|null */
+	private ?array $transaction_snapshot = null;
+
 	public function get_charset_collate(): string {
 		return 'DEFAULT CHARSET=utf8mb4';
 	}
@@ -92,6 +99,9 @@ final class AgentRunStoreTestWpdb {
 		if ( '' === $target ) {
 			return false;
 		}
+		if ( $this->fail_session_update && 'sessions' === $target ) {
+			return false;
+		}
 
 		$rows    = $this->{$target};
 		$updated = 0;
@@ -115,6 +125,40 @@ final class AgentRunStoreTestWpdb {
 		}
 
 		return $updated;
+	}
+
+	public function query( string $sql ) {
+		$sql = strtoupper( trim( $sql ) );
+
+		if ( 'START TRANSACTION' === $sql ) {
+			$this->in_transaction      = true;
+			$this->transaction_snapshot = [
+				'sessions'  => $this->sessions,
+				'runs'      => $this->runs,
+				'insert_id' => $this->insert_id,
+			];
+			return 1;
+		}
+
+		if ( 'COMMIT' === $sql ) {
+			$this->in_transaction       = false;
+			$this->transaction_snapshot = null;
+			return 1;
+		}
+
+		if ( 'ROLLBACK' === $sql ) {
+			if ( $this->in_transaction && is_array( $this->transaction_snapshot ) ) {
+				$this->sessions  = $this->transaction_snapshot['sessions'];
+				$this->runs      = $this->transaction_snapshot['runs'];
+				$this->insert_id = $this->transaction_snapshot['insert_id'];
+			}
+
+			$this->in_transaction       = false;
+			$this->transaction_snapshot = null;
+			return 1;
+		}
+
+		return false;
 	}
 
 	/**
@@ -238,6 +282,21 @@ final class AgentRunStoreTest extends TestCase {
 		$this->assertNull( $GLOBALS['wpdb']->runs[ $run_id ]['lock_token'] );
 		$this->assertSame( 'success', $GLOBALS['wpdb']->sessions[ $session_id ]['last_run_status'] );
 		$this->assertSame( 0, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
+	}
+
+	public function test_complete_run_rolls_back_when_session_update_fails(): void {
+		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
+		$claim      = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$lock_token = (string) $claim['lock_token'];
+
+		$GLOBALS['wpdb']->fail_session_update = true;
+		$completed                            = Agent_Run_Store::get_instance()->complete_run( $run_id, $lock_token, 'success' );
+
+		$this->assertFalse( $completed );
+		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
+		$this->assertSame( $lock_token, $GLOBALS['wpdb']->runs[ $run_id ]['lock_token'] );
+		$this->assertNull( $GLOBALS['wpdb']->sessions[ $session_id ]['last_run_status'] );
 	}
 }
 }
