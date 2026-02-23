@@ -58,19 +58,19 @@ final class Abilities_Helper {
 	private Security $security;
 
 	/**
-	 * Action log helper.
+	 * Agent event helper.
 	 *
-	 * @var Action_Log_Helper
+	 * @var Agent_Event_Helper
 	 */
-	private Action_Log_Helper $action_log_helper;
+	private Agent_Event_Helper $agent_event_helper;
 
 	/**
 	 * Constructor.
 	 */
 	private function __construct() {
-		$this->settings_helper   = Settings_Helper::get_instance();
-		$this->security          = Security::get_instance();
-		$this->action_log_helper = Action_Log_Helper::get_instance();
+		$this->settings_helper    = Settings_Helper::get_instance();
+		$this->security           = Security::get_instance();
+		$this->agent_event_helper = Agent_Event_Helper::get_instance();
 	}
 
 	/**
@@ -194,6 +194,10 @@ final class Abilities_Helper {
 		$allowed_confirmation_tokens = $this->normalize_allowed_confirmation_tokens(
 			$execution_context['allowed_confirmation_tokens'] ?? null
 		);
+		$event_context               = [
+			'session_id' => isset( $execution_context['session_id'] ) ? (int) $execution_context['session_id'] : 0,
+			'run_id'     => isset( $execution_context['run_id'] ) ? (int) $execution_context['run_id'] : 0,
+		];
 
 		$args_json = wp_json_encode( $args );
 		$args_hash = false !== $args_json ? hash( 'sha256', (string) $args_json ) : '';
@@ -207,7 +211,7 @@ final class Abilities_Helper {
 				],
 				'tool'    => $normalized_tool_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -221,7 +225,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -236,7 +240,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -251,7 +255,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -269,7 +273,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
 				return $payload;
 			}
 
@@ -296,7 +300,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
 				return $payload;
 			}
 		}
@@ -319,7 +323,7 @@ final class Abilities_Helper {
 				'ability'      => $ability_name,
 				'safety_class' => $safety_class,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -331,7 +335,7 @@ final class Abilities_Helper {
 			'result'       => $result,
 		];
 
-		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $payload );
+		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $payload, $event_context );
 
 		return $payload;
 	}
@@ -470,7 +474,7 @@ final class Abilities_Helper {
 	}
 
 	/**
-	 * Write one tool-call action ledger row.
+	 * Emit one tool-call event row.
 	 *
 	 * @param string              $tool_name Tool name.
 	 * @param string              $ability_name Ability ID.
@@ -479,6 +483,7 @@ final class Abilities_Helper {
 	 * @param string              $status Log status.
 	 * @param string              $args_hash Hash of arguments.
 	 * @param array<string,mixed> $payload Tool payload.
+	 * @param array<string,mixed> $event_context Optional run/session context.
 	 */
 	private function log_tool_call(
 		string $tool_name,
@@ -487,27 +492,18 @@ final class Abilities_Helper {
 		int $execution_user_id,
 		string $status,
 		string $args_hash,
-		array $payload
+		array $payload,
+		array $event_context
 	): void {
-		$this->action_log_helper->log_event(
-			'tool/' . $tool_name,
-			[
-				'event_type'         => 'tool_call',
-				'status'             => $status,
-				'message'            => isset( $payload['error']['message'] )
-					? (string) $payload['error']['message']
-					: __( 'Tool execution completed.', 'clawpress' ),
-				'requesting_user_id' => $requesting_user_id > 0 ? $requesting_user_id : null,
-				'execution_user_id'  => $execution_user_id > 0 ? $execution_user_id : null,
-				'context'            => [
-					'tool_name'    => $tool_name,
-					'ability_name' => $ability_name,
-					'args_hash'    => $args_hash,
-					'success'      => ! empty( $payload['success'] ),
-					'result'       => isset( $payload['result'] ) ? $payload['result'] : null,
-					'error'        => isset( $payload['error'] ) ? $payload['error'] : null,
-				],
-			]
+		$this->agent_event_helper->emit_tool_call(
+			$tool_name,
+			$ability_name,
+			$requesting_user_id,
+			$execution_user_id,
+			$status,
+			$args_hash,
+			$payload,
+			$event_context
 		);
 	}
 }

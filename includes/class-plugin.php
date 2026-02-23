@@ -17,6 +17,7 @@ use ClawPress\Panel\Panel;
 use ClawPress\PostTypes\Post_Types;
 use ClawPress\RestAPI\Rest_API;
 use ClawPress\Stores\Action_Log_Store;
+use ClawPress\Stores\Agent_Event_Store;
 use ClawPress\Stores\Agent_Run_Store;
 use ClawPress\Stores\Agent_Session_Store;
 
@@ -66,6 +67,7 @@ final class Plugin {
 		Action_Log_Store::get_instance()->create_table();
 		Agent_Session_Store::get_instance()->create_table();
 		Agent_Run_Store::get_instance()->create_table();
+		Agent_Event_Store::get_instance()->create_table();
 
 		$user_id = get_current_user_id();
 		if ( $user_id <= 0 ) {
