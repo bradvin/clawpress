@@ -28,7 +28,7 @@ namespace {
 
 namespace ClawPress\Tests\Unit {
 
-use ClawPress\Helpers\Agent_Run_Store;
+use ClawPress\Helpers\Agent_Run_Helper;
 use ClawPress\Helpers\Agent_Session_Store;
 use ClawPress\Plugin;
 use ClawPress\Tests\Support\TestCase;
@@ -36,7 +36,7 @@ use ClawPress\Tests\Support\TestCase;
 /**
  * Minimal in-memory wpdb stub for run/session store tests.
  */
-final class AgentRunStoreTestWpdb {
+final class AgentRunHelperTestWpdb {
 	public string $prefix = 'wp_';
 
 	public int $insert_id = 0;
@@ -230,11 +230,11 @@ final class AgentRunStoreTestWpdb {
 	}
 }
 
-final class AgentRunStoreTest extends TestCase {
+final class AgentRunHelperTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['clawpress_test_dbdelta_queries'] = [];
-		$GLOBALS['wpdb'] = new AgentRunStoreTestWpdb();
+		$GLOBALS['wpdb'] = new AgentRunHelperTestWpdb();
 	}
 
 	protected function tearDown(): void {
@@ -252,9 +252,9 @@ final class AgentRunStoreTest extends TestCase {
 
 	public function test_claim_run_success(): void {
 		$session_id = Agent_Session_Store::get_instance()->create_session();
-		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 
-		$result = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$result = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 
 		$this->assertTrue( $result['claimed'] );
 		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
@@ -264,10 +264,10 @@ final class AgentRunStoreTest extends TestCase {
 
 	public function test_claim_collision_fails_for_second_worker(): void {
 		$session_id = Agent_Session_Store::get_instance()->create_session();
-		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 
-		$first  = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
-		$second = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-b', 120 );
+		$first  = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$second = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-b', 120 );
 
 		$this->assertTrue( $first['claimed'] );
 		$this->assertFalse( $second['claimed'] );
@@ -276,12 +276,12 @@ final class AgentRunStoreTest extends TestCase {
 
 	public function test_stale_lock_can_be_reclaimed_and_attempt_increments(): void {
 		$session_id = Agent_Session_Store::get_instance()->create_session();
-		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 		$GLOBALS['wpdb']->runs[ $run_id ]['status'] = 'running';
 		$GLOBALS['wpdb']->runs[ $run_id ]['attempt'] = 1;
 		$GLOBALS['wpdb']->runs[ $run_id ]['lock_expires_at_gmt'] = '2000-01-01 00:00:00';
 
-		$result = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-reclaim', 120 );
+		$result = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-reclaim', 120 );
 
 		$this->assertTrue( $result['claimed'] );
 		$this->assertTrue( $result['reclaimed'] );
@@ -291,10 +291,10 @@ final class AgentRunStoreTest extends TestCase {
 
 	public function test_complete_run_clears_lock_and_updates_session_state(): void {
 		$session_id = Agent_Session_Store::get_instance()->create_session();
-		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
-		$claim      = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
+		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 
-		$completed = Agent_Run_Store::get_instance()->complete_run(
+		$completed = Agent_Run_Helper::get_instance()->complete_run(
 			$run_id,
 			(string) $claim['lock_token'],
 			'success',
@@ -312,12 +312,12 @@ final class AgentRunStoreTest extends TestCase {
 
 	public function test_complete_run_rolls_back_when_session_update_fails(): void {
 		$session_id = Agent_Session_Store::get_instance()->create_session();
-		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
-		$claim      = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
+		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 		$lock_token = (string) $claim['lock_token'];
 
 		$GLOBALS['wpdb']->fail_session_update = true;
-		$completed                            = Agent_Run_Store::get_instance()->complete_run( $run_id, $lock_token, 'success' );
+		$completed                            = Agent_Run_Helper::get_instance()->complete_run( $run_id, $lock_token, 'success' );
 
 		$this->assertFalse( $completed );
 		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
@@ -340,11 +340,11 @@ final class AgentRunStoreTest extends TestCase {
 
 	public function test_complete_run_rejects_non_terminal_status(): void {
 		$session_id = Agent_Session_Store::get_instance()->create_session();
-		$run_id     = Agent_Run_Store::get_instance()->create_run( $session_id );
-		$claim      = Agent_Run_Store::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
+		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 		$lock_token = (string) $claim['lock_token'];
 
-		$completed = Agent_Run_Store::get_instance()->complete_run( $run_id, $lock_token, 'running' );
+		$completed = Agent_Run_Helper::get_instance()->complete_run( $run_id, $lock_token, 'running' );
 
 		$this->assertFalse( $completed );
 		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
