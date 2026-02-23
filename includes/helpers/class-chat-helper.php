@@ -107,6 +107,13 @@ final class Chat_Helper {
 	private Command_Confirmation_Store $confirmation_store;
 
 	/**
+	 * Policy helper.
+	 *
+	 * @var Policy_Helper
+	 */
+	private Policy_Helper $policy_helper;
+
+	/**
 	 * LLM reply generator.
 	 *
 	 * @var callable|null
@@ -137,6 +144,7 @@ final class Chat_Helper {
 		$this->context_helper          = $context_helper ?? Context_Helper::get_instance();
 		$this->abilities_helper        = Abilities_Helper::get_instance();
 		$this->confirmation_store      = new Command_Confirmation_Store();
+		$this->policy_helper           = Policy_Helper::get_instance();
 		$this->online_reply_generator  = $online_reply_generator ?? [ $this, 'generate_online_reply' ];
 		$this->provider_model_resolver = $provider_model_resolver ?? [ $this, 'resolve_provider_and_model' ];
 	}
@@ -270,6 +278,16 @@ final class Chat_Helper {
 		$tool_declarations   = $this->normalize_tool_declarations( $context );
 		$requesting_user_id  = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
 		$execution_user_id   = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
+		$trigger_type        = isset( $context['trigger_type'] ) ? (string) $context['trigger_type'] : 'chat';
+		$runtime_policy      = $this->policy_helper->resolve_runtime_policy(
+			$trigger_type,
+			isset( $context['session_metadata'] ) && is_array( $context['session_metadata'] )
+				? $context['session_metadata']
+				: [],
+			isset( $context['policy_overrides'] ) && is_array( $context['policy_overrides'] )
+				? $context['policy_overrides']
+				: []
+		);
 		$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
 
 		$conversation = $history_messages;
@@ -284,7 +302,7 @@ final class Chat_Helper {
 		$latest_context_usage  = null;
 		$tool_call_trace       = [];
 
-		for ( $round = 0; $round < self::MAX_TOOL_ROUNDS; ++$round ) {
+		for ( $round = 0; $round < (int) $runtime_policy['max_tool_rounds']; ++$round ) {
 			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
 			if ( '' !== $system_prompt ) {
 				$builder = $builder->usingSystemInstruction( $system_prompt );
@@ -312,7 +330,7 @@ final class Chat_Helper {
 			}
 
 			$function_responses = [];
-			foreach ( array_slice( $function_calls, 0, self::MAX_TOOL_CALLS_PER_ROUND ) as $index => $function_call ) {
+			foreach ( array_slice( $function_calls, 0, (int) $runtime_policy['max_tool_calls_per_round'] ) as $index => $function_call ) {
 				$tool_name = trim( (string) $function_call->getName() );
 				if ( '' === $tool_name ) {
 					continue;
@@ -330,6 +348,8 @@ final class Chat_Helper {
 						'requesting_user_id' => $requesting_user_id,
 						'execution_user_id'  => $execution_user_id,
 						'confirmation_scope' => 'batch',
+						'trigger_type'       => $trigger_type,
+						'runtime_policy'     => $runtime_policy,
 					]
 				);
 				$tool_call_trace[] = $this->build_tool_call_trace_entry(

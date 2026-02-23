@@ -109,6 +109,51 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertSame( 9, $payload['execution_user_id'] );
 	}
 
+	public function test_destructive_tools_are_denied_for_heartbeat_trigger_policy(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'trigger_type'       => 'heartbeat',
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_destructive_tools_denied', $result['error']['code'] );
+		$this->assertSame( 'heartbeat', $result['policy']['trigger_type'] );
+		$this->assertSame( 'deny_destructive_tools', $result['policy']['decision'] );
+	}
+
+	public function test_runtime_policy_can_enforce_file_delete_gate_for_spawned_agent(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'             => 'spawned_agent',
+					'policy_profile'           => 'default',
+					'allow_tools'              => true,
+					'allow_destructive_tools'  => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'        => false,
+					'on_policy_violation'      => 'deny',
+				],
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_file_delete_denied', $result['error']['code'] );
+		$this->assertSame( 'spawned_agent', $result['policy']['trigger_type'] );
+	}
+
 	public function test_destructive_confirmation_token_must_be_allowlisted_by_execution_context(): void {
 		$initial = Abilities_Helper::get_instance()->execute_tool_call(
 			'file_delete',
