@@ -158,6 +158,32 @@ final class AgentRunStoreTestWpdb {
 			return 1;
 		}
 
+		if ( str_starts_with( $sql, 'UPDATE' ) && false !== strpos( $sql, 'AGENT_SESSIONS' ) ) {
+			if ( $this->fail_session_update ) {
+				return false;
+			}
+
+			$session_id = isset( $this->last_prepare_args[5] ) ? (int) $this->last_prepare_args[5] : 0;
+			if ( $session_id <= 0 || ! isset( $this->sessions[ $session_id ] ) ) {
+				return 0;
+			}
+
+			$run_status = isset( $this->last_prepare_args[1] ) ? (string) $this->last_prepare_args[1] : '';
+			$failures   = (int) ( $this->sessions[ $session_id ]['consecutive_failures'] ?? 0 );
+			if ( 'success' === $run_status ) {
+				$failures = 0;
+			} else {
+				++$failures;
+			}
+
+			$this->sessions[ $session_id ]['last_run_at_gmt']      = isset( $this->last_prepare_args[0] ) ? (string) $this->last_prepare_args[0] : null;
+			$this->sessions[ $session_id ]['last_run_status']      = $run_status;
+			$this->sessions[ $session_id ]['consecutive_failures'] = $failures;
+			$this->sessions[ $session_id ]['next_run_at_gmt']      = $this->last_prepare_args[3] ?? null;
+			$this->sessions[ $session_id ]['updated_at_gmt']       = isset( $this->last_prepare_args[4] ) ? (string) $this->last_prepare_args[4] : null;
+			return 1;
+		}
+
 		return false;
 	}
 
@@ -297,6 +323,19 @@ final class AgentRunStoreTest extends TestCase {
 		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
 		$this->assertSame( $lock_token, $GLOBALS['wpdb']->runs[ $run_id ]['lock_token'] );
 		$this->assertNull( $GLOBALS['wpdb']->sessions[ $session_id ]['last_run_status'] );
+	}
+
+	public function test_apply_run_completion_increments_failures_and_resets_on_success(): void {
+		$session_id = Agent_Session_Store::get_instance()->create_session();
+
+		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'failed', null ) );
+		$this->assertSame( 1, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
+
+		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'failed', null ) );
+		$this->assertSame( 2, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
+
+		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'success', null ) );
+		$this->assertSame( 0, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
 	}
 }
 }

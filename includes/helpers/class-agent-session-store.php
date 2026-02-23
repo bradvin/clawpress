@@ -165,40 +165,40 @@ final class Agent_Session_Store {
 	public function apply_run_completion( int $session_id, string $run_status, ?string $next_run_at_gmt = null ): bool {
 		global $wpdb;
 
-		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_row' ) || ! method_exists( $wpdb, 'update' ) ) {
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'query' ) ) {
 			return false;
 		}
 
 		$table_name = $this->get_table_name();
-		$query      = 'SELECT consecutive_failures FROM ' . $table_name . ' WHERE id = ' . (int) $session_id;
+		$now        = gmdate( 'Y-m-d H:i:s' );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded primary-key lookup by sanitized integer id.
-		$row = $wpdb->get_row( $query, 'ARRAY_A' );
-		if ( ! is_array( $row ) ) {
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
+		$query = $wpdb->prepare(
+			"UPDATE {$table_name}
+			SET
+				last_run_at_gmt = %s,
+				last_run_status = %s,
+				consecutive_failures = CASE
+					WHEN %s = 'success' THEN 0
+					ELSE consecutive_failures + 1
+				END,
+				next_run_at_gmt = %s,
+				updated_at_gmt = %s
+			WHERE id = %d",
+			$now,
+			$run_status,
+			$run_status,
+			$next_run_at_gmt,
+			$now,
+			$session_id
+		);
+
+		if ( ! is_string( $query ) || '' === $query ) {
 			return false;
 		}
 
-		$failures = (int) ( $row['consecutive_failures'] ?? 0 );
-		if ( 'success' === $run_status ) {
-			$failures = 0;
-		} else {
-			++$failures;
-		}
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded repository update.
-		$updated = $wpdb->update(
-			$this->get_table_name(),
-			[
-				'last_run_at_gmt'      => gmdate( 'Y-m-d H:i:s' ),
-				'last_run_status'      => $run_status,
-				'consecutive_failures' => $failures,
-				'next_run_at_gmt'      => $next_run_at_gmt,
-				'updated_at_gmt'       => gmdate( 'Y-m-d H:i:s' ),
-			],
-			[ 'id' => $session_id ],
-			[ '%s', '%s', '%d', '%s', '%s' ],
-			[ '%d' ]
-		);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- prepared bounded update on primary-key id.
+		$updated = $wpdb->query( $query );
 
 		return false !== $updated;
 	}
