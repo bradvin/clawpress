@@ -55,20 +55,6 @@ final class Action_Log_Helper {
 	}
 
 	/**
-	 * Resolve full action log table name.
-	 */
-	public function get_table_name(): string {
-		return $this->store->get_table_name();
-	}
-
-	/**
-	 * Create/update action log table schema.
-	 */
-	public function create_table(): bool {
-		return $this->store->create_table();
-	}
-
-	/**
 	 * Persist one action/event log record.
 	 *
 	 * @param string              $action_name Action or command name.

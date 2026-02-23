@@ -48,20 +48,6 @@ final class Agent_Session_Helper {
 	}
 
 	/**
-	 * Resolve full session table name.
-	 */
-	public function get_table_name(): string {
-		return $this->store->get_table_name();
-	}
-
-	/**
-	 * Create/update session table schema.
-	 */
-	public function create_table(): bool {
-		return $this->store->create_table();
-	}
-
-	/**
 	 * Create one session row.
 	 *
 	 * @param array<string,mixed> $args Session payload.

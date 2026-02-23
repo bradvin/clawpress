@@ -350,5 +350,12 @@ final class AgentRunHelperTest extends TestCase {
 		$this->assertSame( 'running', $GLOBALS['wpdb']->runs[ $run_id ]['status'] );
 		$this->assertSame( $lock_token, $GLOBALS['wpdb']->runs[ $run_id ]['lock_token'] );
 	}
+
+	public function test_helpers_do_not_expose_schema_methods(): void {
+		$this->assertFalse( method_exists( Agent_Run_Helper::class, 'create_table' ) );
+		$this->assertFalse( method_exists( Agent_Run_Helper::class, 'get_table_name' ) );
+		$this->assertFalse( method_exists( Agent_Session_Helper::class, 'create_table' ) );
+		$this->assertFalse( method_exists( Agent_Session_Helper::class, 'get_table_name' ) );
+	}
 }
 }

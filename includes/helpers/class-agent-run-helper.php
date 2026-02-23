@@ -55,20 +55,6 @@ final class Agent_Run_Helper {
 	}
 
 	/**
-	 * Resolve full run table name.
-	 */
-	public function get_table_name(): string {
-		return $this->store->get_table_name();
-	}
-
-	/**
-	 * Create/update run table schema.
-	 */
-	public function create_table(): bool {
-		return $this->store->create_table();
-	}
-
-	/**
 	 * Create a queued run.
 	 *
 	 * @param int $session_id Parent session identifier.
