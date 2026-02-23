@@ -156,6 +156,11 @@ final class Agent_Session_Store {
 
 	/**
 	 * Update parent session state after run completion.
+	 *
+	 * @param int         $session_id Session identifier.
+	 * @param string      $run_status Terminal run status.
+	 * @param string|null $next_run_at_gmt Optional next-run timestamp.
+	 * @param string      $updated_at_gmt Update timestamp (UTC).
 	 */
 	public function update_run_completion( int $session_id, string $run_status, ?string $next_run_at_gmt, string $updated_at_gmt ): bool {
 		global $wpdb;
@@ -165,20 +170,19 @@ final class Agent_Session_Store {
 		}
 
 		$table_name = $this->get_table_name();
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-		$query = $wpdb->prepare(
+		$query      = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
 			"UPDATE {$table_name}
-			SET
-				last_run_at_gmt = %s,
-				last_run_status = %s,
-				consecutive_failures = CASE
-					WHEN %s = 'success' THEN 0
-					ELSE consecutive_failures + 1
-				END,
-				next_run_at_gmt = %s,
-				updated_at_gmt = %s
-			WHERE id = %d",
+				SET
+					last_run_at_gmt = %s,
+					last_run_status = %s,
+					consecutive_failures = CASE
+						WHEN %s = 'success' THEN 0
+						ELSE consecutive_failures + 1
+					END,
+					next_run_at_gmt = %s,
+					updated_at_gmt = %s
+				WHERE id = %d",
 			$updated_at_gmt,
 			$run_status,
 			$run_status,

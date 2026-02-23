@@ -9,7 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
-use ClawPress\Stores\Agent_Event_Store as Agent_Event_DB_Store;
+use ClawPress\Stores\Agent_Event_Store;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,14 +26,16 @@ final class Agent_Event_Helper {
 
 	/**
 	 * Event store instance for DB access.
+	 *
+	 * @var Agent_Event_Store
 	 */
-	private Agent_Event_DB_Store $store;
+	private Agent_Event_Store $store;
 
 	/**
 	 * Constructor.
 	 */
 	private function __construct() {
-		$this->store = Agent_Event_DB_Store::get_instance();
+		$this->store = Agent_Event_Store::get_instance();
 	}
 
 	/**
@@ -59,7 +61,7 @@ final class Agent_Event_Helper {
 			return 0;
 		}
 
-		$payload = isset( $args['payload'] ) && is_array( $args['payload'] )
+		$payload         = isset( $args['payload'] ) && is_array( $args['payload'] )
 			? $args['payload']
 			: [];
 		$encoded_payload = null;

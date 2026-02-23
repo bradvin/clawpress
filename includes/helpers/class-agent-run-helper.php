@@ -9,7 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
-use ClawPress\Stores\Agent_Run_Store as Agent_Run_DB_Store;
+use ClawPress\Stores\Agent_Run_Store;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -33,14 +33,16 @@ final class Agent_Run_Helper {
 
 	/**
 	 * Run store instance for DB access.
+	 *
+	 * @var Agent_Run_Store
 	 */
-	private Agent_Run_DB_Store $store;
+	private Agent_Run_Store $store;
 
 	/**
 	 * Constructor.
 	 */
 	private function __construct() {
-		$this->store = Agent_Run_DB_Store::get_instance();
+		$this->store = Agent_Run_Store::get_instance();
 	}
 
 	/**
@@ -174,12 +176,12 @@ final class Agent_Run_Helper {
 			$run_id,
 			$lock_token,
 			[
-				'status'               => $status,
-				'finished_at_gmt'      => gmdate( 'Y-m-d H:i:s' ),
-				'error_code'           => isset( $args['error_code'] ) ? (string) $args['error_code'] : null,
-				'error_message'        => isset( $args['error_message'] ) ? (string) $args['error_message'] : null,
-				'meta_json'            => $meta_json,
-				'updated_at_gmt'       => gmdate( 'Y-m-d H:i:s' ),
+				'status'          => $status,
+				'finished_at_gmt' => gmdate( 'Y-m-d H:i:s' ),
+				'error_code'      => isset( $args['error_code'] ) ? (string) $args['error_code'] : null,
+				'error_message'   => isset( $args['error_message'] ) ? (string) $args['error_message'] : null,
+				'meta_json'       => $meta_json,
+				'updated_at_gmt'  => gmdate( 'Y-m-d H:i:s' ),
 			]
 		);
 
@@ -231,5 +233,4 @@ final class Agent_Run_Helper {
 			substr( $seed, 20, 12 )
 		);
 	}
-
 }

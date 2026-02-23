@@ -33,6 +33,8 @@ final class Action_Log_Helper {
 
 	/**
 	 * Store instance for DB access.
+	 *
+	 * @var Action_Log_Store
 	 */
 	private Action_Log_Store $store;
 

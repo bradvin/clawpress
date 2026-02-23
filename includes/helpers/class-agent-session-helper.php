@@ -9,7 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
-use ClawPress\Stores\Agent_Session_Store as Agent_Session_DB_Store;
+use ClawPress\Stores\Agent_Session_Store;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,14 +26,16 @@ final class Agent_Session_Helper {
 
 	/**
 	 * Session store instance for DB access.
+	 *
+	 * @var Agent_Session_Store
 	 */
-	private Agent_Session_DB_Store $store;
+	private Agent_Session_Store $store;
 
 	/**
 	 * Constructor.
 	 */
 	private function __construct() {
-		$this->store = Agent_Session_DB_Store::get_instance();
+		$this->store = Agent_Session_Store::get_instance();
 	}
 
 	/**

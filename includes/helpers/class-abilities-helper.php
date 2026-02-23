@@ -216,10 +216,10 @@ final class Abilities_Helper {
 				isset( $execution_context['session_metadata'] ) && is_array( $execution_context['session_metadata'] )
 					? $execution_context['session_metadata']
 					: [],
-					isset( $execution_context['policy_overrides'] ) && is_array( $execution_context['policy_overrides'] )
+				isset( $execution_context['policy_overrides'] ) && is_array( $execution_context['policy_overrides'] )
 						? $execution_context['policy_overrides']
 						: []
-				);
+			);
 
 		$args_json = wp_json_encode( $args );
 		$args_hash = false !== $args_json ? hash( 'sha256', (string) $args_json ) : '';

@@ -108,6 +108,10 @@ final class Agent_Run_Store {
 
 	/**
 	 * Insert a queued run row.
+	 *
+	 * @param int    $session_id Session identifier.
+	 * @param string $run_uuid Run UUID.
+	 * @param string $created_at_gmt Created-at timestamp (UTC).
 	 */
 	public function insert_run( int $session_id, string $run_uuid, string $created_at_gmt ): int {
 		global $wpdb;
@@ -136,11 +140,11 @@ final class Agent_Run_Store {
 	/**
 	 * Compare-and-swap claim update for a run.
 	 *
-	 * @param int                   $run_id Run identifier.
-	 * @param string                $current_status Expected status.
-	 * @param string|null           $current_lock_expires_at_gmt Expected lock expiry when reclaiming.
-	 * @param array<string,mixed>   $data Update data.
-	 * @param bool                  $is_stale Whether this claim is a stale reclaim.
+	 * @param int                 $run_id Run identifier.
+	 * @param string              $current_status Expected status.
+	 * @param string|null         $current_lock_expires_at_gmt Expected lock expiry when reclaiming.
+	 * @param array<string,mixed> $data Update data.
+	 * @param bool                $is_stale Whether this claim is a stale reclaim.
 	 * @return int|false
 	 */
 	public function update_claim(
@@ -260,7 +264,7 @@ final class Agent_Run_Store {
 			return false;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- bounded transaction control statement.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded transaction control statement.
 		return false !== $wpdb->query( 'START TRANSACTION' );
 	}
 
@@ -274,7 +278,7 @@ final class Agent_Run_Store {
 			return false;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- bounded transaction control statement.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded transaction control statement.
 		return false !== $wpdb->query( 'COMMIT' );
 	}
 
@@ -288,7 +292,7 @@ final class Agent_Run_Store {
 			return;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- bounded transaction control statement.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded transaction control statement.
 		$wpdb->query( 'ROLLBACK' );
 	}
 }
