@@ -29,7 +29,7 @@ namespace {
 namespace ClawPress\Tests\Unit {
 
 use ClawPress\Helpers\Agent_Run_Helper;
-use ClawPress\Helpers\Agent_Session_Store;
+use ClawPress\Helpers\Agent_Session_Helper;
 use ClawPress\Plugin;
 use ClawPress\Tests\Support\TestCase;
 
@@ -251,7 +251,7 @@ final class AgentRunHelperTest extends TestCase {
 	}
 
 	public function test_claim_run_success(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 
 		$result = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
@@ -263,7 +263,7 @@ final class AgentRunHelperTest extends TestCase {
 	}
 
 	public function test_claim_collision_fails_for_second_worker(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 
 		$first  = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
@@ -275,7 +275,7 @@ final class AgentRunHelperTest extends TestCase {
 	}
 
 	public function test_stale_lock_can_be_reclaimed_and_attempt_increments(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 		$GLOBALS['wpdb']->runs[ $run_id ]['status'] = 'running';
 		$GLOBALS['wpdb']->runs[ $run_id ]['attempt'] = 1;
@@ -290,7 +290,7 @@ final class AgentRunHelperTest extends TestCase {
 	}
 
 	public function test_complete_run_clears_lock_and_updates_session_state(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 
@@ -311,7 +311,7 @@ final class AgentRunHelperTest extends TestCase {
 	}
 
 	public function test_complete_run_rolls_back_when_session_update_fails(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 		$lock_token = (string) $claim['lock_token'];
@@ -326,20 +326,20 @@ final class AgentRunHelperTest extends TestCase {
 	}
 
 	public function test_apply_run_completion_increments_failures_and_resets_on_success(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 
-		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'failed', null ) );
+		$this->assertTrue( Agent_Session_Helper::get_instance()->apply_run_completion( $session_id, 'failed', null ) );
 		$this->assertSame( 1, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
 
-		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'failed', null ) );
+		$this->assertTrue( Agent_Session_Helper::get_instance()->apply_run_completion( $session_id, 'failed', null ) );
 		$this->assertSame( 2, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
 
-		$this->assertTrue( Agent_Session_Store::get_instance()->apply_run_completion( $session_id, 'success', null ) );
+		$this->assertTrue( Agent_Session_Helper::get_instance()->apply_run_completion( $session_id, 'success', null ) );
 		$this->assertSame( 0, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
 	}
 
 	public function test_complete_run_rejects_non_terminal_status(): void {
-		$session_id = Agent_Session_Store::get_instance()->create_session();
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
 		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
 		$lock_token = (string) $claim['lock_token'];

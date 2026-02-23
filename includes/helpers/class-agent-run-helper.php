@@ -202,7 +202,7 @@ final class Agent_Run_Helper {
 			return false;
 		}
 
-		$session_updated = Agent_Session_Store::get_instance()->apply_run_completion(
+		$session_updated = Agent_Session_Helper::get_instance()->apply_run_completion(
 			(int) $run['session_id'],
 			$status,
 			isset( $args['next_run_at_gmt'] ) ? (string) $args['next_run_at_gmt'] : null

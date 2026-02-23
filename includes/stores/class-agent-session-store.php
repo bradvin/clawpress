@@ -1,18 +1,18 @@
 <?php
 /**
- * Agent session persistence helper.
+ * Agent session persistence store.
  *
  * @package ClawPress
  */
 
 declare( strict_types=1 );
 
-namespace ClawPress\Helpers;
+namespace ClawPress\Stores;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Session store for persistent agent thread state.
+ * Database store for persistent agent session state.
  */
 final class Agent_Session_Store {
 	/**
@@ -103,34 +103,33 @@ final class Agent_Session_Store {
 	}
 
 	/**
-	 * Create one session row.
+	 * Insert one session row.
 	 *
-	 * @param array<string,mixed> $args Session payload.
+	 * @param array<string,mixed> $data Session payload.
 	 */
-	public function create_session( array $args = [] ): int {
+	public function insert_session( array $data ): int {
 		global $wpdb;
 
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'insert' ) ) {
 			return 0;
 		}
 
-		$now = gmdate( 'Y-m-d H:i:s' );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Centralized repository insert.
 		$wpdb->insert(
 			$this->get_table_name(),
 			[
-				'uuid'                 => isset( $args['uuid'] ) ? (string) $args['uuid'] : $this->generate_uuid(),
-				'status'               => isset( $args['status'] ) ? (string) $args['status'] : 'active',
-				'trigger_type'         => isset( $args['trigger_type'] ) ? (string) $args['trigger_type'] : 'chat',
-				'requesting_user_id'   => isset( $args['requesting_user_id'] ) ? (int) $args['requesting_user_id'] : null,
-				'execution_user_id'    => isset( $args['execution_user_id'] ) ? (int) $args['execution_user_id'] : null,
-				'policy_profile'       => isset( $args['policy_profile'] ) ? (string) $args['policy_profile'] : null,
-				'last_run_at_gmt'      => null,
-				'next_run_at_gmt'      => isset( $args['next_run_at_gmt'] ) ? (string) $args['next_run_at_gmt'] : null,
-				'last_run_status'      => null,
-				'consecutive_failures' => 0,
-				'created_at_gmt'       => $now,
-				'updated_at_gmt'       => $now,
+				'uuid'                 => isset( $data['uuid'] ) ? (string) $data['uuid'] : '',
+				'status'               => isset( $data['status'] ) ? (string) $data['status'] : 'active',
+				'trigger_type'         => isset( $data['trigger_type'] ) ? (string) $data['trigger_type'] : 'chat',
+				'requesting_user_id'   => $data['requesting_user_id'] ?? null,
+				'execution_user_id'    => $data['execution_user_id'] ?? null,
+				'policy_profile'       => $data['policy_profile'] ?? null,
+				'last_run_at_gmt'      => $data['last_run_at_gmt'] ?? null,
+				'next_run_at_gmt'      => $data['next_run_at_gmt'] ?? null,
+				'last_run_status'      => $data['last_run_status'] ?? null,
+				'consecutive_failures' => isset( $data['consecutive_failures'] ) ? (int) $data['consecutive_failures'] : 0,
+				'created_at_gmt'       => isset( $data['created_at_gmt'] ) ? (string) $data['created_at_gmt'] : gmdate( 'Y-m-d H:i:s' ),
+				'updated_at_gmt'       => isset( $data['updated_at_gmt'] ) ? (string) $data['updated_at_gmt'] : gmdate( 'Y-m-d H:i:s' ),
 			],
 			[
 				'%s',
@@ -157,12 +156,8 @@ final class Agent_Session_Store {
 
 	/**
 	 * Update parent session state after run completion.
-	 *
-	 * @param int         $session_id      Session identifier.
-	 * @param string      $run_status      Terminal run status.
-	 * @param string|null $next_run_at_gmt Optional next run timestamp.
 	 */
-	public function apply_run_completion( int $session_id, string $run_status, ?string $next_run_at_gmt = null ): bool {
+	public function update_run_completion( int $session_id, string $run_status, ?string $next_run_at_gmt, string $updated_at_gmt ): bool {
 		global $wpdb;
 
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'query' ) ) {
@@ -170,7 +165,6 @@ final class Agent_Session_Store {
 		}
 
 		$table_name = $this->get_table_name();
-		$now        = gmdate( 'Y-m-d H:i:s' );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
 		$query = $wpdb->prepare(
@@ -185,11 +179,11 @@ final class Agent_Session_Store {
 				next_run_at_gmt = %s,
 				updated_at_gmt = %s
 			WHERE id = %d",
-			$now,
+			$updated_at_gmt,
 			$run_status,
 			$run_status,
 			$next_run_at_gmt,
-			$now,
+			$updated_at_gmt,
 			$session_id
 		);
 
@@ -201,20 +195,5 @@ final class Agent_Session_Store {
 		$updated = $wpdb->query( $query );
 
 		return false !== $updated;
-	}
-
-	/**
-	 * Generate uuid-like id without WP dependency.
-	 */
-	private function generate_uuid(): string {
-		$seed = md5( uniqid( '', true ) );
-		return sprintf(
-			'%s-%s-%s-%s-%s',
-			substr( $seed, 0, 8 ),
-			substr( $seed, 8, 4 ),
-			substr( $seed, 12, 4 ),
-			substr( $seed, 16, 4 ),
-			substr( $seed, 20, 12 )
-		);
 	}
 }
