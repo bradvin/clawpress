@@ -29,6 +29,19 @@ The plugin includes:
 - **Hooks**: `src/js/admin/hooks/` - Custom hooks (data fetching, state)
 - **Config**: `src/js/admin/config/` - Field definitions, actions, settings
 
+### JavaScript Formatting Rules
+
+Apply these rules consistently to avoid large lint/fix churn:
+
+- Use tabs for indentation in JS/JSX files.
+- Use single quotes for JS strings/imports (unless escaping/template use makes that inappropriate).
+- Let Prettier collapse JSX/expressions to single-line when short; do not force manual multi-line wrapping.
+- Do not manually align tokens/spaces for visual columns; keep standard Prettier spacing.
+- Keep object/array/function formatting Prettier-first; avoid hand-formatted stylistic layouts.
+- Avoid nested ternaries; expand to clear `if`/`else` when logic branches.
+- Keep `ideas/` out of JS lint scope (ignored via `.eslintignore` and changed-file lint script).
+- Before committing JS changes, run `npm run lint:js -- --fix` (or scoped equivalent) and then `npm run lint:js`.
+
 ### REST API Pattern
 
 Located in `includes/class-rest-api.php`:

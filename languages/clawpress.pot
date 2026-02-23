@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-19T18:29:44+00:00\n"
+"POT-Creation-Date: 2026-02-22T17:22:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -319,12 +319,12 @@ msgid "Confirmed batch `%1$s`. Executing %2$d tool call(s):"
 msgstr ""
 
 #: includes/commands/class-commands.php:245
-#: src/panel/Panel.jsx:145
+#: src/panel/Panel.jsx:172
 msgid "success"
 msgstr ""
 
 #: includes/commands/class-commands.php:246
-#: src/panel/Panel.jsx:147
+#: src/panel/Panel.jsx:174
 msgid "error"
 msgstr ""
 
@@ -372,20 +372,20 @@ msgid "Clear your current chat history."
 msgstr ""
 
 #. translators: %s: expected command usage
-#: includes/commands/handlers/class-clear-command-handler.php:82
-#: includes/commands/handlers/class-create-agent-files-command-handler.php:82
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:82
-#: includes/commands/handlers/class-create-workspace-command-handler.php:92
+#: includes/commands/handlers/class-clear-command-handler.php:84
+#: includes/commands/handlers/class-create-agent-files-command-handler.php:84
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:84
+#: includes/commands/handlers/class-create-workspace-command-handler.php:94
 #: includes/commands/handlers/class-memory-command-handler.php:114
-#: includes/commands/handlers/class-reset-command-handler.php:75
-#: includes/commands/handlers/class-settings-command-handler.php:83
-#: includes/commands/handlers/class-site-command-handler.php:66
+#: includes/commands/handlers/class-reset-command-handler.php:77
+#: includes/commands/handlers/class-settings-command-handler.php:85
+#: includes/commands/handlers/class-site-command-handler.php:68
 #: includes/commands/handlers/class-tools-command-handler.php:95
 #, php-format
 msgid "Invalid usage. Expected: `%s`"
 msgstr ""
 
-#: includes/commands/handlers/class-clear-command-handler.php:100
+#: includes/commands/handlers/class-clear-command-handler.php:102
 msgid "Chat history cleared."
 msgstr ""
 
@@ -393,18 +393,18 @@ msgstr ""
 msgid "Create default agent-file posts from templates."
 msgstr ""
 
-#: includes/commands/handlers/class-create-agent-files-command-handler.php:99
+#: includes/commands/handlers/class-create-agent-files-command-handler.php:101
 msgid "unknown error"
 msgstr ""
 
 #. translators: 1: created count, 2: skipped count, 3: error count, 4: first error detail
-#: includes/commands/handlers/class-create-agent-files-command-handler.php:104
+#: includes/commands/handlers/class-create-agent-files-command-handler.php:106
 #, php-format
 msgid "Agent file bootstrap failed. Created: %1$d, Skipped: %2$d, Errors: %3$d. First error: %4$s"
 msgstr ""
 
 #. translators: 1: created count, 2: skipped count
-#: includes/commands/handlers/class-create-agent-files-command-handler.php:121
+#: includes/commands/handlers/class-create-agent-files-command-handler.php:123
 #, php-format
 msgid "Agent files ready. Created: %1$d, Skipped: %2$d."
 msgstr ""
@@ -413,47 +413,47 @@ msgstr ""
 msgid "Create a dedicated contributor user for the agent."
 msgstr ""
 
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:97
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:99
 #: includes/commands/handlers/class-setup-command-handler.php:423
 msgid "Could not create agent user."
 msgstr ""
 
 #. translators: %s: error message
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:102
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:104
 #, php-format
 msgid "Failed creating agent user: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:123
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:125
 msgid "Agent user created."
 msgstr ""
 
 #. translators: %d: user ID
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:126
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:128
 #, php-format
 msgid "- User ID: %d"
 msgstr ""
 
 #. translators: %s: username
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:131
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:133
 #, php-format
 msgid "- Login: %s"
 msgstr ""
 
 #. translators: %s: email address
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:136
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:138
 #, php-format
 msgid "- Email: %s"
 msgstr ""
 
 #. translators: %s: display name
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:141
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:143
 #, php-format
 msgid "- Display name: %s"
 msgstr ""
 
 #. translators: %s: role name
-#: includes/commands/handlers/class-create-agent-user-command-handler.php:146
+#: includes/commands/handlers/class-create-agent-user-command-handler.php:148
 #, php-format
 msgid "- Role: %s"
 msgstr ""
@@ -462,33 +462,33 @@ msgstr ""
 msgid "Create a secure workspace for the configured agent user."
 msgstr ""
 
-#: includes/commands/handlers/class-create-workspace-command-handler.php:108
+#: includes/commands/handlers/class-create-workspace-command-handler.php:110
 msgid "Agent user is not configured. Set one with `/settings agent_user_id <user-id>` first."
 msgstr ""
 
-#: includes/commands/handlers/class-create-workspace-command-handler.php:121
+#: includes/commands/handlers/class-create-workspace-command-handler.php:123
 #: includes/commands/handlers/class-setup-command-handler.php:510
 msgid "Could not create workspace."
 msgstr ""
 
 #. translators: %s: error message
-#: includes/commands/handlers/class-create-workspace-command-handler.php:126
+#: includes/commands/handlers/class-create-workspace-command-handler.php:128
 #, php-format
 msgid "Failed creating workspace: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-create-workspace-command-handler.php:143
+#: includes/commands/handlers/class-create-workspace-command-handler.php:145
 msgid "Workspace ready."
 msgstr ""
 
 #. translators: %d: user ID
-#: includes/commands/handlers/class-create-workspace-command-handler.php:146
+#: includes/commands/handlers/class-create-workspace-command-handler.php:148
 #, php-format
 msgid "- Agent user ID: %d"
 msgstr ""
 
 #. translators: %s: workspace path
-#: includes/commands/handlers/class-create-workspace-command-handler.php:151
+#: includes/commands/handlers/class-create-workspace-command-handler.php:153
 #, php-format
 msgid "- Path: %s"
 msgstr ""
@@ -553,12 +553,12 @@ msgstr ""
 msgid "Reset all stored ClawPress user meta."
 msgstr ""
 
-#: includes/commands/handlers/class-reset-command-handler.php:89
+#: includes/commands/handlers/class-reset-command-handler.php:91
 msgid "Unable to resolve current user."
 msgstr ""
 
 #. translators: %d: number of user meta keys removed
-#: includes/commands/handlers/class-reset-command-handler.php:122
+#: includes/commands/handlers/class-reset-command-handler.php:124
 #, php-format
 msgid "Reset complete. Removed %d ClawPress user meta entries."
 msgstr ""
@@ -568,31 +568,31 @@ msgid "Update a ClawPress setting value."
 msgstr ""
 
 #. translators: 1: unknown key, 2: comma-separated supported keys
-#: includes/commands/handlers/class-settings-command-handler.php:99
+#: includes/commands/handlers/class-settings-command-handler.php:101
 #, php-format
 msgid "Unknown setting key `%1$s`. Supported keys: %2$s"
 msgstr ""
 
 #. translators: 1: setting key, 2: expected command usage
-#: includes/commands/handlers/class-settings-command-handler.php:117
+#: includes/commands/handlers/class-settings-command-handler.php:119
 #, php-format
 msgid "Missing value for `%1$s`. Expected: `%2$s`"
 msgstr ""
 
 #. translators: 1: setting key, 2: updated setting value
-#: includes/commands/handlers/class-settings-command-handler.php:168
+#: includes/commands/handlers/class-settings-command-handler.php:170
 #, php-format
 msgid "Updated `%1$s` to `%2$s`."
 msgstr ""
 
 #. translators: %s: setting key
-#: includes/commands/handlers/class-settings-command-handler.php:197
+#: includes/commands/handlers/class-settings-command-handler.php:199
 #, php-format
 msgid "Invalid boolean value for `%s`. Use true|false|1|0|yes|no|on|off."
 msgstr ""
 
 #. translators: %s: setting key
-#: includes/commands/handlers/class-settings-command-handler.php:211
+#: includes/commands/handlers/class-settings-command-handler.php:213
 #, php-format
 msgid "Invalid integer value for `%s`."
 msgstr ""
@@ -764,7 +764,7 @@ msgid "Done"
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:703
-#: src/panel/components/cards/SetupCard.jsx:55
+#: src/panel/components/cards/SetupCard.jsx:57
 msgid "Setup Wizard"
 msgstr ""
 
@@ -785,8 +785,7 @@ msgstr ""
 msgid "Choose a configured provider to continue."
 msgstr ""
 
-#. translators: %s: provider display label
-#. translators: %s: model identifier
+#. translators: %s: option label
 #: includes/commands/handlers/class-setup-command-handler.php:745
 #: includes/commands/handlers/class-setup-command-handler.php:778
 #, php-format
@@ -812,8 +811,8 @@ msgid "Run a live test with the selected provider and model."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:802
-#: src/panel/utils/toolDialogHelpers.js:7
-#: src/panel/utils/tools/updatePostsFindReplace.js:112
+#: src/panel/utils/toolDialogHelpers.js:14
+#: src/panel/utils/tools/updatePostsFindReplace.js:90
 msgid "Retry"
 msgstr ""
 
@@ -900,7 +899,7 @@ msgid "Say Hi to Your Agent"
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:930
-#: src/panel/components/cards/SetupCard.jsx:133
+#: src/panel/components/cards/SetupCard.jsx:137
 msgid "Back"
 msgstr ""
 
@@ -908,40 +907,40 @@ msgstr ""
 msgid "Show site name, URL, WordPress version, and plugin version."
 msgstr ""
 
-#: includes/commands/handlers/class-site-command-handler.php:77
+#: includes/commands/handlers/class-site-command-handler.php:79
 msgid "WordPress Site"
 msgstr ""
 
-#: includes/commands/handlers/class-site-command-handler.php:79
-#: includes/commands/handlers/class-site-command-handler.php:80
 #: includes/commands/handlers/class-site-command-handler.php:81
+#: includes/commands/handlers/class-site-command-handler.php:82
+#: includes/commands/handlers/class-site-command-handler.php:83
 msgid "unknown"
 msgstr ""
 
-#: includes/commands/handlers/class-site-command-handler.php:84
+#: includes/commands/handlers/class-site-command-handler.php:86
 msgid "Site info:"
 msgstr ""
 
 #. translators: %s: site name
-#: includes/commands/handlers/class-site-command-handler.php:87
+#: includes/commands/handlers/class-site-command-handler.php:89
 #, php-format
 msgid "- Name: %s"
 msgstr ""
 
 #. translators: %s: site URL
-#: includes/commands/handlers/class-site-command-handler.php:92
+#: includes/commands/handlers/class-site-command-handler.php:94
 #, php-format
 msgid "- URL: %s"
 msgstr ""
 
 #. translators: %s: WordPress version
-#: includes/commands/handlers/class-site-command-handler.php:97
+#: includes/commands/handlers/class-site-command-handler.php:99
 #, php-format
 msgid "- WordPress: %s"
 msgstr ""
 
 #. translators: %s: ClawPress plugin version
-#: includes/commands/handlers/class-site-command-handler.php:102
+#: includes/commands/handlers/class-site-command-handler.php:104
 #, php-format
 msgid "- ClawPress: %s"
 msgstr ""
@@ -950,72 +949,71 @@ msgstr ""
 msgid "Show plugin, provider, memory, and permissions status."
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:80
+#: includes/commands/handlers/class-status-command-handler.php:82
 #: includes/commands/handlers/class-test-command-handler.php:96
 msgid "Invalid usage. No arguments expected."
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:91
+#: includes/commands/handlers/class-status-command-handler.php:93
 #: src/panel/components/PanelHeader.jsx:5
 msgid "Online"
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:91
+#: includes/commands/handlers/class-status-command-handler.php:93
 #: src/panel/components/PanelHeader.jsx:8
 msgid "Offline"
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:92
+#: includes/commands/handlers/class-status-command-handler.php:94
 msgid "yes"
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:93
+#: includes/commands/handlers/class-status-command-handler.php:95
 msgid "no"
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:94
+#: includes/commands/handlers/class-status-command-handler.php:96
 msgid "not configured"
 msgstr ""
 
-#: includes/commands/handlers/class-status-command-handler.php:96
+#: includes/commands/handlers/class-status-command-handler.php:98
 msgid "ClawPress status:"
 msgstr ""
 
 #. translators: %s: mode label
-#: includes/commands/handlers/class-status-command-handler.php:99
+#: includes/commands/handlers/class-status-command-handler.php:101
 #, php-format
 msgid "- Mode: %s"
 msgstr ""
 
-#. translators: %s: provider identifier
-#. translators: %s: provider slug
-#: includes/commands/handlers/class-status-command-handler.php:104
+#. translators: %s: provider ID or slug
+#: includes/commands/handlers/class-status-command-handler.php:106
 #: includes/commands/handlers/class-test-command-handler.php:179
 #, php-format
 msgid "- Provider: %s"
 msgstr ""
 
 #. translators: %s: model identifier
-#: includes/commands/handlers/class-status-command-handler.php:109
+#: includes/commands/handlers/class-status-command-handler.php:111
 #: includes/commands/handlers/class-test-command-handler.php:184
 #, php-format
 msgid "- Model: %s"
 msgstr ""
 
 #. translators: %s: yes/no memory state
-#: includes/commands/handlers/class-status-command-handler.php:114
+#: includes/commands/handlers/class-status-command-handler.php:116
 #, php-format
 msgid "- Memory enabled: %s"
 msgstr ""
 
 #. translators: %s: yes/no agent user state
-#: includes/commands/handlers/class-status-command-handler.php:119
+#: includes/commands/handlers/class-status-command-handler.php:121
 #, php-format
 msgid "- Agent user configured: %s"
 msgstr ""
 
 #. translators: %s: yes/no setup completion state
-#: includes/commands/handlers/class-status-command-handler.php:124
+#: includes/commands/handlers/class-status-command-handler.php:126
 #, php-format
 msgid "- Setup completed: %s"
 msgstr ""
@@ -1170,18 +1168,18 @@ msgid "AI request failed: %s"
 msgstr ""
 
 #: includes/helpers/class-chat-helper.php:1074
-#: src/panel/Panel.jsx:109
+#: src/panel/Panel.jsx:131
 msgid "Request timed out"
 msgstr ""
 
 #: includes/helpers/class-chat-helper.php:1075
-#: src/panel/Panel.jsx:111
+#: src/panel/Panel.jsx:133
 msgid "Provider error"
 msgstr ""
 
 #: includes/helpers/class-chat-helper.php:1097
 #: src/panel/components/cards/ErrorCard.jsx:7
-#: src/panel/Panel.jsx:120
+#: src/panel/Panel.jsx:144
 msgid "Request Error"
 msgstr ""
 
@@ -1210,7 +1208,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/js/admin/components/views/PagesView.js:28
+#: src/js/admin/components/views/PagesView.js:27
 msgid "Showing ClawPress Agent Files."
 msgstr ""
 
@@ -1342,110 +1340,110 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:26
+#: src/js/admin/config/itemConfig.js:25
 msgid "(no title)"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:32
+#: src/js/admin/config/itemConfig.js:31
 msgid "Status"
+msgstr ""
+
+#: src/js/admin/config/itemConfig.js:38
+#: src/panel/utils/tools/updatePostsFindReplace.js:59
+msgid "Published"
 msgstr ""
 
 #: src/js/admin/config/itemConfig.js:39
 #: src/panel/utils/tools/updatePostsFindReplace.js:60
-msgid "Published"
-msgstr ""
-
-#: src/js/admin/config/itemConfig.js:40
-#: src/panel/utils/tools/updatePostsFindReplace.js:61
 msgid "Draft"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:41
+#: src/js/admin/config/itemConfig.js:40
 msgid "Pending"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:42
+#: src/js/admin/config/itemConfig.js:41
 msgid "Private"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:43
+#: src/js/admin/config/itemConfig.js:42
 msgid "Trash"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:54
+#: src/js/admin/config/itemConfig.js:53
 msgid "Date"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:70
+#: src/js/admin/config/itemConfig.js:69
 msgid "Modified"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:89
+#: src/js/admin/config/itemConfig.js:88
 msgid "View"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:97
+#: src/js/admin/config/itemConfig.js:96
 msgid "Edit"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:106
-#: src/js/admin/config/itemConfig.js:146
+#: src/js/admin/config/itemConfig.js:105
+#: src/js/admin/config/itemConfig.js:145
 msgid "Move to Trash"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:124
+#: src/js/admin/config/itemConfig.js:123
 msgid "Move this agent file to trash?"
 msgstr ""
 
 #. translators: %d: number of agent files
-#: src/js/admin/config/itemConfig.js:130
+#: src/js/admin/config/itemConfig.js:129
 #, js-format
 msgid "Move %d agent files to trash?"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:139
-#: src/panel/components/ToolDialogForm.jsx:108
-#: src/panel/utils/toolDialogHelpers.js:72
-#: src/panel/utils/tools/updatePostsFindReplace.js:115
-#: src/panel/utils/tools/updatePostsFindReplace.js:204
+#: src/js/admin/config/itemConfig.js:138
+#: src/panel/components/ToolDialogForm.jsx:164
+#: src/panel/utils/toolDialogHelpers.js:98
+#: src/panel/utils/tools/updatePostsFindReplace.js:97
+#: src/panel/utils/tools/updatePostsFindReplace.js:200
 msgid "Cancel"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:61
+#: src/panel/components/cards/SetupCard.jsx:63
 msgid "Follow these steps to finish setup."
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:102
+#: src/panel/components/cards/SetupCard.jsx:106
 msgid "Use Custom Model ID"
 msgstr ""
 
 #. translators: 1: current step number, 2: total step count, 3: step label.
-#: src/panel/components/cards/SetupCard.jsx:227
+#: src/panel/components/cards/SetupCard.jsx:235
 #, js-format
 msgid "Step %1$d OF %2$d : %3$s"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:339
+#: src/panel/components/cards/SetupCard.jsx:370
 msgid "Path"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:349
+#: src/panel/components/cards/SetupCard.jsx:380
 msgid "Exists"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:363
+#: src/panel/components/cards/SetupCard.jsx:396
 msgid "Provider settings page detected. After saving credentials, click Refresh Providers here."
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:412
+#: src/panel/components/cards/SetupCard.jsx:469
 msgid "Enter custom model ID"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:423
+#: src/panel/components/cards/SetupCard.jsx:485
 msgid "Use Selected Provider"
 msgstr ""
 
-#: src/panel/components/cards/SetupCard.jsx:424
+#: src/panel/components/cards/SetupCard.jsx:489
 msgid "Use Selected Model"
 msgstr ""
 
@@ -1458,284 +1456,282 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:671
+#: src/panel/Panel.jsx:787
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:672
+#: src/panel/Panel.jsx:791
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:15
-#: src/panel/components/MockPanel.jsx:23
+#: src/panel/components/MockPanel.jsx:17
+#: src/panel/components/MockPanel.jsx:25
 msgid "Normal"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:16
+#: src/panel/components/MockPanel.jsx:18
 msgid "Long"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:17
+#: src/panel/components/MockPanel.jsx:19
 msgid "Tool"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:18
+#: src/panel/components/MockPanel.jsx:20
 msgid "Tool Error"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:19
-#: src/panel/Panel.jsx:115
+#: src/panel/components/MockPanel.jsx:21
+#: src/panel/Panel.jsx:139
 msgid "Error"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:24
+#: src/panel/components/MockPanel.jsx:26
 msgid "Slow (3s)"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:25
+#: src/panel/components/MockPanel.jsx:27
 msgid "Infinite"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:30
+#: src/panel/components/MockPanel.jsx:33
 msgid "Mock"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:32
+#: src/panel/components/MockPanel.jsx:36
 msgid "Scenario"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:47
+#: src/panel/components/MockPanel.jsx:55
 msgid "Response delay"
 msgstr ""
 
-#: src/panel/components/MockPanel.jsx:62
-#: src/panel/components/ToolDialogForm.jsx:103
-#: src/panel/utils/toolDialogHelpers.js:8
-#: src/panel/utils/tools/updatePostsFindReplace.js:201
+#: src/panel/components/MockPanel.jsx:72
+#: src/panel/components/ToolDialogForm.jsx:154
+#: src/panel/utils/toolDialogHelpers.js:16
+#: src/panel/utils/tools/updatePostsFindReplace.js:193
 msgid "Run"
 msgstr ""
 
-#: src/panel/components/PanelCard.jsx:29
+#: src/panel/components/PanelCard.jsx:49
 msgid "Card"
 msgstr ""
 
-#: src/panel/components/PanelHeader.jsx:19
+#: src/panel/components/PanelHeader.jsx:26
 msgid "ClawPress Agent"
 msgstr ""
 
-#: src/panel/components/PanelHeader.jsx:24
+#: src/panel/components/PanelHeader.jsx:34
 msgid "Checking…"
 msgstr ""
 
-#: src/panel/components/PanelHeader.jsx:34
+#: src/panel/components/PanelHeader.jsx:48
 msgid "Toggle theme"
 msgstr ""
 
-#: src/panel/components/PanelHeader.jsx:44
+#: src/panel/components/PanelHeader.jsx:58
 msgid "Close panel"
 msgstr ""
 
 #. translators: 1: percentage used, 2: percentage left
-#: src/panel/components/PanelInput.jsx:73
+#: src/panel/components/PanelInput.jsx:91
 #, js-format
 msgid "%1$d%% used (%2$d%% left)"
 msgstr ""
 
 #. translators: 1: used tokens, 2: available context-window tokens
-#: src/panel/components/PanelInput.jsx:81
+#: src/panel/components/PanelInput.jsx:99
 #, js-format
 msgid "%1$s / %2$s tokens used"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:139
-#: src/panel/components/PanelInput.jsx:142
+#: src/panel/components/PanelInput.jsx:165
+#: src/panel/components/PanelInput.jsx:168
 msgid "Suggestions"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:164
+#: src/panel/components/PanelInput.jsx:190
 msgid "Ask me anything…"
 msgstr ""
 
 #. translators: 1: context usage summary, 2: token usage summary
-#: src/panel/components/PanelInput.jsx:176
+#: src/panel/components/PanelInput.jsx:202
 #, js-format
 msgid "Context window: %1$s. %2$s."
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:188
+#: src/panel/components/PanelInput.jsx:222
 msgid "Context window:"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:197
+#: src/panel/components/PanelInput.jsx:231
 msgid "Codex automatically compacts its context"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:205
+#: src/panel/components/PanelInput.jsx:242
 msgid "Stop"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:209
+#: src/panel/components/PanelInput.jsx:250
 msgid "Send"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:117
+#: src/panel/components/PanelMessages.jsx:136
 msgid "System"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:117
-#: src/panel/components/PanelMessages.jsx:159
+#: src/panel/components/PanelMessages.jsx:137
+#: src/panel/components/PanelMessages.jsx:187
 msgid "AGENT"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:153
+#: src/panel/components/PanelMessages.jsx:180
 msgid "Thinking"
 msgstr ""
 
-#: src/panel/components/ToolDialogForm.jsx:99
+#: src/panel/components/ToolDialogForm.jsx:145
 msgid "Preview"
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:41
+#: src/panel/mocks/mockStream.js:47
 msgid "Mock error: something went wrong."
 msgstr ""
 
 #. translators: %s: mock text prefixed with ERROR to trigger an error path
-#: src/panel/mocks/mockStream.js:66
-#: src/panel/mocks/mockStream.js:73
+#: src/panel/mocks/mockStream.js:80
+#: src/panel/mocks/mockStream.js:88
 #, js-format
 msgid "ERROR: %s"
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:67
-#: src/panel/mocks/mockStream.js:69
+#: src/panel/mocks/mockStream.js:81
+#: src/panel/mocks/mockStream.js:83
 msgid "Old Phrase"
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:74
-#: src/panel/mocks/mockStream.js:76
+#: src/panel/mocks/mockStream.js:89
+#: src/panel/mocks/mockStream.js:91
 msgid "New Phrase"
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:87
-msgid "Here is a longer mock response to help you test streaming behavior. "
+#: src/panel/mocks/mockStream.js:103
+msgid "Here is a longer mock response to help you test streaming behavior."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:88
-msgid "It should keep streaming long enough for you to press Stop and see the UI react. "
+#: src/panel/mocks/mockStream.js:107
+msgid "It should keep streaming long enough for you to press Stop and see the UI react."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:89
-msgid ""
-"We can include multiple sentences, line breaks, and a bit of variety.\n"
-"\n"
-""
+#: src/panel/mocks/mockStream.js:111
+msgid "We can include multiple sentences, line breaks, and a bit of variety."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:90
-msgid "Chunk one: The quick brown fox jumps over the lazy dog. "
+#: src/panel/mocks/mockStream.js:115
+msgid "Chunk one: The quick brown fox jumps over the lazy dog."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:91
-msgid "Chunk two: Sphinx of black quartz, judge my vow. "
+#: src/panel/mocks/mockStream.js:119
+msgid "Chunk two: Sphinx of black quartz, judge my vow."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:92
-msgid ""
-"Chunk three: Pack my box with five dozen liquor jugs.\n"
-"\n"
-""
+#: src/panel/mocks/mockStream.js:120
+msgid "Chunk three: Pack my box with five dozen liquor jugs."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:93
+#: src/panel/mocks/mockStream.js:124
 msgid "Final chunk: This should be enough to test canceling a long stream."
 msgstr ""
 
-#: src/panel/mocks/mockStream.js:97
-msgid "I found a tool that can update posts. Here is the proposed change."
-msgstr ""
-
 #. translators: %s: user prompt
-#: src/panel/mocks/mockStream.js:102
+#: src/panel/mocks/mockStream.js:131
 #, js-format
 msgid "Here is a mock response for: \"%s\""
 msgstr ""
 
-#: src/panel/mocks/mockTools.js:13
+#: src/panel/mocks/mockStream.js:135
+msgid "I found a tool that can update posts. Here is the proposed change."
+msgstr ""
+
+#: src/panel/mocks/mockTools.js:18
 msgid "Mock tool error: execution failed."
 msgstr ""
 
-#: src/panel/mocks/mockTools.js:23
+#: src/panel/mocks/mockTools.js:31
 msgid "Hello World"
 msgstr ""
 
-#: src/panel/mocks/mockTools.js:24
+#: src/panel/mocks/mockTools.js:36
 msgid "Sample Post"
 msgstr ""
 
-#: src/panel/Panel.jsx:110
+#: src/panel/Panel.jsx:132
 msgid "Network or API request error"
 msgstr ""
 
-#: src/panel/Panel.jsx:125
-#: src/panel/services/realClient.js:265
-#: src/panel/services/realClient.js:304
+#: src/panel/Panel.jsx:149
+#: src/panel/services/realClient.js:282
+#: src/panel/services/realClient.js:328
 msgid "Chat request failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:149
+#: src/panel/Panel.jsx:176
 msgid "confirmation required"
 msgstr ""
 
 #. translators: 1: tool name, 2: tool call status
-#: src/panel/Panel.jsx:154
+#: src/panel/Panel.jsx:181
 #, js-format
 msgid "Tool call `%1$s` (%2$s)"
 msgstr ""
 
 #. translators: 1: tool call position, 2: total tool calls, 3: tool summary text
-#: src/panel/Panel.jsx:162
+#: src/panel/Panel.jsx:192
 #, js-format
 msgid "[%1$d/%2$d] %3$s"
 msgstr ""
 
-#: src/panel/Panel.jsx:503
-msgid "Preparing tool plan..."
+#: src/panel/Panel.jsx:587
+msgid "Preparing tool plan…"
 msgstr ""
 
-#: src/panel/Panel.jsx:516
+#: src/panel/Panel.jsx:601
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:677
+#: src/panel/Panel.jsx:799
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:698
+#: src/panel/Panel.jsx:827
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:762
+#: src/panel/Panel.jsx:898
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:800
+#: src/panel/Panel.jsx:940
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:858
-#: src/panel/Panel.jsx:875
+#: src/panel/Panel.jsx:1007
+#: src/panel/Panel.jsx:1031
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:866
+#: src/panel/Panel.jsx:1018
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:913
+#: src/panel/Panel.jsx:1074
 #, js-format
 msgid "Mock: %s"
+msgstr ""
+
+#: src/panel/Panel.jsx:1164
+msgid "Resize panel"
 msgstr ""
 
 #. translators: %d: HTTP status code
@@ -1744,68 +1740,68 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:315
+#: src/panel/services/realClient.js:340
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 
-#: src/panel/utils/toolDialogHelpers.js:4
-#: src/panel/utils/toolDialogHelpers.js:12
+#: src/panel/utils/toolDialogHelpers.js:5
+#: src/panel/utils/toolDialogHelpers.js:21
 msgid "Running…"
 msgstr ""
 
-#: src/panel/utils/toolDialogHelpers.js:5
+#: src/panel/utils/toolDialogHelpers.js:8
 msgid "Blocked"
 msgstr ""
 
-#: src/panel/utils/toolDialogHelpers.js:6
+#: src/panel/utils/toolDialogHelpers.js:11
 msgid "Re-run"
 msgstr ""
 
-#: src/panel/utils/toolDialogHelpers.js:15
+#: src/panel/utils/toolDialogHelpers.js:25
 msgid "Blocked (waiting for earlier tool)."
 msgstr ""
 
-#: src/panel/utils/toolDialogHelpers.js:16
+#: src/panel/utils/toolDialogHelpers.js:26
 msgid "Blocked."
 msgstr ""
 
-#: src/panel/utils/toolDialogHelpers.js:78
+#: src/panel/utils/toolDialogHelpers.js:105
 msgid "Cancelled."
 msgstr ""
 
-#: src/panel/utils/toolDialogRenderers.js:18
+#: src/panel/utils/toolDialogRenderers.js:26
 msgid "Unknown tool"
 msgstr ""
 
-#: src/panel/utils/toolDialogRenderers.js:41
+#: src/panel/utils/toolDialogRenderers.js:53
 msgid "Changes:"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:44
+#: src/panel/utils/tools/updatePostsFindReplace.js:43
 msgid "Find"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:46
+#: src/panel/utils/tools/updatePostsFindReplace.js:45
 msgid "The text to search for."
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:50
+#: src/panel/utils/tools/updatePostsFindReplace.js:49
 msgid "Replace"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:52
+#: src/panel/utils/tools/updatePostsFindReplace.js:51
 msgid "The text to replace with."
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:56
+#: src/panel/utils/tools/updatePostsFindReplace.js:55
 msgid "Post status"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:59
+#: src/panel/utils/tools/updatePostsFindReplace.js:58
 msgid "Any"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:66
+#: src/panel/utils/tools/updatePostsFindReplace.js:65
 msgid "Dry run"
 msgstr ""
 
@@ -1817,36 +1813,36 @@ msgstr ""
 msgid "Update Posts - Find and Replace"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:147
+#: src/panel/utils/tools/updatePostsFindReplace.js:133
 msgid "Preview Results"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:148
+#: src/panel/utils/tools/updatePostsFindReplace.js:134
 msgid "Results"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:152
+#: src/panel/utils/tools/updatePostsFindReplace.js:138
 msgid "No matches found."
 msgstr ""
 
 #. translators: %d: number of changed posts
-#: src/panel/utils/tools/updatePostsFindReplace.js:158
+#: src/panel/utils/tools/updatePostsFindReplace.js:144
 #, js-format
 msgid "Changed posts (%d)"
 msgstr ""
 
-#: src/panel/utils/tools/updatePostsFindReplace.js:166
+#: src/panel/utils/tools/updatePostsFindReplace.js:153
 msgid "Untitled"
 msgstr ""
 
 #. translators: %d: post ID
-#: src/panel/utils/tools/updatePostsFindReplace.js:171
+#: src/panel/utils/tools/updatePostsFindReplace.js:158
 #, js-format
 msgid "ID %d"
 msgstr ""
 
 #. translators: %d: number of replacements in a post
-#: src/panel/utils/tools/updatePostsFindReplace.js:178
+#: src/panel/utils/tools/updatePostsFindReplace.js:165
 #, js-format
 msgid "%d change"
 msgid_plural "%d changes"

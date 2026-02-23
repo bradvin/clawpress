@@ -741,7 +741,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				foreach ( $providers as $provider_id ) {
 					$data['actions'][] = [
 						'id'     => sprintf( 'provider-%s', $provider_id ),
-						/* translators: %s: provider display label */
+						/* translators: %s: option label */
 						'label'  => sprintf( __( 'Use %s', 'clawpress' ), $this->get_provider_label( $provider_id ) ),
 						'type'   => 'send_prompt',
 						'prompt' => sprintf( '/setup provider %s', $provider_id ),
@@ -774,7 +774,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				foreach ( $models as $model_id ) {
 					$data['actions'][] = [
 						'id'     => sprintf( 'model-%s', sanitize_key( $model_id ) ),
-						/* translators: %s: model identifier */
+						/* translators: %s: option label */
 						'label'  => sprintf( __( 'Use %s', 'clawpress' ), $model_id ),
 						'type'   => 'send_prompt',
 						'prompt' => sprintf( '/setup model %s', $model_id ),

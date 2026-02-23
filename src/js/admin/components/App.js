@@ -33,9 +33,7 @@ export default function App() {
 				onSelect={ handleTabSelect }
 			>
 				{ ( { content } ) => (
-					<div className="clawpress-tab-content">
-						{ content }
-					</div>
+					<div className="clawpress-tab-content">{ content }</div>
 				) }
 			</TabPanel>
 		</div>
