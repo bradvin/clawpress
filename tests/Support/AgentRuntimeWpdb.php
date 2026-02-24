@@ -201,6 +201,33 @@ final class Agent_Runtime_Wpdb {
 	public function get_row( string $query, string $output ) {
 		unset( $output );
 
+		if ( false !== strpos( $query, 'idempotency_key = %s' ) ) {
+			$session_id      = isset( $this->last_prepare_args[0] ) ? (int) $this->last_prepare_args[0] : 0;
+			$idempotency_key = isset( $this->last_prepare_args[1] ) ? (string) $this->last_prepare_args[1] : '';
+			if ( $session_id <= 0 || '' === $idempotency_key ) {
+				return null;
+			}
+
+			$matching = array_values(
+				array_filter(
+					$this->runs,
+					static fn( array $row ): bool => (int) ( $row['session_id'] ?? 0 ) === $session_id
+						&& (string) ( $row['idempotency_key'] ?? '' ) === $idempotency_key
+				)
+			);
+
+			if ( [] === $matching ) {
+				return null;
+			}
+
+			usort(
+				$matching,
+				static fn( array $left, array $right ): int => (int) ( $right['id'] ?? 0 ) <=> (int) ( $left['id'] ?? 0 )
+			);
+
+			return $matching[0];
+		}
+
 		$id = isset( $this->last_prepare_args[0] ) ? (int) $this->last_prepare_args[0] : 0;
 		if ( $id <= 0 ) {
 			return null;

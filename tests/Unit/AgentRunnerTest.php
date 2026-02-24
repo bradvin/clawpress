@@ -68,5 +68,51 @@ final class AgentRunnerTest extends TestCase {
 		$this->assertSame( Agent_Runner::RUN_SLICE_ACTION_HOOK, WordPress_Stubs::$single_scheduled_actions[0]['hook'] );
 		$this->assertSame( 23, WordPress_Stubs::$single_scheduled_actions[0]['args']['run_id'] );
 	}
-}
 
+	public function test_runner_marks_run_error_when_session_is_missing(): void {
+		$run_id = Agent_Run_Helper::get_instance()->create_run(
+			9999,
+			[
+				'status' => 'queued',
+				'meta'   => [
+					'message' => 'Missing session',
+				],
+			]
+		);
+
+		$runner = new Agent_Runner();
+		$runner->run_slice_action( $run_id );
+
+		$run = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 'error', $run['status'] );
+		$this->assertSame( 'session_missing', $run['error_code'] );
+	}
+
+	public function test_runner_pauses_run_when_session_cannot_be_claimed(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session(
+			[
+				'status' => 'running',
+			]
+		);
+		$GLOBALS['wpdb']->sessions[ $session_id ]['lease_expires_at_gmt'] = gmdate( 'Y-m-d H:i:s', time() + 300 );
+
+		$run_id = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'status' => 'queued',
+				'meta'   => [
+					'message' => 'Busy session',
+				],
+			]
+		);
+
+		$runner = new Agent_Runner();
+		$runner->run_slice_action( $run_id );
+
+		$run = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 'paused', $run['status'] );
+		$this->assertNotNull( $run['next_retry_at_gmt'] ?? null );
+		$this->assertCount( 1, WordPress_Stubs::$single_scheduled_actions );
+		$this->assertSame( $run_id, WordPress_Stubs::$single_scheduled_actions[0]['args']['run_id'] );
+	}
+}

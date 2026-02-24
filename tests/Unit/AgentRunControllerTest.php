@@ -104,5 +104,88 @@ final class AgentRunControllerTest extends TestCase {
 		$this->assertSame( $event_a, $data['events'][0]['event_id'] );
 		$this->assertSame( $event_b, $data['next_cursor'] );
 	}
-}
 
+	public function test_create_run_rejects_unknown_session_id(): void {
+		$controller = new Agent_Run_Controller();
+		$response   = $controller->create_run(
+			new \WP_REST_Request(
+				[
+					'session_id' => 9999,
+					'message'    => 'Invalid session test',
+				]
+			)
+		);
+
+		$data = $response->get_data();
+		$this->assertSame( 404, $response->get_status() );
+		$this->assertSame( 'Session not found.', $data['error'] );
+	}
+
+	public function test_create_run_reuses_idempotency_key_for_same_session(): void {
+		$session_id  = Agent_Session_Helper::get_instance()->create_session(
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+		$controller  = new Agent_Run_Controller();
+		$first_reply = $controller->create_run(
+			new \WP_REST_Request(
+				[
+					'session_id'       => $session_id,
+					'message'          => 'Idempotency request',
+					'idempotency_key'  => 'same-key-123',
+					'transport_mode'   => 'polling',
+					'max_attempts'     => 4,
+				]
+			)
+		);
+		$second_reply = $controller->create_run(
+			new \WP_REST_Request(
+				[
+					'session_id'      => $session_id,
+					'message'         => 'Idempotency request duplicate',
+					'idempotency_key' => 'same-key-123',
+				]
+			)
+		);
+
+		$first_data  = $first_reply->get_data();
+		$second_data = $second_reply->get_data();
+
+		$this->assertSame( 201, $first_reply->get_status() );
+		$this->assertSame( 200, $second_reply->get_status() );
+		$this->assertSame( $first_data['run_id'], $second_data['run_id'] );
+		$this->assertCount( 1, $GLOBALS['wpdb']->runs );
+		$this->assertCount( 1, WordPress_Stubs::$async_actions );
+	}
+
+	public function test_controller_exposes_spawn_endpoint_method(): void {
+		$this->assertTrue( method_exists( Agent_Run_Controller::class, 'spawn_agent' ) );
+	}
+
+	public function test_spawn_agent_creates_spawned_session_and_run(): void {
+		$controller = new Agent_Run_Controller();
+		$response   = $controller->spawn_agent(
+			new \WP_REST_Request(
+				[
+					'message'             => 'Run spawned workflow',
+					'transport_mode'      => 'polling',
+					'slice_budget_ms'     => 1200,
+					'max_steps_per_slice' => 2,
+				]
+			)
+		);
+
+		$data = $response->get_data();
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( 'spawned_agent', $data['trigger'] );
+		$this->assertSame( 'queued', $data['status'] );
+		$this->assertGreaterThan( 0, (int) $data['session_id'] );
+		$this->assertGreaterThan( 0, (int) $data['run_id'] );
+		$this->assertCount( 1, WordPress_Stubs::$async_actions );
+		$this->assertSame( Agent_Runner::RUN_SLICE_ACTION_HOOK, WordPress_Stubs::$async_actions[0]['hook'] );
+		$this->assertSame( 'spawned_agent', $GLOBALS['wpdb']->sessions[ (int) $data['session_id'] ]['trigger_type'] );
+		$this->assertSame( 'spawned_agent', $GLOBALS['wpdb']->runs[ (int) $data['run_id'] ]['trigger_type'] );
+	}
+}
