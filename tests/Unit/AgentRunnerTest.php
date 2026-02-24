@@ -112,6 +112,8 @@ final class AgentRunnerTest extends TestCase {
 		$run = Agent_Run_Helper::get_instance()->get_run( $run_id );
 		$this->assertSame( 'paused', $run['status'] );
 		$this->assertNotNull( $run['next_retry_at_gmt'] ?? null );
+		$this->assertSame( 'session_not_claimable', $run['meta']['reason'] ?? null );
+		$this->assertSame( 'session_not_claimable', $run['meta']['pause_reason'] ?? null );
 		$this->assertCount( 1, WordPress_Stubs::$single_scheduled_actions );
 		$this->assertSame( $run_id, WordPress_Stubs::$single_scheduled_actions[0]['args']['run_id'] );
 	}
@@ -146,5 +148,16 @@ final class AgentRunnerTest extends TestCase {
 		$this->assertSame( 'done', $run_row['status'] );
 		$this->assertSame( 2, (int) $run_row['attempt'] );
 		$this->assertNull( $run_row['lock_token'] );
+	}
+
+	public function test_retry_backoff_calculates_from_retry_count(): void {
+		$runner     = new Agent_Runner();
+		$reflection = new \ReflectionClass( Agent_Runner::class );
+		$method     = $reflection->getMethod( 'calculate_retry_backoff' );
+		$method->setAccessible( true );
+
+		$this->assertSame( 15, $method->invoke( $runner, 1 ) );
+		$this->assertSame( 30, $method->invoke( $runner, 2 ) );
+		$this->assertSame( 60, $method->invoke( $runner, 3 ) );
 	}
 }

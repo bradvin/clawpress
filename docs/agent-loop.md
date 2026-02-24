@@ -34,6 +34,7 @@ Important fields:
 - `status`: `queued`, `running`, `paused`, terminal states (`done`, `error`, `timeout`, `requires_confirmation`, etc.).
 - `lock_token`, `lock_expires_at_gmt`: run-level lock.
 - `attempt`, `max_attempts`: retry accounting.
+- `retry_count`: retry/backoff accounting separate from continuation slices.
 - `next_retry_at_gmt`: deferred scheduling.
 - `resume_cursor_json`: continuation state between slices.
 - `meta_json`: request payload and runtime metadata.
@@ -102,6 +103,13 @@ Session failure counter behavior (`update_run_completion`):
 - incremented for error-like outcomes.
 
 This keeps time-slicing and confirmation waits from being treated as failures.
+
+Retry model notes:
+
+- `attempt` tracks claim lifecycle visibility.
+- `retry_count` tracks error-driven retries/backoff only.
+- continuation pauses (`in_progress`) do not increment `retry_count`.
+- paused progress releases run lock metadata (`lock_token`, `claimed_by`, lease timestamps) because lock scope is one slice.
 
 ## Manual Re-enqueue Safety
 

@@ -114,10 +114,11 @@ final class Agent_Run_Helper {
 					'session_id'         => $session_id,
 					'run_uuid'           => isset( $args['run_uuid'] ) ? (string) $args['run_uuid'] : $this->generate_uuid(),
 				'trigger_type'       => isset( $args['trigger_type'] ) ? (string) $args['trigger_type'] : 'chat',
-				'transport_mode'     => isset( $args['transport_mode'] ) ? (string) $args['transport_mode'] : 'polling',
-				'status'             => isset( $args['status'] ) ? (string) $args['status'] : 'queued',
-				'attempt'            => isset( $args['attempt'] ) ? max( 1, (int) $args['attempt'] ) : 1,
-				'max_attempts'       => isset( $args['max_attempts'] ) ? max( 1, (int) $args['max_attempts'] ) : 5,
+					'transport_mode'     => isset( $args['transport_mode'] ) ? (string) $args['transport_mode'] : 'polling',
+					'status'             => isset( $args['status'] ) ? (string) $args['status'] : 'queued',
+					'attempt'            => isset( $args['attempt'] ) ? max( 1, (int) $args['attempt'] ) : 1,
+					'retry_count'        => isset( $args['retry_count'] ) ? max( 0, (int) $args['retry_count'] ) : 0,
+					'max_attempts'       => isset( $args['max_attempts'] ) ? max( 1, (int) $args['max_attempts'] ) : 5,
 				'next_retry_at_gmt'  => isset( $args['next_retry_at_gmt'] ) ? (string) $args['next_retry_at_gmt'] : null,
 				'resume_cursor_json' => $resume_cursor_json,
 				'meta_json'          => $meta_json,
@@ -318,17 +319,20 @@ final class Agent_Run_Helper {
 			$meta_json    = false === $encoded_meta ? null : $encoded_meta;
 		}
 
-		$updated = $this->store->update_progress(
-			$run_id,
-			$lock_token,
-			[
-				'status'             => isset( $args['status'] ) ? (string) $args['status'] : 'paused',
-				'next_retry_at_gmt'  => isset( $args['next_retry_at_gmt'] ) ? (string) $args['next_retry_at_gmt'] : gmdate( 'Y-m-d H:i:s' ),
-				'resume_cursor_json' => $resume_cursor_json,
-				'meta_json'          => $meta_json,
-				'updated_at_gmt'     => gmdate( 'Y-m-d H:i:s' ),
-			]
-		);
+			$updated = $this->store->update_progress(
+				$run_id,
+				$lock_token,
+				[
+					'status'             => isset( $args['status'] ) ? (string) $args['status'] : 'paused',
+					'next_retry_at_gmt'  => isset( $args['next_retry_at_gmt'] ) ? (string) $args['next_retry_at_gmt'] : gmdate( 'Y-m-d H:i:s' ),
+					'resume_cursor_json' => $resume_cursor_json,
+					'meta_json'          => $meta_json,
+					'retry_count'        => isset( $args['retry_count'] )
+						? max( 0, (int) $args['retry_count'] )
+						: (int) ( $run['retry_count'] ?? 0 ),
+					'updated_at_gmt'     => gmdate( 'Y-m-d H:i:s' ),
+				]
+			);
 
 		if ( false === $updated || 0 === $updated ) {
 			return false;
@@ -450,9 +454,10 @@ final class Agent_Run_Helper {
 			'run_uuid'          => isset( $run['run_uuid'] ) ? (string) $run['run_uuid'] : '',
 			'status'            => isset( $run['status'] ) ? (string) $run['status'] : 'queued',
 			'trigger_type'      => isset( $run['trigger_type'] ) ? (string) $run['trigger_type'] : 'chat',
-			'transport_mode'    => isset( $run['transport_mode'] ) ? (string) $run['transport_mode'] : 'polling',
-			'attempt'           => isset( $run['attempt'] ) ? (int) $run['attempt'] : 1,
-			'max_attempts'      => isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5,
+				'transport_mode'    => isset( $run['transport_mode'] ) ? (string) $run['transport_mode'] : 'polling',
+				'attempt'           => isset( $run['attempt'] ) ? (int) $run['attempt'] : 1,
+				'retry_count'       => isset( $run['retry_count'] ) ? (int) $run['retry_count'] : 0,
+				'max_attempts'      => isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5,
 			'next_retry_at_gmt' => $run['next_retry_at_gmt'] ?? null,
 			'started_at_gmt'    => $run['started_at_gmt'] ?? null,
 			'finished_at_gmt'   => $run['finished_at_gmt'] ?? null,
@@ -479,6 +484,10 @@ final class Agent_Run_Helper {
 	 * @return array<string,mixed>
 	 */
 	private function normalize_run_row( array $row ): array {
+		if ( ! isset( $row['retry_count'] ) ) {
+			$row['retry_count'] = 0;
+		}
+
 		if ( isset( $row['resume_cursor_json'] ) && is_string( $row['resume_cursor_json'] ) && '' !== trim( $row['resume_cursor_json'] ) ) {
 			$decoded = json_decode( $row['resume_cursor_json'], true );
 			if ( is_array( $decoded ) ) {

@@ -135,6 +135,30 @@ final class AgentRunHelperTest extends TestCase {
 		$this->assertSame( 0, (int) $GLOBALS['wpdb']->sessions[ $session_id ]['consecutive_failures'] );
 	}
 
+	public function test_pause_run_clears_lock_metadata_and_persists_retry_count(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
+		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
+		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+
+		$paused = Agent_Run_Helper::get_instance()->pause_run(
+			$run_id,
+			(string) $claim['lock_token'],
+			[
+				'status'      => 'paused',
+				'retry_count' => 2,
+			]
+		);
+
+		$this->assertTrue( $paused );
+		$run = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 'paused', $run['status'] );
+		$this->assertSame( 2, (int) $run['retry_count'] );
+		$this->assertNull( $run['lock_token'] );
+		$this->assertNull( $run['claimed_by'] );
+		$this->assertNull( $run['lock_acquired_at_gmt'] );
+		$this->assertNull( $run['lock_expires_at_gmt'] );
+	}
+
 	public function test_enqueue_run_rejects_non_terminal_statuses(): void {
 		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );

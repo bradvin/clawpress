@@ -200,17 +200,18 @@ final class Agent_Runner {
 		$session_claim = $this->session_helper->claim_session( $session_id, $worker_id, self::SESSION_LEASE_TTL );
 		if ( empty( $session_claim['claimed'] ) ) {
 			$delay_seconds = self::RETRY_BACKOFF_BASE;
-			$this->run_helper->pause_run(
-				$run_id,
-				$lock_token,
-				[
-					'status'            => 'paused',
-					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-					'meta'              => [
-						'reason' => 'session_not_claimable',
-					],
-				]
-			);
+				$this->run_helper->pause_run(
+					$run_id,
+					$lock_token,
+					[
+						'status'            => 'paused',
+						'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+						'meta'              => [
+							'reason'       => 'session_not_claimable',
+							'pause_reason' => 'session_not_claimable',
+						],
+					]
+				);
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 			return;
 		}
@@ -255,12 +256,13 @@ final class Agent_Runner {
 				[
 					'status'            => 'paused',
 					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-					'resume_cursor'     => $result['resume_cursor'] ?? null,
-					'meta'              => [
-						'last_result' => $result,
-					],
-				]
-			);
+						'resume_cursor'     => $result['resume_cursor'] ?? null,
+						'meta'              => [
+							'last_result'  => $result,
+							'pause_reason' => 'slice_budget',
+						],
+					]
+				);
 			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 
@@ -303,23 +305,26 @@ final class Agent_Runner {
 			return;
 		}
 
-		$attempt      = isset( $run['attempt'] ) ? (int) $run['attempt'] : 1;
-		$max_attempts = isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5;
-		if ( $attempt < $max_attempts ) {
-			$delay_seconds = $this->calculate_retry_backoff( $attempt );
-			$this->run_helper->pause_run(
-				$run_id,
-				$lock_token,
-				[
-					'status'            => 'paused',
-					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-					'resume_cursor'     => $result['resume_cursor'] ?? null,
-					'meta'              => [
-						'last_result' => $result,
-						'retry_count' => $attempt,
-					],
-				]
-			);
+			$retry_count  = isset( $run['retry_count'] ) ? max( 0, (int) $run['retry_count'] ) : 0;
+			$max_attempts = isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5;
+			if ( $retry_count < $max_attempts ) {
+				$next_retry_count = $retry_count + 1;
+				$delay_seconds    = $this->calculate_retry_backoff( $next_retry_count );
+				$this->run_helper->pause_run(
+					$run_id,
+					$lock_token,
+					[
+						'status'            => 'paused',
+						'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+						'resume_cursor'     => $result['resume_cursor'] ?? null,
+						'retry_count'       => $next_retry_count,
+						'meta'              => [
+							'last_result'  => $result,
+							'retry_count'  => $next_retry_count,
+							'pause_reason' => 'retry_backoff',
+						],
+					]
+				);
 			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 			return;
@@ -352,11 +357,11 @@ final class Agent_Runner {
 	/**
 	 * Calculate exponential retry backoff.
 	 *
-	 * @param int $attempt Attempt count.
+	 * @param int $retry_count Retry count.
 	 */
-	private function calculate_retry_backoff( int $attempt ): int {
-		$attempt = max( 1, $attempt );
-		$delay   = self::RETRY_BACKOFF_BASE * ( 2 ** ( $attempt - 1 ) );
+	private function calculate_retry_backoff( int $retry_count ): int {
+		$retry_count = max( 1, $retry_count );
+		$delay       = self::RETRY_BACKOFF_BASE * ( 2 ** ( $retry_count - 1 ) );
 		return min( $delay, 15 * MINUTE_IN_SECONDS );
 	}
 }
