@@ -125,6 +125,12 @@ const PanelMessages = ( {
 						const content = item.data.content || '';
 						const isInProgressStatus =
 							isInProgressStatusMessage( content );
+						if (
+							isInProgressStatus &&
+							item.messageIndex !== latestMessageIndex
+						) {
+							return null;
+						}
 						const messageRole = isInProgressStatus
 							? 'system'
 							: item.data.role;
