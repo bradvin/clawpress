@@ -12,6 +12,7 @@ namespace ClawPress\RestAPI\Controllers;
 use ClawPress\Helpers\Agent_Event_Helper;
 use ClawPress\Helpers\Agent_Run_Helper;
 use ClawPress\Helpers\Agent_Session_Helper;
+use ClawPress\Helpers\Settings_Helper;
 use ClawPress\Runner\Agent_Runner;
 
 defined( 'ABSPATH' ) || exit;
@@ -42,12 +43,20 @@ final class Agent_Run_Controller implements Route_Controller {
 	private Agent_Event_Helper $event_helper;
 
 	/**
+	 * Settings helper.
+	 *
+	 * @var Settings_Helper
+	 */
+	private Settings_Helper $settings_helper;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		$this->run_helper     = Agent_Run_Helper::get_instance();
 		$this->session_helper = Agent_Session_Helper::get_instance();
 		$this->event_helper   = Agent_Event_Helper::get_instance();
+		$this->settings_helper = Settings_Helper::get_instance();
 	}
 
 	/**
@@ -231,7 +240,7 @@ final class Agent_Run_Controller implements Route_Controller {
 				[
 					'trigger_type'       => $trigger,
 					'requesting_user_id' => $requesting_user_id,
-					'execution_user_id'  => $requesting_user_id,
+					'execution_user_id'  => $this->resolve_execution_user_id( $requesting_user_id ),
 					'policy_profile'     => 'default',
 				]
 			);
@@ -309,7 +318,7 @@ final class Agent_Run_Controller implements Route_Controller {
 			[
 				'trigger_type'       => 'spawned_agent',
 				'requesting_user_id' => $requesting_user_id,
-				'execution_user_id'  => $requesting_user_id,
+				'execution_user_id'  => $this->resolve_execution_user_id( $requesting_user_id ),
 				'policy_profile'     => 'default',
 			]
 		);
@@ -496,5 +505,19 @@ final class Agent_Run_Controller implements Route_Controller {
 				Agent_Runner::ACTION_GROUP
 			);
 		}
+	}
+
+	/**
+	 * Resolve execution user for run/spawn session creation.
+	 *
+	 * @param int $requesting_user_id Requesting user id.
+	 */
+	private function resolve_execution_user_id( int $requesting_user_id ): int {
+		$execution_user_id = $this->settings_helper->resolve_agent_user_id();
+		if ( $execution_user_id > 0 ) {
+			return $execution_user_id;
+		}
+
+		return $requesting_user_id > 0 ? $requesting_user_id : 0;
 	}
 }

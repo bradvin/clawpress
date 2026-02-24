@@ -48,12 +48,20 @@ Event rows (`clawpress_agent_events`) are append-only progress records for polli
 ## 1) Chat Path (`Chat_Helper` -> `Agent_Loop_Helper::run_slice`)
 
 1. Resolve provider/model.
-2. Build runtime request payload.
-3. Execute a bounded slice through `Agent_Loop_Helper::run_slice`.
-4. If slice completes: return assistant text/card/context/tool-call trace.
-5. If slice returns `in_progress`: create a chat session/run with `resume_cursor`, enqueue background continuation, and return `run_id` + `session_id` + `status=in_progress` for polling.
+2. Create and claim chat session/run records up front (`run_id`, `session_id`).
+3. Build runtime request payload.
+4. Execute a bounded slice through `Agent_Loop_Helper::run_slice`.
+5. Persist first-slice outcomes onto the same run/session state.
+6. Emit run-linked events from the first slice (no pre-run event gap).
+7. If slice completes: return assistant text/card/context/tool-call trace.
+8. If slice returns `in_progress`: persist `resume_cursor`, enqueue background continuation, and return `run_id` + `session_id` + `status=in_progress` for polling.
 
 If provider is unavailable, it returns deterministic offline mode without background run creation.
+
+Execution identity:
+
+- Chat, run-creation, and spawn adapters resolve execution user consistently.
+- Preferred execution user is configured `agent_user_id`; fallback is requesting user.
 
 ## 2) Background Path (`Agent_Run_Controller` + `Agent_Runner`)
 

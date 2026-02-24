@@ -53,6 +53,28 @@ final class AgentRunControllerTest extends TestCase {
 		$this->assertSame( Agent_Runner::RUN_SLICE_ACTION_HOOK, WordPress_Stubs::$async_actions[0]['hook'] );
 	}
 
+	public function test_create_run_uses_configured_agent_user_for_execution_identity(): void {
+		update_option(
+			'clawpress_settings',
+			[
+				'agent_user_id' => 9,
+			]
+		);
+
+		$controller = new Agent_Run_Controller();
+		$response   = $controller->create_run(
+			new \WP_REST_Request(
+				[
+					'message' => 'Execution user test',
+				]
+			)
+		);
+
+		$data = $response->get_data();
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( 9, (int) $GLOBALS['wpdb']->sessions[ (int) $data['session_id'] ]['execution_user_id'] );
+	}
+
 	public function test_enqueue_run_rejects_non_terminal_status(): void {
 		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );
@@ -187,5 +209,27 @@ final class AgentRunControllerTest extends TestCase {
 		$this->assertSame( Agent_Runner::RUN_SLICE_ACTION_HOOK, WordPress_Stubs::$async_actions[0]['hook'] );
 		$this->assertSame( 'spawned_agent', $GLOBALS['wpdb']->sessions[ (int) $data['session_id'] ]['trigger_type'] );
 		$this->assertSame( 'spawned_agent', $GLOBALS['wpdb']->runs[ (int) $data['run_id'] ]['trigger_type'] );
+	}
+
+	public function test_spawn_agent_uses_configured_agent_user_for_execution_identity(): void {
+		update_option(
+			'clawpress_settings',
+			[
+				'agent_user_id' => 11,
+			]
+		);
+
+		$controller = new Agent_Run_Controller();
+		$response   = $controller->spawn_agent(
+			new \WP_REST_Request(
+				[
+					'message' => 'Execution identity for spawn',
+				]
+			)
+		);
+
+		$data = $response->get_data();
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( 11, (int) $GLOBALS['wpdb']->sessions[ (int) $data['session_id'] ]['execution_user_id'] );
 	}
 }

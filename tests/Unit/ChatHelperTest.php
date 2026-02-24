@@ -343,12 +343,16 @@ final class ChatHelperTest extends TestCase {
 
 			$this->assertSame( 'in_progress', $payload['mode'] );
 			$this->assertSame( 'in_progress', $payload['status'] );
-			$this->assertGreaterThan( 0, (int) $payload['run_id'] );
-			$this->assertGreaterThan( 0, (int) $payload['session_id'] );
-			$this->assertCount( 1, $GLOBALS['wpdb']->runs );
-			$this->assertCount( 1, WordPress_Stubs::$async_actions );
-		} finally {
-			unset( $GLOBALS['wpdb'] );
+				$this->assertGreaterThan( 0, (int) $payload['run_id'] );
+				$this->assertGreaterThan( 0, (int) $payload['session_id'] );
+				$this->assertCount( 1, $GLOBALS['wpdb']->runs );
+				$this->assertCount( 1, WordPress_Stubs::$async_actions );
+				$this->assertNotEmpty( $GLOBALS['wpdb']->events );
+				$events = array_values( $GLOBALS['wpdb']->events );
+				$this->assertSame( (int) $payload['run_id'], (int) $events[0]['run_id'] );
+				$this->assertSame( (int) $payload['session_id'], (int) $events[0]['session_id'] );
+			} finally {
+				unset( $GLOBALS['wpdb'] );
+			}
 		}
 	}
-}
