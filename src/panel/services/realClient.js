@@ -2,6 +2,19 @@ import { __, sprintf } from '@wordpress/i18n';
 
 const RUN_POLL_INTERVAL_MS = 500;
 const RUN_POLL_MAX_SECONDS = 180;
+const RUN_PROGRESS_MESSAGES = [
+	__( 'I am still working on this', 'clawpress' ),
+	__( 'Yes, still working on it.', 'clawpress' ),
+	__( 'Ok, this is taking long now. Still on it.', 'clawpress' ),
+	__(
+		'Plot twist: still working on it. My keyboard is sweating.',
+		'clawpress'
+	),
+	__(
+		'At this point even my coffee is worried, but I am still on it.',
+		'clawpress'
+	),
+];
 const TERMINAL_RUN_STATUSES = new Set( [
 	'done',
 	'success',
@@ -126,6 +139,17 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 
 			signal?.addEventListener( 'abort', onAbort, { once: true } );
 		} );
+
+	const getRunProgressMessage = ( pollCount ) => {
+		const normalizedPollCount = Number.isFinite( Number( pollCount ) )
+			? Math.max( 0, Math.round( Number( pollCount ) ) )
+			: 0;
+		const index = Math.min(
+			normalizedPollCount + 1,
+			RUN_PROGRESS_MESSAGES.length - 1
+		);
+		return RUN_PROGRESS_MESSAGES[ index ] || RUN_PROGRESS_MESSAGES[ 0 ];
+	};
 
 	const normalizeCard = ( rawCard ) => {
 		if ( ! rawCard || typeof rawCard !== 'object' ) {
@@ -606,6 +630,8 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			? Math.max( 0, Math.round( Number( initialEventsCursor ) ) )
 			: 0;
 		const startedAt = Date.now();
+		let pollCount = 0;
+		let lastProgressMessage = '';
 
 		while ( true ) {
 			if ( signal?.aborted ) {
@@ -657,6 +683,13 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 				);
 				return;
 			}
+
+			const progressMessage = getRunProgressMessage( pollCount );
+			if ( progressMessage && progressMessage !== lastProgressMessage ) {
+				onEvent( 'run_progress', { text: progressMessage } );
+				lastProgressMessage = progressMessage;
+			}
+			pollCount += 1;
 
 			await waitForNextPoll( signal );
 		}

@@ -595,6 +595,13 @@ const Panel = () => {
 				}
 				setToolPlanningShown( false );
 				break;
+			case 'run_progress':
+				setEphemeralStatus(
+					typeof parsed?.text === 'string' && parsed.text.trim()
+						? parsed.text
+						: __( 'I am still working on this', 'clawpress' )
+				);
+				break;
 			case 'error':
 				appendMessage(
 					'system',

@@ -41,12 +41,22 @@ const PanelMessages = ( {
 	onSendCardAction,
 } ) => {
 	const containerRef = useRef( null );
-	const inProgressStatusText = __(
-		'I am still working on this',
-		'clawpress'
-	);
+	const inProgressStatusMessages = new Set( [
+		__( 'I am still working on this', 'clawpress' ),
+		__( 'Yes, still working on it.', 'clawpress' ),
+		__( 'Ok, this is taking long now. Still on it.', 'clawpress' ),
+		__(
+			'Plot twist: still working on it. My keyboard is sweating.',
+			'clawpress'
+		),
+		__(
+			'At this point even my coffee is worried, but I am still on it.',
+			'clawpress'
+		),
+	] );
 	const isInProgressStatusMessage = ( content ) =>
-		typeof content === 'string' && content.trim() === inProgressStatusText;
+		typeof content === 'string' &&
+		inProgressStatusMessages.has( content.trim() );
 
 	useEffect( () => {
 		const container = containerRef.current;
