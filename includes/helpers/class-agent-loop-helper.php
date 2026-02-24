@@ -369,7 +369,9 @@ final class Agent_Loop_Helper {
 			? $this->normalize_tool_call_trace_payload( $resume_state['tool_calls'] )
 			: [];
 		$round_start           = isset( $resume_state['round'] ) ? max( 0, (int) $resume_state['round'] ) : 0;
-		$steps_completed       = isset( $resume_state['steps_completed'] ) ? max( 0, (int) $resume_state['steps_completed'] ) : 0;
+		$steps_completed       = $is_slice
+			? 0
+			: ( isset( $resume_state['steps_completed'] ) ? max( 0, (int) $resume_state['steps_completed'] ) : 0 );
 
 		if ( $is_slice && $round_start > 0 ) {
 			$transport->emit(
