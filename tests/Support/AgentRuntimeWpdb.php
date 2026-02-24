@@ -153,7 +153,11 @@ final class Agent_Runtime_Wpdb {
 				return false;
 			}
 
-			$session_id = isset( $this->last_prepare_args[5] ) ? (int) $this->last_prepare_args[5] : 0;
+			$has_paused_clause = count( $this->last_prepare_args ) >= 7;
+			$session_id_index  = $has_paused_clause ? 6 : 5;
+			$next_run_index    = $has_paused_clause ? 4 : 3;
+			$updated_index     = $has_paused_clause ? 5 : 4;
+			$session_id        = isset( $this->last_prepare_args[ $session_id_index ] ) ? (int) $this->last_prepare_args[ $session_id_index ] : 0;
 			if ( $session_id <= 0 || ! isset( $this->sessions[ $session_id ] ) ) {
 				return 0;
 			}
@@ -161,17 +165,17 @@ final class Agent_Runtime_Wpdb {
 			$run_status = isset( $this->last_prepare_args[1] ) ? (string) $this->last_prepare_args[1] : '';
 			$failures   = (int) ( $this->sessions[ $session_id ]['consecutive_failures'] ?? 0 );
 
-			if ( in_array( $run_status, [ 'success', 'done' ], true ) ) {
+			if ( in_array( $run_status, [ 'success', 'done', 'requires_confirmation' ], true ) ) {
 				$failures = 0;
-			} else {
+			} elseif ( 'paused' !== $run_status ) {
 				++$failures;
 			}
 
 			$this->sessions[ $session_id ]['last_run_at_gmt']      = isset( $this->last_prepare_args[0] ) ? (string) $this->last_prepare_args[0] : null;
 			$this->sessions[ $session_id ]['last_run_status']      = $run_status;
 			$this->sessions[ $session_id ]['consecutive_failures'] = $failures;
-			$this->sessions[ $session_id ]['next_run_at_gmt']      = $this->last_prepare_args[3] ?? null;
-			$this->sessions[ $session_id ]['updated_at_gmt']       = isset( $this->last_prepare_args[4] ) ? (string) $this->last_prepare_args[4] : null;
+			$this->sessions[ $session_id ]['next_run_at_gmt']      = $this->last_prepare_args[ $next_run_index ] ?? null;
+			$this->sessions[ $session_id ]['updated_at_gmt']       = isset( $this->last_prepare_args[ $updated_index ] ) ? (string) $this->last_prepare_args[ $updated_index ] : null;
 			return 1;
 		}
 

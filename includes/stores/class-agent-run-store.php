@@ -295,10 +295,11 @@ final class Agent_Run_Store {
 	 * Re-enqueue run by ID.
 	 *
 	 * @param int    $run_id Run identifier.
+	 * @param string $current_status Expected current status.
 	 * @param string $updated_at_gmt Update timestamp.
 	 * @return int|false
 	 */
-	public function update_enqueue( int $run_id, string $updated_at_gmt ) {
+	public function update_enqueue( int $run_id, string $current_status, string $updated_at_gmt ) {
 		global $wpdb;
 
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'update' ) ) {
@@ -315,10 +316,11 @@ final class Agent_Run_Store {
 				'updated_at_gmt'     => $updated_at_gmt,
 			],
 			[
-				'id' => $run_id,
+				'id'     => $run_id,
+				'status' => $current_status,
 			],
 			[ '%s', '%s', '%s', '%s' ],
-			[ '%d' ]
+			[ '%d', '%s' ]
 		);
 	}
 

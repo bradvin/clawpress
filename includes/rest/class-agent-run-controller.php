@@ -245,6 +245,16 @@ final class Agent_Run_Controller implements Route_Controller {
 			);
 		}
 
+		$current_status = isset( $run['status'] ) ? (string) $run['status'] : 'queued';
+		if ( ! $this->run_helper->is_enqueueable_status( $current_status ) ) {
+			return new \WP_REST_Response(
+				[
+					'error' => __( 'Run is not in a retryable state.', 'clawpress' ),
+				],
+				409
+			);
+		}
+
 		if ( ! $this->run_helper->enqueue_run( $run_id ) ) {
 			return new \WP_REST_Response(
 				[

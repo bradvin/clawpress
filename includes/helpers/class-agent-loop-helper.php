@@ -1410,9 +1410,19 @@ final class Agent_Loop_Helper {
 				return $reflection->isVariadic() ? 0 : $reflection->getNumberOfParameters();
 			}
 
+			if ( $target_callable instanceof \Closure || is_string( $target_callable ) ) {
+				$reflection = new \ReflectionFunction( $target_callable );
+				return $reflection->isVariadic() ? 0 : $reflection->getNumberOfParameters();
+			}
+
+			if ( is_object( $target_callable ) && method_exists( $target_callable, '__invoke' ) ) {
+				$reflection = new \ReflectionMethod( $target_callable, '__invoke' );
+				return $reflection->isVariadic() ? 0 : $reflection->getNumberOfParameters();
+			}
+
 			$reflection = new \ReflectionFunction( $target_callable );
 			return $reflection->isVariadic() ? 0 : $reflection->getNumberOfParameters();
-		} catch ( \ReflectionException $exception ) {
+		} catch ( \ReflectionException | \TypeError $exception ) {
 			unset( $exception );
 			return 0;
 		}

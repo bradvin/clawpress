@@ -102,15 +102,16 @@ final class Agent_Session_Helper {
 			];
 		}
 
-		$current_status = isset( $session['status'] ) ? (string) $session['status'] : 'idle';
-		$now            = gmdate( 'Y-m-d H:i:s' );
-		$is_stale       = 'running' === $current_status
+		$current_status   = isset( $session['status'] ) ? (string) $session['status'] : 'idle';
+		$now              = gmdate( 'Y-m-d H:i:s' );
+		$is_stale         = 'running' === $current_status
 			&& isset( $session['lease_expires_at_gmt'] )
 			&& is_string( $session['lease_expires_at_gmt'] )
 			&& '' !== $session['lease_expires_at_gmt']
 			&& strtotime( $session['lease_expires_at_gmt'] ) < strtotime( $now );
+		$is_claimable_now = in_array( $current_status, [ 'idle', 'paused' ], true );
 
-		if ( 'idle' !== $current_status && ! $is_stale ) {
+		if ( ! $is_claimable_now && ! $is_stale ) {
 			return [
 				'claimed' => false,
 				'reason'  => 'not_claimable',

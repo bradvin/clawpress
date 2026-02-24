@@ -34,6 +34,22 @@ final class Agent_Run_Helper {
 	];
 
 	/**
+	 * Statuses that can be manually re-enqueued.
+	 *
+	 * @var array<int,string>
+	 */
+	private const ENQUEUEABLE_STATUSES = [
+		'success',
+		'done',
+		'failed',
+		'cancelled',
+		'canceled',
+		'error',
+		'timeout',
+		'requires_confirmation',
+	];
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var ?self
@@ -110,7 +126,17 @@ final class Agent_Run_Helper {
 	 * @param int $run_id Run identifier.
 	 */
 	public function enqueue_run( int $run_id ): bool {
-		$updated = $this->store->update_enqueue( $run_id, gmdate( 'Y-m-d H:i:s' ) );
+		$run = $this->get_run( $run_id );
+		if ( [] === $run ) {
+			return false;
+		}
+
+		$current_status = isset( $run['status'] ) ? (string) $run['status'] : 'queued';
+		if ( ! $this->is_enqueueable_status( $current_status ) ) {
+			return false;
+		}
+
+		$updated = $this->store->update_enqueue( $run_id, $current_status, gmdate( 'Y-m-d H:i:s' ) );
 		return false !== $updated && $updated > 0;
 	}
 
@@ -186,7 +212,7 @@ final class Agent_Run_Helper {
 		}
 
 		$next_attempt = (int) ( $run['attempt'] ?? 1 );
-		if ( $is_stale || $is_claimable_now ) {
+		if ( $is_stale || 'paused' === $current_status ) {
 			$next_attempt = max( 1, $next_attempt + 1 );
 		}
 
@@ -397,6 +423,15 @@ final class Agent_Run_Helper {
 			'resume_cursor'     => $run['resume_cursor'] ?? null,
 			'meta'              => $run['meta'] ?? null,
 		];
+	}
+
+	/**
+	 * Check whether a run status can be re-enqueued manually.
+	 *
+	 * @param string $status Run status.
+	 */
+	public function is_enqueueable_status( string $status ): bool {
+		return in_array( strtolower( trim( $status ) ), self::ENQUEUEABLE_STATUSES, true );
 	}
 
 	/**

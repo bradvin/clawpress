@@ -295,13 +295,15 @@ final class Agent_Session_Store {
 					last_run_at_gmt = %s,
 					last_run_status = %s,
 					consecutive_failures = CASE
-						WHEN %s IN ('success', 'done') THEN 0
+						WHEN %s IN ('success', 'done', 'requires_confirmation') THEN 0
+						WHEN %s = 'paused' THEN consecutive_failures
 						ELSE consecutive_failures + 1
 					END,
 					next_run_at_gmt = %s,
 					updated_at_gmt = %s
 				WHERE id = %d",
 			$updated_at_gmt,
+			$run_status,
 			$run_status,
 			$run_status,
 			$next_run_at_gmt,
