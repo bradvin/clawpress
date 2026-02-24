@@ -153,6 +153,19 @@ final class Provider_Helper {
 	}
 
 	/**
+	 * Resolve provider and model with fallback behavior.
+	 *
+	 * @param array<string,mixed> $settings Settings array.
+	 * @return array{provider:string,model:string}
+	 */
+	public function resolve_provider_and_model( array $settings ): array {
+		return [
+			'provider' => $this->resolve_provider_with_fallback( $settings ),
+			'model'    => $this->resolve_model( $settings ),
+		];
+	}
+
+	/**
 	 * Whether a provider/model combination should use `max_completion_tokens`.
 	 *
 	 * Some OpenAI model families reject legacy `max_tokens` and require

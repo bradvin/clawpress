@@ -150,6 +150,16 @@ final class Agent_Runner {
 	 * @param int $delay_seconds Delay in seconds.
 	 */
 	public function enqueue_run_slice( int $run_id, int $delay_seconds = 0 ): void {
+		self::enqueue_run_slice_action( $run_id, $delay_seconds );
+	}
+
+	/**
+	 * Queue one run slice action through Action Scheduler.
+	 *
+	 * @param int $run_id Run identifier.
+	 * @param int $delay_seconds Delay in seconds.
+	 */
+	public static function enqueue_run_slice_action( int $run_id, int $delay_seconds = 0 ): void {
 		if ( $run_id <= 0 ) {
 			return;
 		}
@@ -206,13 +216,13 @@ final class Agent_Runner {
 			return;
 		}
 
-		$runtime_policy              = $this->policy_helper->resolve_runtime_policy(
+		$runtime_policy             = $this->policy_helper->resolve_runtime_policy(
 			isset( $run['trigger_type'] ) ? (string) $run['trigger_type'] : 'heartbeat',
 			[
 				'policy_profile' => isset( $session['policy_profile'] ) ? (string) $session['policy_profile'] : 'default',
 			]
 		);
-		$max_wall_time_seconds       = isset( $runtime_policy['max_wall_time_seconds'] )
+		$max_wall_time_seconds      = isset( $runtime_policy['max_wall_time_seconds'] )
 			? max( 1, (int) $runtime_policy['max_wall_time_seconds'] )
 			: 120;
 		$allow_background_followups = isset( $runtime_policy['allow_background_followups'] ) && true === $runtime_policy['allow_background_followups'];
@@ -296,56 +306,56 @@ final class Agent_Runner {
 		$result = $this->loop_helper->run_slice( $turn_request );
 
 		$status = isset( $result['status'] ) ? (string) $result['status'] : 'error';
-			if ( 'in_progress' === $status ) {
-				if ( $this->has_run_exceeded_wall_time( $run, $max_wall_time_seconds ) ) {
-					$this->run_helper->complete_run(
-						$run_id,
-						$lock_token,
-						'timeout',
-						[
-							'error_code'    => 'wall_time_exceeded',
-							'error_message' => __( 'Run exceeded maximum wall time.', 'clawpress' ),
-							'meta'          => [
-								'last_result'           => $result,
-								'max_wall_time_seconds' => $max_wall_time_seconds,
-							],
-						]
-					);
-					$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
-					return;
-				}
+		if ( 'in_progress' === $status ) {
+			if ( $this->has_run_exceeded_wall_time( $run, $max_wall_time_seconds ) ) {
+				$this->run_helper->complete_run(
+					$run_id,
+					$lock_token,
+					'timeout',
+					[
+						'error_code'    => 'wall_time_exceeded',
+						'error_message' => __( 'Run exceeded maximum wall time.', 'clawpress' ),
+						'meta'          => [
+							'last_result'           => $result,
+							'max_wall_time_seconds' => $max_wall_time_seconds,
+						],
+					]
+				);
+				$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+				return;
+			}
 
-				if ( ! $allow_background_followups ) {
-					$this->run_helper->complete_run(
-						$run_id,
-						$lock_token,
-						'timeout',
-						[
-							'error_code'    => 'background_followups_disabled',
-							'error_message' => __( 'Background follow-up slices are disabled for this trigger.', 'clawpress' ),
-							'meta'          => [
-								'last_result' => $result,
-							],
-						]
-					);
-					$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
-					return;
-				}
+			if ( ! $allow_background_followups ) {
+				$this->run_helper->complete_run(
+					$run_id,
+					$lock_token,
+					'timeout',
+					[
+						'error_code'    => 'background_followups_disabled',
+						'error_message' => __( 'Background follow-up slices are disabled for this trigger.', 'clawpress' ),
+						'meta'          => [
+							'last_result' => $result,
+						],
+					]
+				);
+				$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+				return;
+			}
 
-				$delay_seconds = 1;
-				$this->run_helper->pause_run(
+			$delay_seconds = 1;
+			$this->run_helper->pause_run(
 				$run_id,
 				$lock_token,
 				[
 					'status'            => 'paused',
 					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-						'resume_cursor'     => $result['resume_cursor'] ?? null,
-						'meta'              => [
-							'last_result'  => $result,
-							'pause_reason' => 'slice_budget',
-						],
-					]
-				);
+					'resume_cursor'     => $result['resume_cursor'] ?? null,
+					'meta'              => [
+						'last_result'  => $result,
+						'pause_reason' => 'slice_budget',
+					],
+				]
+			);
 			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 
@@ -390,41 +400,41 @@ final class Agent_Runner {
 
 			$retry_count  = isset( $run['retry_count'] ) ? max( 0, (int) $run['retry_count'] ) : 0;
 			$max_attempts = isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5;
-			if ( $retry_count < $max_attempts ) {
-				if ( ! $allow_background_followups ) {
-					$this->run_helper->complete_run(
-						$run_id,
-						$lock_token,
-						'timeout',
-						[
-							'error_code'    => 'background_followups_disabled',
-							'error_message' => __( 'Background follow-up slices are disabled for this trigger.', 'clawpress' ),
-							'meta'          => [
-								'last_result' => $result,
-							],
-						]
-					);
-					$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
-					return;
-				}
-
-				$next_retry_count = $retry_count + 1;
-				$delay_seconds    = $this->calculate_retry_backoff( $next_retry_count );
-				$this->run_helper->pause_run(
+		if ( $retry_count < $max_attempts ) {
+			if ( ! $allow_background_followups ) {
+				$this->run_helper->complete_run(
 					$run_id,
 					$lock_token,
+					'timeout',
 					[
-						'status'            => 'paused',
-						'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-						'resume_cursor'     => $result['resume_cursor'] ?? null,
-						'retry_count'       => $next_retry_count,
-						'meta'              => [
-							'last_result'  => $result,
-							'retry_count'  => $next_retry_count,
-							'pause_reason' => 'retry_backoff',
+						'error_code'    => 'background_followups_disabled',
+						'error_message' => __( 'Background follow-up slices are disabled for this trigger.', 'clawpress' ),
+						'meta'          => [
+							'last_result' => $result,
 						],
 					]
 				);
+				$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+				return;
+			}
+
+			$next_retry_count = $retry_count + 1;
+			$delay_seconds    = $this->calculate_retry_backoff( $next_retry_count );
+			$this->run_helper->pause_run(
+				$run_id,
+				$lock_token,
+				[
+					'status'            => 'paused',
+					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+					'resume_cursor'     => $result['resume_cursor'] ?? null,
+					'retry_count'       => $next_retry_count,
+					'meta'              => [
+						'last_result'  => $result,
+						'retry_count'  => $next_retry_count,
+						'pause_reason' => 'retry_backoff',
+					],
+				]
+			);
 			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 			return;

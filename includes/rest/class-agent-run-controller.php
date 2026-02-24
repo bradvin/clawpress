@@ -53,9 +53,9 @@ final class Agent_Run_Controller implements Route_Controller {
 	 * Constructor.
 	 */
 	public function __construct() {
-		$this->run_helper     = Agent_Run_Helper::get_instance();
-		$this->session_helper = Agent_Session_Helper::get_instance();
-		$this->event_helper   = Agent_Event_Helper::get_instance();
+		$this->run_helper      = Agent_Run_Helper::get_instance();
+		$this->session_helper  = Agent_Session_Helper::get_instance();
+		$this->event_helper    = Agent_Event_Helper::get_instance();
 		$this->settings_helper = Settings_Helper::get_instance();
 	}
 
@@ -295,7 +295,7 @@ final class Agent_Run_Controller implements Route_Controller {
 			);
 		}
 
-		$this->enqueue_run_slice( $run_id );
+		Agent_Runner::enqueue_run_slice_action( $run_id );
 
 		return new \WP_REST_Response(
 			[
@@ -357,7 +357,7 @@ final class Agent_Run_Controller implements Route_Controller {
 			);
 		}
 
-		$this->enqueue_run_slice( $run_id );
+		Agent_Runner::enqueue_run_slice_action( $run_id );
 
 		return new \WP_REST_Response(
 			[
@@ -406,7 +406,7 @@ final class Agent_Run_Controller implements Route_Controller {
 			);
 		}
 
-		$this->enqueue_run_slice( $run_id );
+		Agent_Runner::enqueue_run_slice_action( $run_id );
 
 		return new \WP_REST_Response(
 			[
@@ -476,35 +476,6 @@ final class Agent_Run_Controller implements Route_Controller {
 		}
 
 		return $transport_mode;
-	}
-
-	/**
-	 * Queue one run slice action.
-	 *
-	 * @param int $run_id Run identifier.
-	 */
-	private function enqueue_run_slice( int $run_id ): void {
-		if ( $run_id <= 0 ) {
-			return;
-		}
-
-		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			as_enqueue_async_action(
-				Agent_Runner::RUN_SLICE_ACTION_HOOK,
-				[ 'run_id' => $run_id ],
-				Agent_Runner::ACTION_GROUP
-			);
-			return;
-		}
-
-		if ( function_exists( 'as_schedule_single_action' ) ) {
-			as_schedule_single_action(
-				time(),
-				Agent_Runner::RUN_SLICE_ACTION_HOOK,
-				[ 'run_id' => $run_id ],
-				Agent_Runner::ACTION_GROUP
-			);
-		}
 	}
 
 	/**

@@ -79,7 +79,7 @@ final class Chat_Helper {
 		$this->provider_helper         = Provider_Helper::get_instance();
 		$this->agent_loop_helper       = Agent_Loop_Helper::get_instance();
 		$this->online_reply_generator  = $online_reply_generator;
-		$this->provider_model_resolver = $provider_model_resolver ?? [ $this, 'resolve_provider_and_model' ];
+		$this->provider_model_resolver = $provider_model_resolver ?? [ $this->provider_helper, 'resolve_provider_and_model' ];
 	}
 
 	/**
@@ -136,11 +136,11 @@ final class Chat_Helper {
 		$session_lease_token = '';
 
 		try {
-			$slice_budget_ms = $this->resolve_chat_slice_budget_ms( $settings );
+			$slice_budget_ms    = $this->resolve_chat_slice_budget_ms( $settings );
 			$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
 			$execution_user_id  = $this->resolve_execution_user_id( $settings, $requesting_user_id );
-			$has_persistent_run  = false;
-			$turn_request        = [
+			$has_persistent_run = false;
+			$turn_request       = [
 				'message'                 => $message,
 				'trigger'                 => 'chat',
 				'transport_mode'          => 'polling',
@@ -184,11 +184,11 @@ final class Chat_Helper {
 					$run_lock_token = (string) $run_claim['lock_token'];
 					$session_claim  = Agent_Session_Helper::get_instance()->claim_session( $session_id, $worker_id, 120 );
 					if ( ! empty( $session_claim['claimed'] ) && isset( $session_claim['lease_token'] ) ) {
-						$session_lease_token         = (string) $session_claim['lease_token'];
-						$has_persistent_run          = true;
-						$turn_request['run_id']      = $run_id;
-						$turn_request['session_id']  = $session_id;
-						$turn_request['attempt']     = isset( $run_claim['attempt'] ) ? (int) $run_claim['attempt'] : 1;
+						$session_lease_token        = (string) $session_claim['lease_token'];
+						$has_persistent_run         = true;
+						$turn_request['run_id']     = $run_id;
+						$turn_request['session_id'] = $session_id;
+						$turn_request['attempt']    = isset( $run_claim['attempt'] ) ? (int) $run_claim['attempt'] : 1;
 					}
 				}
 			}
@@ -377,7 +377,7 @@ final class Chat_Helper {
 			];
 		}
 
-		$this->enqueue_run_slice( $run_id );
+		Agent_Runner::enqueue_run_slice_action( $run_id );
 
 		$reply = isset( $runtime_result['assistant_text'] ) ? trim( (string) $runtime_result['assistant_text'] ) : '';
 		if ( '' === $reply ) {
@@ -440,35 +440,6 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Queue a run slice action without depending on runner lifecycle hooks.
-	 *
-	 * @param int $run_id Run identifier.
-	 */
-	private function enqueue_run_slice( int $run_id ): void {
-		if ( $run_id <= 0 ) {
-			return;
-		}
-
-		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			as_enqueue_async_action(
-				Agent_Runner::RUN_SLICE_ACTION_HOOK,
-				[ 'run_id' => $run_id ],
-				Agent_Runner::ACTION_GROUP
-			);
-			return;
-		}
-
-		if ( function_exists( 'as_schedule_single_action' ) ) {
-			as_schedule_single_action(
-				time(),
-				Agent_Runner::RUN_SLICE_ACTION_HOOK,
-				[ 'run_id' => $run_id ],
-				Agent_Runner::ACTION_GROUP
-			);
-		}
-	}
-
-	/**
 	 * Build text fallback for card-only responses.
 	 *
 	 * @param array<string,mixed> $card Card payload.
@@ -484,19 +455,6 @@ final class Chat_Helper {
 		}
 
 		return __( 'Action required.', 'clawpress' );
-	}
-
-	/**
-	 * Resolve provider + model with default runtime behavior.
-	 *
-	 * @param array<string,mixed> $settings Current settings.
-	 * @return array{provider:string,model:string}
-	 */
-	private function resolve_provider_and_model( array $settings ): array {
-		return [
-			'provider' => $this->provider_helper->resolve_provider_with_fallback( $settings ),
-			'model'    => $this->provider_helper->resolve_model( $settings ),
-		];
 	}
 
 	/**
@@ -624,7 +582,7 @@ final class Chat_Helper {
 			$error_message = __( 'Unknown provider error.', 'clawpress' );
 		}
 
-		$error_type = $this->classify_error_type( $throwable, $error_message );
+		$error_type = $this->agent_loop_helper->classify_provider_error_type( $throwable, $error_message );
 		$error_code = $throwable->getCode();
 		if ( ! is_int( $error_code ) && ! is_string( $error_code ) ) {
 			$error_code = 0;
@@ -657,30 +615,5 @@ final class Chat_Helper {
 				],
 			],
 		];
-	}
-
-	/**
-	 * Classify known provider error patterns.
-	 *
-	 * @param Throwable $throwable Thrown exception.
-	 * @param string    $error_message Sanitized error message.
-	 */
-	private function classify_error_type( Throwable $throwable, string $error_message ): string {
-		$message  = strtolower( $error_message . ' ' . $throwable->getMessage() );
-		$patterns = [
-			'timed out',
-			'timeout',
-			'curl error 28',
-			'deadline exceeded',
-			'operation timed out',
-		];
-
-		foreach ( $patterns as $pattern ) {
-			if ( false !== strpos( $message, $pattern ) ) {
-				return 'timeout';
-			}
-		}
-
-		return 'provider';
 	}
 }

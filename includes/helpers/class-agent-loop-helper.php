@@ -57,16 +57,6 @@ final class Agent_Loop_Helper {
 	];
 
 	/**
-	 * Default max tool rounds.
-	 */
-	private const DEFAULT_MAX_TOOL_ROUNDS = 4;
-
-	/**
-	 * Default max tool calls per round.
-	 */
-	private const DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 6;
-
-	/**
 	 * Singleton instance.
 	 *
 	 * @var ?self
@@ -168,7 +158,7 @@ final class Agent_Loop_Helper {
 		$settings                = $this->settings_helper->get_settings();
 		$provider_model_resolver = isset( $turn_request['provider_model_resolver'] ) && is_callable( $turn_request['provider_model_resolver'] )
 			? $turn_request['provider_model_resolver']
-			: [ $this, 'resolve_provider_and_model' ];
+			: [ $this->provider_helper, 'resolve_provider_and_model' ];
 		$resolved                = call_user_func( $provider_model_resolver, $settings );
 		$provider                = isset( $resolved['provider'] ) ? trim( (string) $resolved['provider'] ) : '';
 		$model                   = isset( $resolved['model'] ) ? trim( (string) $resolved['model'] ) : '';
@@ -277,7 +267,7 @@ final class Agent_Loop_Helper {
 				$error_message = __( 'Unknown provider error.', 'clawpress' );
 			}
 
-			$error_type = $this->classify_error_type( $throwable, $error_message );
+			$error_type = $this->classify_provider_error_type( $throwable, $error_message );
 			$transport->emit(
 				[
 					'type'    => 'agent.run.error',
@@ -1324,25 +1314,12 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
-	 * Resolve provider + model with default runtime behavior.
-	 *
-	 * @param array<string,mixed> $settings Current settings.
-	 * @return array{provider:string,model:string}
-	 */
-	private function resolve_provider_and_model( array $settings ): array {
-		return [
-			'provider' => $this->provider_helper->resolve_provider_with_fallback( $settings ),
-			'model'    => $this->provider_helper->resolve_model( $settings ),
-		];
-	}
-
-	/**
 	 * Classify known provider error patterns.
 	 *
 	 * @param Throwable $throwable Thrown exception.
 	 * @param string    $error_message Sanitized error message.
 	 */
-	private function classify_error_type( Throwable $throwable, string $error_message ): string {
+	public function classify_provider_error_type( Throwable $throwable, string $error_message ): string {
 		$message  = strtolower( $error_message . ' ' . $throwable->getMessage() );
 		$patterns = [
 			'timed out',
