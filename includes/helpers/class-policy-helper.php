@@ -48,7 +48,9 @@ final class Policy_Helper {
 	private const TRIGGER_POLICY_OVERRIDES = [
 		'chat'          => [
 			// Extended during runtime-loop testing to reduce premature wall-time exits.
-			'max_wall_time_seconds' => 1200,
+			'max_wall_time_seconds'    => 1200,
+			'max_tool_rounds'          => 6,
+			'max_tool_calls_per_round' => 8,
 		],
 		'heartbeat'     => [
 			'allow_destructive_tools'    => false,

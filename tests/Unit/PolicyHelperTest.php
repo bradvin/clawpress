@@ -20,8 +20,8 @@ final class PolicyHelperTest extends TestCase {
 		$this->assertTrue( $policy['allow_tools'] );
 		$this->assertTrue( $policy['allow_destructive_tools'] );
 		$this->assertTrue( $policy['require_confirmation_for_destructive'] );
-		$this->assertSame( 4, $policy['max_tool_rounds'] );
-		$this->assertSame( 6, $policy['max_tool_calls_per_round'] );
+		$this->assertSame( 6, $policy['max_tool_rounds'] );
+		$this->assertSame( 8, $policy['max_tool_calls_per_round'] );
 	}
 
 	public function test_heartbeat_trigger_resolves_stricter_defaults(): void {

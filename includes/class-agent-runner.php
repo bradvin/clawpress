@@ -494,7 +494,10 @@ final class Agent_Runner {
 			if ( '' === $assistant_text ) {
 				$assistant_text = 'requires_confirmation' === $terminal_status
 					? __( 'Action requires confirmation before continuing.', 'clawpress' )
-					: __( 'Run completed.', 'clawpress' );
+					: __(
+						'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
+						'clawpress'
+					);
 			}
 		}
 

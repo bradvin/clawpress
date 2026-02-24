@@ -606,7 +606,10 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 
 		if ( runStatus === 'done' || runStatus === 'success' ) {
 			onEvent( 'response_message', {
-				text: __( 'Run completed.', 'clawpress' ),
+				text: __(
+					'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
+					'clawpress'
+				),
 				role: 'assistant',
 			} );
 			return;

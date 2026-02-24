@@ -236,6 +236,7 @@ final class Agent_Loop_Helper {
 				'tool_calls'     => $online_reply_payload['tool_calls'],
 				'resume_cursor'  => isset( $online_reply_payload['resume_cursor'] ) ? $online_reply_payload['resume_cursor'] : null,
 			];
+			$result = $this->ensure_terminal_assistant_text( $result );
 
 			if ( isset( $online_reply_payload['events_cursor'] ) ) {
 				$result['events_cursor'] = (int) $online_reply_payload['events_cursor'];
@@ -304,6 +305,38 @@ final class Agent_Loop_Helper {
 		} finally {
 			$transport->close();
 		}
+	}
+
+	/**
+	 * Ensure terminal online responses always include user-facing assistant text.
+	 *
+	 * @param array<string,mixed> $result Runtime result payload.
+	 * @return array<string,mixed>
+	 */
+	private function ensure_terminal_assistant_text( array $result ): array {
+		$mode   = isset( $result['mode'] ) ? strtolower( trim( (string) $result['mode'] ) ) : '';
+		$status = isset( $result['status'] ) ? strtolower( trim( (string) $result['status'] ) ) : '';
+
+		if ( 'online' !== $mode || ! in_array( $status, [ 'success', 'done', 'requires_confirmation' ], true ) ) {
+			return $result;
+		}
+
+		$assistant_text = isset( $result['assistant_text'] ) ? trim( (string) $result['assistant_text'] ) : '';
+		if ( '' !== $assistant_text ) {
+			$result['assistant_text'] = $assistant_text;
+			return $result;
+		}
+
+		if ( 'requires_confirmation' === $status ) {
+			$result['assistant_text'] = __( 'Action requires confirmation before continuing.', 'clawpress' );
+			return $result;
+		}
+
+		$result['assistant_text'] = __(
+			'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
+			'clawpress'
+		);
+		return $result;
 	}
 
 	/**

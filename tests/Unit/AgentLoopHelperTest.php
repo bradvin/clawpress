@@ -113,6 +113,43 @@ final class AgentLoopHelperTest extends TestCase {
 		$this->assertNotEmpty( $GLOBALS['wpdb']->events );
 	}
 
+	public function test_run_turn_fills_terminal_empty_assistant_text_with_friendly_message(): void {
+		$result = Agent_Loop_Helper::get_instance()->run_turn(
+			[
+				'message'                 => 'Summarize files',
+				'trigger'                 => 'chat',
+				'transport_mode'          => 'polling',
+				'requesting_user_id'      => 1,
+				'execution_user_id'       => 1,
+				'provider_model_resolver' => static fn( array $settings ): array => [
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				],
+				'online_reply_generator'  => static function (): array {
+					return [
+						'status'      => 'success',
+						'next_action' => 'stop',
+						'reply'       => '',
+						'tool_calls'  => [
+							[
+								'name'     => 'file_read',
+								'status'   => 'success',
+								'round'    => 1,
+								'sequence' => 1,
+							],
+						],
+					];
+				},
+			]
+		);
+
+		$this->assertSame( 'success', $result['status'] );
+		$this->assertSame(
+			'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
+			$result['assistant_text']
+		);
+	}
+
 	public function test_run_slice_returns_in_progress_with_resume_cursor(): void {
 		$result = Agent_Loop_Helper::get_instance()->run_slice(
 			[
