@@ -1,6 +1,6 @@
 import { __, sprintf } from '@wordpress/i18n';
 
-const RUN_POLL_INTERVAL_MS = 1200;
+const RUN_POLL_INTERVAL_MS = 500;
 const RUN_POLL_MAX_SECONDS = 180;
 const TERMINAL_RUN_STATUSES = new Set( [
 	'done',

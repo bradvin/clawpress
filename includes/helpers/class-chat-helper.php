@@ -350,7 +350,7 @@ final class Chat_Helper {
 			$run_lock_token,
 			[
 				'status'            => 'paused',
-				'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + 1 ),
+				'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s' ),
 				'resume_cursor'     => $runtime_result['resume_cursor'] ?? null,
 				'meta'              => [
 					'message'             => isset( $turn_request['message'] ) ? (string) $turn_request['message'] : '',

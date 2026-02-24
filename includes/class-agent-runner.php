@@ -351,32 +351,32 @@ final class Agent_Runner {
 				return;
 			}
 
-			$delay_seconds = 1;
-			$pause_args    = [
-				'status'            => 'paused',
-				'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-				'meta'              => [
-					'last_result'  => $result,
-					'pause_reason' => 'slice_budget',
-				],
-			];
-			if ( array_key_exists( 'resume_cursor', $result ) ) {
-				$pause_args['resume_cursor'] = $result['resume_cursor'];
-			}
-			$this->run_helper->pause_run( $run_id, $lock_token, $pause_args );
-			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
-			$this->enqueue_run_slice( $run_id, $delay_seconds );
-
-			$this->event_helper->emit(
-				'agent.runner.slice_paused',
-				[
-					'run_id'     => $run_id,
-					'session_id' => $session_id,
-					'payload'    => [
-						'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+				$delay_seconds = 0;
+				$pause_args    = [
+					'status'            => 'paused',
+					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+					'meta'              => [
+						'last_result'  => $result,
+						'pause_reason' => 'slice_budget',
 					],
-				]
-			);
+				];
+				if ( array_key_exists( 'resume_cursor', $result ) ) {
+					$pause_args['resume_cursor'] = $result['resume_cursor'];
+				}
+				$this->run_helper->pause_run( $run_id, $lock_token, $pause_args );
+				$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
+				$this->enqueue_run_slice( $run_id, $delay_seconds );
+
+				$this->event_helper->emit(
+					'agent.runner.slice_paused',
+					[
+						'run_id'     => $run_id,
+						'session_id' => $session_id,
+						'payload'    => [
+							'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+						],
+					]
+				);
 			return;
 		}
 
