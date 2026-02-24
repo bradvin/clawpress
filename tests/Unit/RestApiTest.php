@@ -37,7 +37,7 @@ final class RestApiTest extends TestCase {
 			WordPress_Stubs::$rest_routes
 		);
 
-		$this->assertCount( 7, WordPress_Stubs::$rest_routes );
+		$this->assertCount( 11, WordPress_Stubs::$rest_routes );
 		$this->assertContains( '/settings:GET', $routes );
 		$this->assertContains( '/settings:POST', $routes );
 		$this->assertContains( '/status:GET', $routes );
@@ -45,6 +45,10 @@ final class RestApiTest extends TestCase {
 		$this->assertContains( '/panel/state:POST', $routes );
 		$this->assertContains( '/chat/message:POST', $routes );
 		$this->assertContains( '/chat/history:GET', $routes );
+		$this->assertContains( '/agent/runs:POST', $routes );
+		$this->assertContains( '/agent/runs/(?P<run_id>\\d+)/enqueue:POST', $routes );
+		$this->assertContains( '/agent/runs/(?P<run_id>\\d+):GET', $routes );
+		$this->assertContains( '/agent/runs/(?P<run_id>\\d+)/events:GET', $routes );
 	}
 
 	public function test_settings_routes_use_global_manage_options_permission_callback(): void {
@@ -611,4 +615,5 @@ final class RestApiTest extends TestCase {
 			$get_response->get_data()
 		);
 	}
+
 }

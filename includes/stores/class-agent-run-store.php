@@ -74,23 +74,30 @@ final class Agent_Run_Store {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			session_id bigint(20) unsigned NOT NULL,
 			run_uuid char(36) NOT NULL,
+			trigger_type varchar(32) NOT NULL DEFAULT 'chat',
+			transport_mode varchar(16) NOT NULL DEFAULT 'polling',
 			status varchar(32) NOT NULL DEFAULT 'queued',
 			claimed_by varchar(64) NULL,
 			lock_token char(64) NULL,
 			lock_acquired_at_gmt datetime NULL,
 			lock_expires_at_gmt datetime NULL,
 			attempt int(11) NOT NULL DEFAULT 1,
+			max_attempts int(11) NOT NULL DEFAULT 5,
+			next_retry_at_gmt datetime NULL,
 			started_at_gmt datetime NULL,
 			finished_at_gmt datetime NULL,
+			resume_cursor_json longtext NULL,
 			error_code varchar(128) NULL,
 			error_message text NULL,
 			meta_json longtext NULL,
+			idempotency_key varchar(128) NULL,
 			created_at_gmt datetime NOT NULL,
 			updated_at_gmt datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY run_uuid (run_uuid),
 			KEY session_status (session_id, status),
 			KEY status_lock_expires_at_gmt (status, lock_expires_at_gmt),
+			KEY status_next_retry_at_gmt (status, next_retry_at_gmt),
 			KEY claimed_by (claimed_by)
 		) {$charset_collate};";
 
@@ -109,11 +116,9 @@ final class Agent_Run_Store {
 	/**
 	 * Insert a queued run row.
 	 *
-	 * @param int    $session_id Session identifier.
-	 * @param string $run_uuid Run UUID.
-	 * @param string $created_at_gmt Created-at timestamp (UTC).
+	 * @param array<string,mixed> $data Run payload.
 	 */
-	public function insert_run( int $session_id, string $run_uuid, string $created_at_gmt ): int {
+	public function insert_run( array $data ): int {
 		global $wpdb;
 
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'insert' ) ) {
@@ -124,14 +129,35 @@ final class Agent_Run_Store {
 		$wpdb->insert(
 			$this->get_table_name(),
 			[
-				'session_id'     => $session_id,
-				'run_uuid'       => $run_uuid,
-				'status'         => 'queued',
-				'attempt'        => 1,
-				'created_at_gmt' => $created_at_gmt,
-				'updated_at_gmt' => $created_at_gmt,
+				'session_id'         => isset( $data['session_id'] ) ? (int) $data['session_id'] : 0,
+				'run_uuid'           => isset( $data['run_uuid'] ) ? (string) $data['run_uuid'] : '',
+				'trigger_type'       => isset( $data['trigger_type'] ) ? (string) $data['trigger_type'] : 'chat',
+				'transport_mode'     => isset( $data['transport_mode'] ) ? (string) $data['transport_mode'] : 'polling',
+				'status'             => isset( $data['status'] ) ? (string) $data['status'] : 'queued',
+				'attempt'            => isset( $data['attempt'] ) ? (int) $data['attempt'] : 1,
+				'max_attempts'       => isset( $data['max_attempts'] ) ? (int) $data['max_attempts'] : 5,
+				'next_retry_at_gmt'  => $data['next_retry_at_gmt'] ?? null,
+				'resume_cursor_json' => $data['resume_cursor_json'] ?? null,
+				'meta_json'          => $data['meta_json'] ?? null,
+				'idempotency_key'    => isset( $data['idempotency_key'] ) ? (string) $data['idempotency_key'] : null,
+				'created_at_gmt'     => isset( $data['created_at_gmt'] ) ? (string) $data['created_at_gmt'] : gmdate( 'Y-m-d H:i:s' ),
+				'updated_at_gmt'     => isset( $data['updated_at_gmt'] ) ? (string) $data['updated_at_gmt'] : gmdate( 'Y-m-d H:i:s' ),
 			],
-			[ '%d', '%s', '%s', '%d', '%s', '%s' ]
+			[
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+				'%d',
+				'%d',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+				'%s',
+			]
 		);
 
 		return isset( $wpdb->insert_id ) ? (int) $wpdb->insert_id : 0;
@@ -191,6 +217,40 @@ final class Agent_Run_Store {
 	}
 
 	/**
+	 * Update in-progress run state with lock-token guard.
+	 *
+	 * @param int                 $run_id Run identifier.
+	 * @param string              $lock_token Lock token guard.
+	 * @param array<string,mixed> $data Update payload.
+	 * @return int|false
+	 */
+	public function update_progress( int $run_id, string $lock_token, array $data ) {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'update' ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded repository update.
+		return $wpdb->update(
+			$this->get_table_name(),
+			[
+				'status'             => isset( $data['status'] ) ? (string) $data['status'] : 'paused',
+				'next_retry_at_gmt'  => $data['next_retry_at_gmt'] ?? null,
+				'resume_cursor_json' => $data['resume_cursor_json'] ?? null,
+				'meta_json'          => $data['meta_json'] ?? null,
+				'updated_at_gmt'     => isset( $data['updated_at_gmt'] ) ? (string) $data['updated_at_gmt'] : null,
+			],
+			[
+				'id'         => $run_id,
+				'lock_token' => $lock_token,
+			],
+			[ '%s', '%s', '%s', '%s', '%s' ],
+			[ '%d', '%s' ]
+		);
+	}
+
+	/**
 	 * Complete a run with lock-token guard.
 	 *
 	 * @param int                 $run_id Run identifier.
@@ -215,6 +275,8 @@ final class Agent_Run_Store {
 				'lock_acquired_at_gmt' => null,
 				'lock_expires_at_gmt'  => null,
 				'finished_at_gmt'      => isset( $data['finished_at_gmt'] ) ? (string) $data['finished_at_gmt'] : null,
+				'resume_cursor_json'   => $data['resume_cursor_json'] ?? null,
+				'next_retry_at_gmt'    => $data['next_retry_at_gmt'] ?? null,
 				'error_code'           => $data['error_code'] ?? null,
 				'error_message'        => $data['error_message'] ?? null,
 				'meta_json'            => $data['meta_json'] ?? null,
@@ -224,9 +286,76 @@ final class Agent_Run_Store {
 				'id'         => $run_id,
 				'lock_token' => $lock_token,
 			],
-			[ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ],
+			[ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ],
 			[ '%d', '%s' ]
 		);
+	}
+
+	/**
+	 * Re-enqueue run by ID.
+	 *
+	 * @param int    $run_id Run identifier.
+	 * @param string $updated_at_gmt Update timestamp.
+	 * @return int|false
+	 */
+	public function update_enqueue( int $run_id, string $updated_at_gmt ) {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'update' ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded repository update.
+		return $wpdb->update(
+			$this->get_table_name(),
+			[
+				'status'             => 'queued',
+				'next_retry_at_gmt'  => null,
+				'resume_cursor_json' => null,
+				'updated_at_gmt'     => $updated_at_gmt,
+			],
+			[
+				'id' => $run_id,
+			],
+			[ '%s', '%s', '%s', '%s' ],
+			[ '%d' ]
+		);
+	}
+
+	/**
+	 * Fetch runnable run rows ordered by age.
+	 *
+	 * @param int    $limit Max rows.
+	 * @param string $now_gmt Current timestamp.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function get_runnable_runs( int $limit, string $now_gmt ): array {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_results' ) ) {
+			return [];
+		}
+
+		$limit      = max( 1, min( 100, $limit ) );
+		$table_name = $this->get_table_name();
+		$query      = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
+			"SELECT * FROM {$table_name}
+				WHERE status IN ('queued', 'paused')
+					AND (next_retry_at_gmt IS NULL OR next_retry_at_gmt <= %s)
+				ORDER BY created_at_gmt ASC
+				LIMIT %d",
+			$now_gmt,
+			$limit
+		);
+
+		if ( ! is_string( $query ) || '' === $query ) {
+			return [];
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded runnable-run lookup.
+		$rows = $wpdb->get_results( $query, 'ARRAY_A' );
+		return is_array( $rows ) ? array_values( $rows ) : [];
 	}
 
 	/**

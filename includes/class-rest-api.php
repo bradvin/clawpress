@@ -16,6 +16,7 @@ declare( strict_types=1 );
 namespace ClawPress\RestAPI;
 
 use ClawPress\RestAPI\Controllers\Chat_Controller;
+use ClawPress\RestAPI\Controllers\Agent_Run_Controller;
 use ClawPress\RestAPI\Controllers\Panel_State_Controller;
 use ClawPress\RestAPI\Controllers\Route_Controller;
 use ClawPress\RestAPI\Controllers\Settings_Controller;
@@ -43,6 +44,7 @@ final class Rest_API {
 			new Status_Controller(),
 			new Panel_State_Controller(),
 			new Chat_Controller(),
+			new Agent_Run_Controller(),
 		];
 
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );

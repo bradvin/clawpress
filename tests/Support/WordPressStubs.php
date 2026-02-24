@@ -53,6 +53,12 @@ final class WordPress_Stubs {
 	public static array $scheduled_actions = array();
 
 	/** @var array<int,array<string,mixed>> */
+	public static array $single_scheduled_actions = array();
+
+	/** @var array<int,array<string,mixed>> */
+	public static array $async_actions = array();
+
+	/** @var array<int,array<string,mixed>> */
 	public static array $triggered_actions = array();
 
 	/** @var array<string,mixed> */
@@ -98,6 +104,8 @@ final class WordPress_Stubs {
 		self::$abilities            = array();
 		self::$ability_categories   = array();
 		self::$scheduled_actions    = array();
+		self::$single_scheduled_actions = array();
+		self::$async_actions        = array();
 		self::$triggered_actions    = array();
 		self::$options              = array();
 		self::$user_meta            = array();
@@ -215,6 +223,13 @@ namespace {
 			$title = preg_replace( '/[^a-z0-9\-]+/', '-', $title );
 			$title = preg_replace( '/-+/', '-', (string) $title );
 			return trim( (string) $title, '-' );
+		}
+	}
+
+	if ( ! function_exists( 'sanitize_key' ) ) {
+		function sanitize_key( string $key ): string {
+			$key = strtolower( trim( $key ) );
+			return (string) preg_replace( '/[^a-z0-9_\-]/', '', $key );
 		}
 	}
 
@@ -636,6 +651,31 @@ namespace {
 				'hook'      => $hook,
 				'args'      => $args,
 				'group'     => $group,
+			);
+			return 1;
+		}
+	}
+
+	if ( ! function_exists( 'as_schedule_single_action' ) ) {
+		function as_schedule_single_action( int $timestamp, string $hook, array $args = array(), string $group = '', bool $unique = false, int $priority = 10 ): int {
+			unset( $unique, $priority );
+			WordPress_Stubs::$single_scheduled_actions[] = array(
+				'timestamp' => $timestamp,
+				'hook'      => $hook,
+				'args'      => $args,
+				'group'     => $group,
+			);
+			return 1;
+		}
+	}
+
+	if ( ! function_exists( 'as_enqueue_async_action' ) ) {
+		function as_enqueue_async_action( string $hook, array $args = array(), string $group = '', bool $unique = false, int $priority = 10 ): int {
+			unset( $unique, $priority );
+			WordPress_Stubs::$async_actions[] = array(
+				'hook'  => $hook,
+				'args'  => $args,
+				'group' => $group,
 			);
 			return 1;
 		}
