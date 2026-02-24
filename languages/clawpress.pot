@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-24T11:40:35+00:00\n"
+"POT-Creation-Date: 2026-02-24T12:12:17+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -228,11 +228,11 @@ msgid "Run exceeded maximum wall time."
 msgstr ""
 
 #: includes/class-agent-runner.php:335
-#: includes/class-agent-runner.php:411
+#: includes/class-agent-runner.php:410
 msgid "Background follow-up slices are disabled for this trigger."
 msgstr ""
 
-#: includes/class-agent-runner.php:449
+#: includes/class-agent-runner.php:447
 #: includes/helpers/class-chat-helper.php:232
 msgid "Agent run failed."
 msgstr ""
@@ -683,8 +683,8 @@ msgstr ""
 #: includes/commands/handlers/class-setup-command-handler.php:393
 #: includes/commands/handlers/class-test-command-handler.php:203
 #: includes/helpers/class-agent-loop-helper.php:267
-#: includes/helpers/class-chat-helper.php:529
-#: includes/helpers/class-chat-helper.php:582
+#: includes/helpers/class-chat-helper.php:537
+#: includes/helpers/class-chat-helper.php:590
 msgid "Unknown provider error."
 msgstr ""
 
@@ -1139,91 +1139,97 @@ msgstr ""
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
+#. translators: %d: maximum number of tool calls executed per round.
+#: includes/helpers/class-agent-loop-helper.php:880
+#, php-format
+msgid "Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round."
+msgstr ""
+
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1087
+#: includes/helpers/class-agent-loop-helper.php:1173
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1095
+#: includes/helpers/class-agent-loop-helper.php:1181
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1098
+#: includes/helpers/class-agent-loop-helper.php:1184
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1106
+#: includes/helpers/class-agent-loop-helper.php:1192
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1107
+#: includes/helpers/class-agent-loop-helper.php:1193
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1113
+#: includes/helpers/class-agent-loop-helper.php:1199
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1114
+#: includes/helpers/class-agent-loop-helper.php:1200
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1120
+#: includes/helpers/class-agent-loop-helper.php:1206
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:362
+#: includes/helpers/class-chat-helper.php:366
 msgid "Unable to persist paused run state."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:372
+#: includes/helpers/class-chat-helper.php:376
 msgid "Unable to release session after pausing run."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:384
+#: includes/helpers/class-chat-helper.php:388
 msgid "I am still working on this. Poll run progress to continue."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:454
+#: includes/helpers/class-chat-helper.php:462
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:457
+#: includes/helpers/class-chat-helper.php:465
 msgid "Action required."
 msgstr ""
 
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:468
+#: includes/helpers/class-chat-helper.php:476
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:545
-#: includes/helpers/class-chat-helper.php:594
+#: includes/helpers/class-chat-helper.php:553
+#: includes/helpers/class-chat-helper.php:602
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:561
-#: includes/helpers/class-chat-helper.php:610
+#: includes/helpers/class-chat-helper.php:569
+#: includes/helpers/class-chat-helper.php:618
 #: src/panel/components/cards/ErrorCard.jsx:7
 #: src/panel/Panel.jsx:144
 msgid "Request Error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:563
-#: includes/helpers/class-chat-helper.php:612
+#: includes/helpers/class-chat-helper.php:571
+#: includes/helpers/class-chat-helper.php:620
 #: src/panel/Panel.jsx:131
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:564
-#: includes/helpers/class-chat-helper.php:613
+#: includes/helpers/class-chat-helper.php:572
+#: includes/helpers/class-chat-helper.php:621
 #: src/panel/Panel.jsx:133
 msgid "Provider error"
 msgstr ""
@@ -1748,8 +1754,8 @@ msgid "Network or API request error"
 msgstr ""
 
 #: src/panel/Panel.jsx:149
-#: src/panel/services/realClient.js:578
-#: src/panel/services/realClient.js:644
+#: src/panel/services/realClient.js:652
+#: src/panel/services/realClient.js:723
 msgid "Chat request failed."
 msgstr ""
 
@@ -1818,31 +1824,31 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:379
+#: src/panel/services/realClient.js:433
 msgid "Run failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:436
+#: src/panel/services/realClient.js:496
 msgid "Action requires confirmation before continuing."
 msgstr ""
 
-#: src/panel/services/realClient.js:447
+#: src/panel/services/realClient.js:507
 msgid "Run completed."
 msgstr ""
 
-#: src/panel/services/realClient.js:457
+#: src/panel/services/realClient.js:517
 msgid "Run ended with an error."
 msgstr ""
 
-#: src/panel/services/realClient.js:479
+#: src/panel/services/realClient.js:547
 msgid "Run polling timed out before a terminal status was received."
 msgstr ""
 
-#: src/panel/services/realClient.js:626
+#: src/panel/services/realClient.js:705
 msgid "Run entered progress mode without a valid run ID."
 msgstr ""
 
-#: src/panel/services/realClient.js:656
+#: src/panel/services/realClient.js:735
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 
