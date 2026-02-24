@@ -88,6 +88,14 @@ final class Agent_Run_Helper {
 	 * @param array<string,mixed> $args Optional run args.
 	 */
 	public function create_run( int $session_id, array $args = [] ): int {
+		$idempotency_key = isset( $args['idempotency_key'] ) ? trim( (string) $args['idempotency_key'] ) : '';
+		if ( $session_id > 0 && '' !== $idempotency_key ) {
+			$existing_run = $this->get_run_by_idempotency_key( $session_id, $idempotency_key );
+			if ( [] !== $existing_run && isset( $existing_run['id'] ) ) {
+				return (int) $existing_run['id'];
+			}
+		}
+
 		$now       = gmdate( 'Y-m-d H:i:s' );
 		$meta      = isset( $args['meta'] ) && is_array( $args['meta'] ) ? $args['meta'] : [];
 		$meta_json = [] !== $meta ? wp_json_encode( $meta ) : null;
@@ -118,6 +126,22 @@ final class Agent_Run_Helper {
 				'updated_at_gmt'     => $now,
 			]
 		);
+	}
+
+	/**
+	 * Fetch one run by idempotency key.
+	 *
+	 * @param int    $session_id Session identifier.
+	 * @param string $idempotency_key Idempotency key.
+	 * @return array<string,mixed>
+	 */
+	public function get_run_by_idempotency_key( int $session_id, string $idempotency_key ): array {
+		$row = $this->store->get_run_by_idempotency_key( $session_id, $idempotency_key );
+		if ( [] === $row ) {
+			return [];
+		}
+
+		return $this->normalize_run_row( $row );
 	}
 
 	/**

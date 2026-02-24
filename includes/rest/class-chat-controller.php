@@ -199,6 +199,9 @@ final class Chat_Controller implements Route_Controller {
 						? $reply_payload['context']
 						: null,
 					'tool_calls'  => $tool_calls_meta,
+					'run_id'      => isset( $reply_payload['run_id'] ) ? (int) $reply_payload['run_id'] : null,
+					'session_id'  => isset( $reply_payload['session_id'] ) ? (int) $reply_payload['session_id'] : null,
+					'status'      => isset( $reply_payload['status'] ) ? (string) $reply_payload['status'] : null,
 				],
 			],
 			200

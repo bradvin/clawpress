@@ -94,6 +94,49 @@ final class Agent_Run_Controller implements Route_Controller {
 						'sanitize_callback' => 'absint',
 						'validate_callback' => 'clawpress_validate_int',
 					],
+					'idempotency_key'     => [
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					],
+				],
+			]
+		);
+
+		register_rest_route(
+			'clawpress/v1',
+			'/agent/spawn',
+			[
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'spawn_agent' ],
+				'permission_callback' => 'clawpress_check_permissions',
+				'args'                => [
+					'message'             => [
+						'required'          => false,
+						'sanitize_callback' => 'clawpress_sanitize_multiline_text',
+					],
+					'transport_mode'      => [
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_key',
+					],
+					'max_attempts'        => [
+						'required'          => false,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => 'clawpress_validate_int',
+					],
+					'slice_budget_ms'     => [
+						'required'          => false,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => 'clawpress_validate_int',
+					],
+					'max_steps_per_slice' => [
+						'required'          => false,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => 'clawpress_validate_int',
+					],
+					'idempotency_key'     => [
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					],
 				],
 			]
 		);
@@ -171,10 +214,20 @@ final class Agent_Run_Controller implements Route_Controller {
 			$trigger = 'chat';
 		}
 
-		$session_id = (int) $request->get_param( 'session_id' );
-		if ( $session_id <= 0 ) {
-			$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
-			$session_id         = $this->session_helper->create_session(
+		$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$session_id         = (int) $request->get_param( 'session_id' );
+		if ( $session_id > 0 ) {
+			$session = $this->session_helper->get_session( $session_id );
+			if ( [] === $session ) {
+				return new \WP_REST_Response(
+					[
+						'error' => __( 'Session not found.', 'clawpress' ),
+					],
+					404
+				);
+			}
+		} else {
+			$session_id = $this->session_helper->create_session(
 				[
 					'trigger_type'       => $trigger,
 					'requesting_user_id' => $requesting_user_id,
@@ -193,13 +246,30 @@ final class Agent_Run_Controller implements Route_Controller {
 			);
 		}
 
+		$idempotency_key = trim( (string) $request->get_param( 'idempotency_key' ) );
+		if ( '' !== $idempotency_key ) {
+			$existing_run = $this->run_helper->get_run_by_idempotency_key( $session_id, $idempotency_key );
+			if ( [] !== $existing_run && isset( $existing_run['id'] ) ) {
+				return new \WP_REST_Response(
+					[
+						'run_id'       => (int) $existing_run['id'],
+						'session_id'   => $session_id,
+						'status'       => isset( $existing_run['status'] ) ? (string) $existing_run['status'] : 'queued',
+						'deduplicated' => true,
+					],
+					200
+				);
+			}
+		}
+
 		$run_id = $this->run_helper->create_run(
 			$session_id,
 			[
-				'trigger_type'   => $trigger,
-				'transport_mode' => $this->normalize_transport_mode( (string) $request->get_param( 'transport_mode' ) ),
-				'max_attempts'   => max( 1, (int) $request->get_param( 'max_attempts' ) > 0 ? (int) $request->get_param( 'max_attempts' ) : 5 ),
-				'meta'           => [
+				'trigger_type'    => $trigger,
+				'transport_mode'  => $this->normalize_transport_mode( (string) $request->get_param( 'transport_mode' ) ),
+				'max_attempts'    => max( 1, (int) $request->get_param( 'max_attempts' ) > 0 ? (int) $request->get_param( 'max_attempts' ) : 5 ),
+				'idempotency_key' => '' !== $idempotency_key ? $idempotency_key : null,
+				'meta'            => [
 					'message'             => (string) $request->get_param( 'message' ),
 					'slice_budget_ms'     => max( 1, (int) $request->get_param( 'slice_budget_ms' ) > 0 ? (int) $request->get_param( 'slice_budget_ms' ) : 1500 ),
 					'max_steps_per_slice' => max( 1, (int) $request->get_param( 'max_steps_per_slice' ) > 0 ? (int) $request->get_param( 'max_steps_per_slice' ) : 1 ),
@@ -222,6 +292,69 @@ final class Agent_Run_Controller implements Route_Controller {
 			[
 				'run_id'     => $run_id,
 				'session_id' => $session_id,
+				'status'     => 'queued',
+			],
+			201
+		);
+	}
+
+	/**
+	 * Spawn a background agent session + first run.
+	 *
+	 * @param \WP_REST_Request $request Request object.
+	 */
+	public function spawn_agent( \WP_REST_Request $request ): \WP_REST_Response {
+		$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$session_id         = $this->session_helper->create_session(
+			[
+				'trigger_type'       => 'spawned_agent',
+				'requesting_user_id' => $requesting_user_id,
+				'execution_user_id'  => $requesting_user_id,
+				'policy_profile'     => 'default',
+			]
+		);
+
+		if ( $session_id <= 0 ) {
+			return new \WP_REST_Response(
+				[
+					'error' => __( 'Unable to create session for spawned agent.', 'clawpress' ),
+				],
+				500
+			);
+		}
+
+		$idempotency_key = trim( (string) $request->get_param( 'idempotency_key' ) );
+		$run_id          = $this->run_helper->create_run(
+			$session_id,
+			[
+				'trigger_type'    => 'spawned_agent',
+				'transport_mode'  => $this->normalize_transport_mode( (string) $request->get_param( 'transport_mode' ) ),
+				'max_attempts'    => max( 1, (int) $request->get_param( 'max_attempts' ) > 0 ? (int) $request->get_param( 'max_attempts' ) : 5 ),
+				'idempotency_key' => '' !== $idempotency_key ? $idempotency_key : null,
+				'meta'            => [
+					'message'             => (string) $request->get_param( 'message' ),
+					'slice_budget_ms'     => max( 1, (int) $request->get_param( 'slice_budget_ms' ) > 0 ? (int) $request->get_param( 'slice_budget_ms' ) : 1500 ),
+					'max_steps_per_slice' => max( 1, (int) $request->get_param( 'max_steps_per_slice' ) > 0 ? (int) $request->get_param( 'max_steps_per_slice' ) : 1 ),
+				],
+			]
+		);
+
+		if ( $run_id <= 0 ) {
+			return new \WP_REST_Response(
+				[
+					'error' => __( 'Unable to create run for spawned agent.', 'clawpress' ),
+				],
+				500
+			);
+		}
+
+		$this->enqueue_run_slice( $run_id );
+
+		return new \WP_REST_Response(
+			[
+				'session_id' => $session_id,
+				'run_id'     => $run_id,
+				'trigger'    => 'spawned_agent',
 				'status'     => 'queued',
 			],
 			201

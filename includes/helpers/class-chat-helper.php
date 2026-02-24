@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Helpers;
 
 use ClawPress\Commands\Commands;
+use ClawPress\Runner\Agent_Runner;
 use Throwable;
 
 defined( 'ABSPATH' ) || exit;
@@ -130,10 +131,13 @@ final class Chat_Helper {
 		}
 
 		try {
-			$turn_request = [
+			$slice_budget_ms = $this->resolve_chat_slice_budget_ms( $settings );
+			$turn_request    = [
 				'message'                 => $message,
 				'trigger'                 => 'chat',
 				'transport_mode'          => 'polling',
+				'slice_budget_ms'         => $slice_budget_ms,
+				'max_steps_per_slice'     => 2,
 				'requesting_user_id'      => function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0,
 				'execution_user_id'       => $this->settings_helper->resolve_agent_user_id( $settings ),
 				'provider_model_resolver' => $this->provider_model_resolver,
@@ -142,7 +146,17 @@ final class Chat_Helper {
 				$turn_request['online_reply_generator'] = $this->online_reply_generator;
 			}
 
-			$runtime_result = $this->agent_loop_helper->run_turn( $turn_request );
+			$runtime_result = $this->agent_loop_helper->run_slice( $turn_request );
+
+			if ( 'in_progress' === (string) ( $runtime_result['status'] ?? '' ) ) {
+				return $this->build_in_progress_reply_payload(
+					$message,
+					$provider,
+					$model,
+					$turn_request,
+					$runtime_result
+				);
+			}
 
 			if ( isset( $runtime_result['error'] ) && is_array( $runtime_result['error'] ) ) {
 				return $this->build_runtime_error_reply_payload( $runtime_result['error'], $provider, $model );
@@ -190,6 +204,138 @@ final class Chat_Helper {
 			return $payload;
 		} catch ( Throwable $throwable ) {
 			return $this->build_error_reply_payload( $throwable, $provider, $model );
+		}
+	}
+
+	/**
+	 * Build chat payload for in-progress continuation via background runner.
+	 *
+	 * @param string              $message User message.
+	 * @param string              $provider Provider identifier.
+	 * @param string              $model Model identifier.
+	 * @param array<string,mixed> $turn_request Turn request payload.
+	 * @param array<string,mixed> $runtime_result Runtime result payload.
+	 * @return array<string,mixed>
+	 */
+	private function build_in_progress_reply_payload(
+		string $message,
+		string $provider,
+		string $model,
+		array $turn_request,
+		array $runtime_result
+	): array {
+		$requesting_user_id = isset( $turn_request['requesting_user_id'] ) ? (int) $turn_request['requesting_user_id'] : 0;
+		$execution_user_id  = isset( $turn_request['execution_user_id'] ) ? (int) $turn_request['execution_user_id'] : 0;
+		$session_id         = Agent_Session_Helper::get_instance()->create_session(
+			[
+				'trigger_type'       => 'chat',
+				'requesting_user_id' => $requesting_user_id > 0 ? $requesting_user_id : null,
+				'execution_user_id'  => $execution_user_id > 0 ? $execution_user_id : null,
+				'policy_profile'     => 'default',
+			]
+		);
+
+		if ( $session_id <= 0 ) {
+			return [
+				'reply'       => __( 'Unable to start background run.', 'clawpress' ),
+				'mode'        => 'error',
+				'provider'    => $provider,
+				'model'       => '' !== $model ? $model : null,
+				'suggestions' => $this->get_default_offline_suggestions(),
+			];
+		}
+
+		$run_id = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'trigger_type'   => 'chat',
+				'transport_mode' => 'polling',
+				'status'         => 'paused',
+				'resume_cursor'  => $runtime_result['resume_cursor'] ?? null,
+				'meta'           => [
+					'message'             => $message,
+					'slice_budget_ms'     => isset( $turn_request['slice_budget_ms'] ) ? (int) $turn_request['slice_budget_ms'] : 1500,
+					'max_steps_per_slice' => isset( $turn_request['max_steps_per_slice'] ) ? (int) $turn_request['max_steps_per_slice'] : 2,
+				],
+			]
+		);
+
+		if ( $run_id <= 0 ) {
+			return [
+				'reply'       => __( 'Unable to queue background run.', 'clawpress' ),
+				'mode'        => 'error',
+				'provider'    => $provider,
+				'model'       => '' !== $model ? $model : null,
+				'suggestions' => $this->get_default_offline_suggestions(),
+			];
+		}
+
+		$this->enqueue_run_slice( $run_id );
+
+		$reply = isset( $runtime_result['assistant_text'] ) ? trim( (string) $runtime_result['assistant_text'] ) : '';
+		if ( '' === $reply ) {
+			$reply = __( 'I am still working on this. Poll run progress to continue.', 'clawpress' );
+		}
+
+		$payload = [
+			'reply'       => $reply,
+			'mode'        => 'in_progress',
+			'status'      => 'in_progress',
+			'provider'    => $provider,
+			'model'       => '' !== $model ? $model : null,
+			'suggestions' => [],
+			'run_id'      => $run_id,
+			'session_id'  => $session_id,
+		];
+
+		if ( isset( $runtime_result['context'] ) && is_array( $runtime_result['context'] ) ) {
+			$payload['context'] = $runtime_result['context'];
+		}
+
+		if ( isset( $runtime_result['tool_calls'] ) && is_array( $runtime_result['tool_calls'] ) && [] !== $runtime_result['tool_calls'] ) {
+			$payload['tool_calls'] = $runtime_result['tool_calls'];
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Resolve synchronous chat slice budget.
+	 *
+	 * @param array<string,mixed> $settings Plugin settings.
+	 */
+	private function resolve_chat_slice_budget_ms( array $settings ): int {
+		$request_timeout = $this->settings_helper->get_request_timeout( $settings );
+		$budget          = (int) $request_timeout * 1000;
+		return max( 250, min( 15000, $budget ) );
+	}
+
+	/**
+	 * Queue a run slice action without depending on runner lifecycle hooks.
+	 *
+	 * @param int $run_id Run identifier.
+	 */
+	private function enqueue_run_slice( int $run_id ): void {
+		if ( $run_id <= 0 ) {
+			return;
+		}
+
+		if ( function_exists( 'as_enqueue_async_action' ) ) {
+			as_enqueue_async_action(
+				Agent_Runner::RUN_SLICE_ACTION_HOOK,
+				[ 'run_id' => $run_id ],
+				Agent_Runner::ACTION_GROUP
+			);
+			return;
+		}
+
+		if ( function_exists( 'as_schedule_single_action' ) ) {
+			as_schedule_single_action(
+				time(),
+				Agent_Runner::RUN_SLICE_ACTION_HOOK,
+				[ 'run_id' => $run_id ],
+				Agent_Runner::ACTION_GROUP
+			);
 		}
 	}
 

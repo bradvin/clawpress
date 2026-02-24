@@ -386,6 +386,46 @@ final class Agent_Run_Store {
 	}
 
 	/**
+	 * Fetch one run by session + idempotency key.
+	 *
+	 * @param int    $session_id Session identifier.
+	 * @param string $idempotency_key Idempotency key.
+	 * @return array<string,mixed>
+	 */
+	public function get_run_by_idempotency_key( int $session_id, string $idempotency_key ): array {
+		global $wpdb;
+
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_row' ) ) {
+			return [];
+		}
+
+		$idempotency_key = trim( $idempotency_key );
+		if ( $session_id <= 0 || '' === $idempotency_key ) {
+			return [];
+		}
+
+		$table_name = $this->get_table_name();
+		$query      = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
+			"SELECT * FROM {$table_name}
+				WHERE session_id = %d
+					AND idempotency_key = %s
+				ORDER BY id DESC
+				LIMIT 1",
+			$session_id,
+			$idempotency_key
+		);
+
+		if ( ! is_string( $query ) || '' === $query ) {
+			return [];
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- bounded lookup by session + idempotency key.
+		$row = $wpdb->get_row( $query, 'ARRAY_A' );
+		return is_array( $row ) ? $row : [];
+	}
+
+	/**
 	 * Begin transaction.
 	 */
 	public function begin_transaction(): bool {

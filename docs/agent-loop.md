@@ -1,6 +1,6 @@
 # Agent Loop Runtime
 
-This document describes how the ClawPress agent loop executes work across chat and background runner flows.
+This document describes how the ClawPress agent loop executes work across chat, background runner, and spawn flows.
 
 ## Scope
 
@@ -8,7 +8,7 @@ The runtime spans:
 
 - `Agent_Loop_Helper`: turn/slice execution engine.
 - `Agent_Runner`: Action Scheduler worker that claims and executes run slices.
-- `Agent_Run_Controller`: REST API for creating, enqueueing, and polling runs.
+- `Agent_Run_Controller`: REST API for creating, spawning, enqueueing, and polling runs.
 - `Agent_Run_Helper` + `Agent_Session_Helper`: lifecycle/state helpers.
 - `Agent_Run_Store` + `Agent_Session_Store` + `Agent_Event_Store`: persistence.
 - `Polling_Transport` / `Null_Transport`: event delivery.
@@ -44,12 +44,13 @@ Event rows (`clawpress_agent_events`) are append-only progress records for polli
 
 ## Execution Paths
 
-## 1) Chat Path (`Chat_Helper` -> `Agent_Loop_Helper::run_turn`)
+## 1) Chat Path (`Chat_Helper` -> `Agent_Loop_Helper::run_slice`)
 
 1. Resolve provider/model.
 2. Build runtime request payload.
-3. Execute one turn through `Agent_Loop_Helper`.
-4. Return assistant text/card/context/tool-call trace.
+3. Execute a bounded slice through `Agent_Loop_Helper::run_slice`.
+4. If slice completes: return assistant text/card/context/tool-call trace.
+5. If slice returns `in_progress`: create a chat session/run with `resume_cursor`, enqueue background continuation, and return `run_id` + `session_id` + `status=in_progress` for polling.
 
 If provider is unavailable, it returns deterministic offline mode without background run creation.
 
@@ -62,6 +63,13 @@ If provider is unavailable, it returns deterministic offline mode without backgr
 5. Runner either:
    - completes run (`done`, `requires_confirmation`, `error`, etc.), or
    - pauses run with `resume_cursor` and `next_retry_at_gmt`, then re-enqueues.
+
+## 3) Spawn Path (`POST /agent/spawn`)
+
+1. Create a new `spawned_agent` session.
+2. Seed first run metadata (`message`, slice budgets, retry limits).
+3. Enqueue first slice.
+4. Return `session_id` + `run_id` immediately.
 
 ## Locking and Claim Rules
 
@@ -102,6 +110,14 @@ This keeps time-slicing and confirmation waits from being treated as failures.
 
 This prevents accidental mutation of active runs and stale-state rewrites.
 
+## Idempotency
+
+`idempotency_key` is supported on run creation:
+
+- `POST /agent/runs` with the same `session_id + idempotency_key` returns the existing run instead of inserting a duplicate.
+- duplicate create requests return HTTP `200` with `deduplicated=true`.
+- unknown explicit `session_id` now returns HTTP `404` to prevent orphan run creation.
+
 ## Agent Loop Callback Compatibility
 
 `Agent_Loop_Helper` supports custom `online_reply_generator` callables with varying arity.
@@ -119,6 +135,7 @@ Invokable object reflection uses `ReflectionMethod(__invoke)` and catches both `
 `Agent_Run_Controller` registers:
 
 - `POST /clawpress/v1/agent/runs`
+- `POST /clawpress/v1/agent/spawn`
 - `POST /clawpress/v1/agent/runs/{run_id}/enqueue`
 - `GET /clawpress/v1/agent/runs/{run_id}`
 - `GET /clawpress/v1/agent/runs/{run_id}/events?after={event_id}&limit={n}`
@@ -139,8 +156,13 @@ The runtime harness uses `tests/Support/AgentRuntimeWpdb.php` and covers:
 - enqueue safety rules,
 - paused and requires-confirmation failure accounting,
 - runner progression from queued run to completion,
+- runner missing-session and unclaimable-session negative flows,
 - controller create/enqueue/events behavior,
-- loop invocation with invokable callback arity.
+- controller idempotency and unknown-session negative flows,
+- spawn endpoint flow,
+- chat `in_progress` handoff with run metadata,
+- loop invocation with invokable callback arity,
+- loop streaming-mode transport fallback and slice `in_progress` payload semantics.
 
 Primary tests:
 
