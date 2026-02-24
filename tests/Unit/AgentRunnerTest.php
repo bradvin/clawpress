@@ -53,6 +53,13 @@ final class AgentRunnerTest extends TestCase {
 		$this->assertNull( $run_row['lock_token'] );
 		$this->assertSame( 'idle', $GLOBALS['wpdb']->sessions[ $session_id ]['status'] );
 		$this->assertSame( 'done', $GLOBALS['wpdb']->sessions[ $session_id ]['last_run_status'] );
+		$history = get_option( 'clawpress_chat_history_1', [] );
+		$this->assertIsArray( $history );
+		$this->assertNotEmpty( $history );
+		$last_history_item = $history[ count( $history ) - 1 ];
+		$this->assertIsArray( $last_history_item );
+		$this->assertSame( 'assistant', $last_history_item['role'] ?? '' );
+		$this->assertNotSame( '', trim( (string) ( $last_history_item['content'] ?? '' ) ) );
 	}
 
 	public function test_enqueue_run_slice_uses_async_and_delayed_single_actions(): void {

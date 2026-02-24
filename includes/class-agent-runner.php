@@ -13,6 +13,7 @@ use ClawPress\Helpers\Agent_Event_Helper;
 use ClawPress\Helpers\Agent_Loop_Helper;
 use ClawPress\Helpers\Agent_Run_Helper;
 use ClawPress\Helpers\Agent_Session_Helper;
+use ClawPress\Helpers\Chat_History_Helper;
 use ClawPress\Helpers\Policy_Helper;
 
 defined( 'ABSPATH' ) || exit;
@@ -87,14 +88,22 @@ final class Agent_Runner {
 	private Policy_Helper $policy_helper;
 
 	/**
+	 * Chat history helper.
+	 *
+	 * @var Chat_History_Helper
+	 */
+	private Chat_History_Helper $chat_history_helper;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
-		$this->run_helper     = Agent_Run_Helper::get_instance();
-		$this->session_helper = Agent_Session_Helper::get_instance();
-		$this->event_helper   = Agent_Event_Helper::get_instance();
-		$this->loop_helper    = Agent_Loop_Helper::get_instance();
-		$this->policy_helper  = Policy_Helper::get_instance();
+		$this->run_helper          = Agent_Run_Helper::get_instance();
+		$this->session_helper      = Agent_Session_Helper::get_instance();
+		$this->event_helper        = Agent_Event_Helper::get_instance();
+		$this->loop_helper         = Agent_Loop_Helper::get_instance();
+		$this->policy_helper       = Policy_Helper::get_instance();
+		$this->chat_history_helper = Chat_History_Helper::get_instance();
 
 		add_action( 'clawpress_run_scheduled_tasks', [ $this, 'run_scheduled_tasks' ] );
 		add_action( self::RUN_SLICE_ACTION_HOOK, [ $this, 'run_slice_action' ], 10, 1 );
@@ -373,28 +382,29 @@ final class Agent_Runner {
 
 		if ( in_array( $status, [ 'success', 'requires_confirmation' ], true ) ) {
 			$terminal_status = 'success' === $status ? 'done' : 'requires_confirmation';
-			$this->run_helper->complete_run(
-				$run_id,
-				$lock_token,
-				$terminal_status,
-				[
-					'meta' => [
-						'result' => $result,
-					],
-				]
-			);
-			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'idle' );
-			$this->event_helper->emit(
-				'agent.runner.slice_completed',
-				[
-					'run_id'     => $run_id,
-					'session_id' => $session_id,
-					'payload'    => [
-						'status' => $terminal_status,
-					],
-				]
-			);
-			return;
+				$this->run_helper->complete_run(
+					$run_id,
+					$lock_token,
+					$terminal_status,
+					[
+						'meta' => [
+							'result' => $result,
+						],
+					]
+				);
+				$this->persist_terminal_chat_result( $run, $session, $result, $terminal_status );
+				$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'idle' );
+				$this->event_helper->emit(
+					'agent.runner.slice_completed',
+					[
+						'run_id'     => $run_id,
+						'session_id' => $session_id,
+						'payload'    => [
+							'status' => $terminal_status,
+						],
+					]
+				);
+				return;
 		}
 
 			$retry_count  = isset( $run['retry_count'] ) ? max( 0, (int) $run['retry_count'] ) : 0;
@@ -451,6 +461,50 @@ final class Agent_Runner {
 			]
 		);
 		$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+	}
+
+	/**
+	 * Persist terminal chat result back into per-user chat history.
+	 *
+	 * @param array<string,mixed> $run Run row.
+	 * @param array<string,mixed> $session Session row.
+	 * @param array<string,mixed> $result Runtime result payload.
+	 * @param string              $terminal_status Terminal run status.
+	 */
+	private function persist_terminal_chat_result( array $run, array $session, array $result, string $terminal_status ): void {
+		$trigger_type = isset( $run['trigger_type'] ) ? sanitize_key( (string) $run['trigger_type'] ) : '';
+		if ( 'chat' !== $trigger_type ) {
+			return;
+		}
+
+		$requesting_user_id = isset( $session['requesting_user_id'] ) ? (int) $session['requesting_user_id'] : 0;
+		if ( $requesting_user_id <= 0 ) {
+			return;
+		}
+
+		$assistant_text = isset( $result['assistant_text'] ) ? trim( (string) $result['assistant_text'] ) : '';
+		$card           = isset( $result['card'] ) && is_array( $result['card'] ) ? $result['card'] : null;
+		$tool_calls     = isset( $result['tool_calls'] ) && is_array( $result['tool_calls'] ) ? $result['tool_calls'] : null;
+
+		if ( '' === $assistant_text ) {
+			if ( null !== $card && isset( $card['data']['message'] ) ) {
+				$assistant_text = trim( sanitize_text_field( (string) $card['data']['message'] ) );
+			}
+
+			if ( '' === $assistant_text ) {
+				$assistant_text = 'requires_confirmation' === $terminal_status
+					? __( 'Action requires confirmation before continuing.', 'clawpress' )
+					: __( 'Run completed.', 'clawpress' );
+			}
+		}
+
+		$this->chat_history_helper->append_history_message(
+			'assistant',
+			$assistant_text,
+			$card,
+			$tool_calls,
+			$requesting_user_id
+		);
 	}
 
 	/**
