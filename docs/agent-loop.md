@@ -13,6 +13,12 @@ The runtime spans:
 - `Agent_Run_Store` + `Agent_Session_Store` + `Agent_Event_Store`: persistence.
 - `Polling_Transport` / `Null_Transport`: event delivery.
 
+Shared runtime utilities:
+
+- `Agent_Runner::enqueue_run_slice_action()` is the single enqueue path used by chat, run-controller, and runner retry/continuation logic.
+- `Provider_Helper::resolve_provider_and_model()` is the default provider/model resolver for both chat and loop runtime.
+- `Agent_Loop_Helper::classify_provider_error_type()` is reused by chat and loop runtime error handling.
+
 ## Core Model
 
 ### Session
@@ -204,4 +210,5 @@ Primary tests:
 
 - `Agent_Runner` is wired in plugin bootstrap and listens to `clawpress_run_scheduled_tasks` and `clawpress_agent_run_slice`.
 - Action Scheduler async actions are preferred; delayed slices use single scheduled actions.
+- Chat and REST controllers delegate run-slice scheduling to `Agent_Runner::enqueue_run_slice_action()` to avoid duplicate enqueue behavior.
 - Keep helper/store boundaries intact: controllers and runner call helpers; helpers call stores.
