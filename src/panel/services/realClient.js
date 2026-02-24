@@ -1,7 +1,8 @@
 import { __, sprintf } from '@wordpress/i18n';
 
-const RUN_POLL_INTERVAL_MS = 500;
+const RUN_POLL_INTERVAL_MS = 2000;
 const RUN_POLL_MAX_SECONDS = 180;
+const RUN_PROGRESS_MESSAGE_STEP_SECONDS = 10;
 const RUN_PROGRESS_MESSAGES = [
 	__( 'I am still working on this', 'clawpress' ),
 	__( 'Yes, still working on it.', 'clawpress' ),
@@ -140,12 +141,16 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			signal?.addEventListener( 'abort', onAbort, { once: true } );
 		} );
 
-	const getRunProgressMessage = ( pollCount ) => {
-		const normalizedPollCount = Number.isFinite( Number( pollCount ) )
-			? Math.max( 0, Math.round( Number( pollCount ) ) )
+	const getRunProgressMessage = ( elapsedSeconds ) => {
+		const normalizedElapsedSeconds = Number.isFinite(
+			Number( elapsedSeconds )
+		)
+			? Math.max( 0, Number( elapsedSeconds ) )
 			: 0;
 		const index = Math.min(
-			normalizedPollCount + 1,
+			Math.floor(
+				normalizedElapsedSeconds / RUN_PROGRESS_MESSAGE_STEP_SECONDS
+			),
 			RUN_PROGRESS_MESSAGES.length - 1
 		);
 		return RUN_PROGRESS_MESSAGES[ index ] || RUN_PROGRESS_MESSAGES[ 0 ];
@@ -630,7 +635,6 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			? Math.max( 0, Math.round( Number( initialEventsCursor ) ) )
 			: 0;
 		const startedAt = Date.now();
-		let pollCount = 0;
 		let lastProgressMessage = '';
 
 		while ( true ) {
@@ -684,12 +688,11 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 				return;
 			}
 
-			const progressMessage = getRunProgressMessage( pollCount );
+			const progressMessage = getRunProgressMessage( elapsedSeconds );
 			if ( progressMessage && progressMessage !== lastProgressMessage ) {
 				onEvent( 'run_progress', { text: progressMessage } );
 				lastProgressMessage = progressMessage;
 			}
-			pollCount += 1;
 
 			await waitForNextPoll( signal );
 		}
