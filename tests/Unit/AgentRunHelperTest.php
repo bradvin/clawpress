@@ -159,6 +159,47 @@ final class AgentRunHelperTest extends TestCase {
 		$this->assertNull( $run['lock_expires_at_gmt'] );
 	}
 
+	public function test_pause_run_preserves_existing_resume_cursor_and_merges_meta(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
+		$run_id     = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'meta'          => [
+					'message'             => 'hello',
+					'slice_budget_ms'     => 1500,
+					'max_steps_per_slice' => 2,
+				],
+				'resume_cursor' => [
+					'version' => 1,
+					'round'   => 2,
+				],
+			]
+		);
+		$claim      = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-a', 120 );
+
+		$paused = Agent_Run_Helper::get_instance()->pause_run(
+			$run_id,
+			(string) $claim['lock_token'],
+			[
+				'status'      => 'paused',
+				'retry_count' => 1,
+				'meta'        => [
+					'pause_reason' => 'retry_backoff',
+				],
+			]
+		);
+
+		$this->assertTrue( $paused );
+		$run = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 1, (int) $run['retry_count'] );
+		$this->assertSame( 'hello', $run['meta']['message'] ?? '' );
+		$this->assertSame( 1500, (int) ( $run['meta']['slice_budget_ms'] ?? 0 ) );
+		$this->assertSame( 2, (int) ( $run['meta']['max_steps_per_slice'] ?? 0 ) );
+		$this->assertSame( 'retry_backoff', $run['meta']['pause_reason'] ?? '' );
+		$this->assertSame( 1, (int) ( $run['resume_cursor']['version'] ?? 0 ) );
+		$this->assertSame( 2, (int) ( $run['resume_cursor']['round'] ?? 0 ) );
+	}
+
 	public function test_enqueue_run_rejects_non_terminal_statuses(): void {
 		$session_id = Agent_Session_Helper::get_instance()->create_session();
 		$run_id     = Agent_Run_Helper::get_instance()->create_run( $session_id );

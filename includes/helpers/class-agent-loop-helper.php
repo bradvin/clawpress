@@ -466,15 +466,47 @@ final class Agent_Loop_Helper {
 			$function_responses = [];
 			$confirmation_batch = [];
 
-			foreach ( array_slice( $function_calls, 0, (int) $runtime_policy['max_tool_calls_per_round'] ) as $index => $function_call ) {
+			$max_tool_calls_per_round = max( 1, (int) $runtime_policy['max_tool_calls_per_round'] );
+			foreach ( $function_calls as $index => $function_call ) {
 				$tool_name = trim( (string) $function_call->getName() );
 				if ( '' === $tool_name ) {
-					continue;
+					$tool_name = 'unknown_tool';
 				}
 
 				$function_response_id = trim( (string) $function_call->getId() );
 				if ( '' === $function_response_id ) {
 					$function_response_id = sprintf( 'tool-call-%d-%d', $round + 1, $index + 1 );
+				}
+
+				if ( $index >= $max_tool_calls_per_round ) {
+					$tool_result       = $this->build_tool_call_limit_tool_result( $max_tool_calls_per_round );
+					$tool_call_trace[] = $this->build_tool_call_trace_entry(
+						$tool_name,
+						$function_call->getArgs(),
+						$tool_result,
+						$round + 1,
+						$index + 1
+					);
+
+					$transport->emit(
+						[
+							'type'    => 'agent.tool_call',
+							'payload' => [
+								'round'     => $round + 1,
+								'sequence'  => $index + 1,
+								'tool_name' => strtolower( trim( $tool_name ) ),
+								'status'    => 'error',
+							],
+						]
+					);
+
+					$function_responses[] = new FunctionResponse(
+						$function_response_id,
+						$tool_name,
+						$tool_result
+					);
+
+					continue;
 				}
 
 				$tool_result       = $this->abilities_helper->execute_tool_call(
@@ -834,6 +866,26 @@ final class Agent_Loop_Helper {
 			'message'               => '' !== $message ? $message : null,
 			'round'                 => max( 1, $round ),
 			'sequence'              => max( 1, $sequence ),
+		];
+	}
+
+	/**
+	 * Build a synthetic tool result when the per-round execution cap is exceeded.
+	 *
+	 * @param int $max_tool_calls_per_round Per-round execution cap.
+	 * @return array<string,mixed>
+	 */
+	private function build_tool_call_limit_tool_result( int $max_tool_calls_per_round ): array {
+		return [
+			'success'               => false,
+			'requires_confirmation' => false,
+			'ability'               => '',
+			'result'                => [],
+			'error'                 => [
+				'code'    => 'tool_call_limit_exceeded',
+				/* translators: %d: maximum number of tool calls executed per round. */
+				'message' => sprintf( __( 'Tool call skipped because the per-round limit of %d was reached.', 'clawpress' ), max( 1, $max_tool_calls_per_round ) ),
+			],
 		];
 	}
 

@@ -113,35 +113,35 @@ final class Agent_Run_Helper {
 				[
 					'session_id'         => $session_id,
 					'run_uuid'           => isset( $args['run_uuid'] ) ? (string) $args['run_uuid'] : $this->generate_uuid(),
-				'trigger_type'       => isset( $args['trigger_type'] ) ? (string) $args['trigger_type'] : 'chat',
+					'trigger_type'       => isset( $args['trigger_type'] ) ? (string) $args['trigger_type'] : 'chat',
 					'transport_mode'     => isset( $args['transport_mode'] ) ? (string) $args['transport_mode'] : 'polling',
 					'status'             => isset( $args['status'] ) ? (string) $args['status'] : 'queued',
 					'attempt'            => isset( $args['attempt'] ) ? max( 1, (int) $args['attempt'] ) : 1,
 					'retry_count'        => isset( $args['retry_count'] ) ? max( 0, (int) $args['retry_count'] ) : 0,
 					'max_attempts'       => isset( $args['max_attempts'] ) ? max( 1, (int) $args['max_attempts'] ) : 5,
-				'next_retry_at_gmt'  => isset( $args['next_retry_at_gmt'] ) ? (string) $args['next_retry_at_gmt'] : null,
-				'resume_cursor_json' => $resume_cursor_json,
-				'meta_json'          => $meta_json,
-				'idempotency_key'    => isset( $args['idempotency_key'] ) ? (string) $args['idempotency_key'] : null,
-				'created_at_gmt'     => $now,
+					'next_retry_at_gmt'  => isset( $args['next_retry_at_gmt'] ) ? (string) $args['next_retry_at_gmt'] : null,
+					'resume_cursor_json' => $resume_cursor_json,
+					'meta_json'          => $meta_json,
+					'idempotency_key'    => isset( $args['idempotency_key'] ) ? (string) $args['idempotency_key'] : null,
+					'created_at_gmt'     => $now,
 					'updated_at_gmt'     => $now,
 				]
 			);
 
-			if ( $run_id > 0 ) {
-				return $run_id;
-			}
+		if ( $run_id > 0 ) {
+			return $run_id;
+		}
 
 			// Handle write races for idempotent run creation (duplicate-key insert in concurrent request).
-			if ( $session_id > 0 && '' !== $idempotency_key ) {
-				$existing_run = $this->get_run_by_idempotency_key( $session_id, $idempotency_key );
-				if ( [] !== $existing_run && isset( $existing_run['id'] ) ) {
-					return (int) $existing_run['id'];
-				}
+		if ( $session_id > 0 && '' !== $idempotency_key ) {
+			$existing_run = $this->get_run_by_idempotency_key( $session_id, $idempotency_key );
+			if ( [] !== $existing_run && isset( $existing_run['id'] ) ) {
+				return (int) $existing_run['id'];
 			}
+		}
 
 			return 0;
-		}
+	}
 
 	/**
 	 * Fetch one run by idempotency key.
@@ -307,15 +307,20 @@ final class Agent_Run_Helper {
 			return false;
 		}
 
-		$resume_cursor_json = null;
+		$resume_cursor_json = isset( $run['resume_cursor_json'] ) && is_string( $run['resume_cursor_json'] )
+			? $run['resume_cursor_json']
+			: null;
 		if ( array_key_exists( 'resume_cursor', $args ) ) {
 			$encoded_resume     = wp_json_encode( $args['resume_cursor'] );
 			$resume_cursor_json = false === $encoded_resume ? null : $encoded_resume;
 		}
 
-		$meta_json = null;
+		$existing_meta = isset( $run['meta'] ) && is_array( $run['meta'] ) ? $run['meta'] : [];
+		$meta_json     = isset( $run['meta_json'] ) && is_string( $run['meta_json'] )
+			? $run['meta_json']
+			: null;
 		if ( isset( $args['meta'] ) && is_array( $args['meta'] ) ) {
-			$encoded_meta = wp_json_encode( $args['meta'] );
+			$encoded_meta = wp_json_encode( array_merge( $existing_meta, $args['meta'] ) );
 			$meta_json    = false === $encoded_meta ? null : $encoded_meta;
 		}
 
@@ -454,10 +459,10 @@ final class Agent_Run_Helper {
 			'run_uuid'          => isset( $run['run_uuid'] ) ? (string) $run['run_uuid'] : '',
 			'status'            => isset( $run['status'] ) ? (string) $run['status'] : 'queued',
 			'trigger_type'      => isset( $run['trigger_type'] ) ? (string) $run['trigger_type'] : 'chat',
-				'transport_mode'    => isset( $run['transport_mode'] ) ? (string) $run['transport_mode'] : 'polling',
-				'attempt'           => isset( $run['attempt'] ) ? (int) $run['attempt'] : 1,
-				'retry_count'       => isset( $run['retry_count'] ) ? (int) $run['retry_count'] : 0,
-				'max_attempts'      => isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5,
+			'transport_mode'    => isset( $run['transport_mode'] ) ? (string) $run['transport_mode'] : 'polling',
+			'attempt'           => isset( $run['attempt'] ) ? (int) $run['attempt'] : 1,
+			'retry_count'       => isset( $run['retry_count'] ) ? (int) $run['retry_count'] : 0,
+			'max_attempts'      => isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5,
 			'next_retry_at_gmt' => $run['next_retry_at_gmt'] ?? null,
 			'started_at_gmt'    => $run['started_at_gmt'] ?? null,
 			'finished_at_gmt'   => $run['finished_at_gmt'] ?? null,

@@ -343,19 +343,18 @@ final class Agent_Runner {
 			}
 
 			$delay_seconds = 1;
-			$this->run_helper->pause_run(
-				$run_id,
-				$lock_token,
-				[
-					'status'            => 'paused',
-					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-					'resume_cursor'     => $result['resume_cursor'] ?? null,
-					'meta'              => [
-						'last_result'  => $result,
-						'pause_reason' => 'slice_budget',
-					],
-				]
-			);
+			$pause_args    = [
+				'status'            => 'paused',
+				'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+				'meta'              => [
+					'last_result'  => $result,
+					'pause_reason' => 'slice_budget',
+				],
+			];
+			if ( array_key_exists( 'resume_cursor', $result ) ) {
+				$pause_args['resume_cursor'] = $result['resume_cursor'];
+			}
+			$this->run_helper->pause_run( $run_id, $lock_token, $pause_args );
 			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 
@@ -420,21 +419,20 @@ final class Agent_Runner {
 
 			$next_retry_count = $retry_count + 1;
 			$delay_seconds    = $this->calculate_retry_backoff( $next_retry_count );
-			$this->run_helper->pause_run(
-				$run_id,
-				$lock_token,
-				[
-					'status'            => 'paused',
-					'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
-					'resume_cursor'     => $result['resume_cursor'] ?? null,
-					'retry_count'       => $next_retry_count,
-					'meta'              => [
-						'last_result'  => $result,
-						'retry_count'  => $next_retry_count,
-						'pause_reason' => 'retry_backoff',
-					],
-				]
-			);
+			$pause_args       = [
+				'status'            => 'paused',
+				'next_retry_at_gmt' => gmdate( 'Y-m-d H:i:s', time() + $delay_seconds ),
+				'retry_count'       => $next_retry_count,
+				'meta'              => [
+					'last_result'  => $result,
+					'retry_count'  => $next_retry_count,
+					'pause_reason' => 'retry_backoff',
+				],
+			];
+			if ( array_key_exists( 'resume_cursor', $result ) ) {
+				$pause_args['resume_cursor'] = $result['resume_cursor'];
+			}
+			$this->run_helper->pause_run( $run_id, $lock_token, $pause_args );
 			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'paused' );
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
 			return;
