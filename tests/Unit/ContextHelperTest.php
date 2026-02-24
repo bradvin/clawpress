@@ -97,6 +97,36 @@ final class ContextHelperTest extends TestCase {
 		$this->assertInstanceOf( FunctionDeclaration::class, $context['tool_declarations'][0] );
 	}
 
+	public function test_build_model_context_trims_leading_non_user_messages(): void {
+		update_option( 'clawpress_chat_history_1', [
+			[
+				'id'        => 'msg-1',
+				'role'      => 'assistant',
+				'content'   => 'Interim status',
+				'createdAt' => 1,
+			],
+			[
+				'id'        => 'msg-2',
+				'role'      => 'user',
+				'content'   => 'Real request',
+				'createdAt' => 2,
+			],
+			[
+				'id'        => 'msg-3',
+				'role'      => 'assistant',
+				'content'   => 'Acknowledged',
+				'createdAt' => 3,
+			],
+		] );
+
+		$helper  = Context_Helper::get_instance();
+		$context = $helper->build_model_context( 'Continue' );
+
+		$this->assertCount( 2, $context['history_messages'] );
+		$this->assertSame( 'user', $context['history_messages'][0]->getRole()->value );
+		$this->assertSame( 'model', $context['history_messages'][1]->getRole()->value );
+	}
+
 	public function test_build_messages_appends_bootstrap_requirement_before_first_assistant_response(): void {
 		update_option(
 			'clawpress_settings',
