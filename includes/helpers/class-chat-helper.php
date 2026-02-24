@@ -385,7 +385,7 @@ final class Chat_Helper {
 
 		$reply = isset( $runtime_result['assistant_text'] ) ? trim( (string) $runtime_result['assistant_text'] ) : '';
 		if ( '' === $reply ) {
-			$reply = __( 'I am still working on this. Poll run progress to continue.', 'clawpress' );
+			$reply = __( 'I am still working on this', 'clawpress' );
 		}
 
 		$payload = [

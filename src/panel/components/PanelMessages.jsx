@@ -41,6 +41,12 @@ const PanelMessages = ( {
 	onSendCardAction,
 } ) => {
 	const containerRef = useRef( null );
+	const inProgressStatusText = __(
+		'I am still working on this',
+		'clawpress'
+	);
+	const isInProgressStatusMessage = ( content ) =>
+		typeof content === 'string' && content.trim() === inProgressStatusText;
 
 	useEffect( () => {
 		const container = containerRef.current;
@@ -72,6 +78,11 @@ const PanelMessages = ( {
 		null;
 
 	const latestMessageIndex = messages.length - 1;
+	const latestMessage =
+		latestMessageIndex >= 0 ? messages[ latestMessageIndex ] : null;
+	const latestInProgressStatusVisible = isInProgressStatusMessage(
+		latestMessage?.content || ''
+	);
 
 	const items = [
 		...messages.map( ( message, index ) => ( {
@@ -111,16 +122,22 @@ const PanelMessages = ( {
 			{ items.map( ( item ) =>
 				item.type === 'message' ? (
 					( () => {
-						const isSystem = item.data.role === 'system';
-						const isAssistant = item.data.role === 'assistant';
+						const content = item.data.content || '';
+						const isInProgressStatus =
+							isInProgressStatusMessage( content );
+						const messageRole = isInProgressStatus
+							? 'system'
+							: item.data.role;
+						const isSystem = messageRole === 'system';
+						const isAssistant = messageRole === 'assistant';
 						const hasCard =
 							item.data.card &&
 							typeof item.data.card === 'object';
 						const isLatestMessageCard =
 							hasCard && item.messageIndex === latestMessageIndex;
-						const content = item.data.content || '';
 						const hasEllipsis = /(\.\.\.|…)\s*$/.test( content );
-						const showThinking = isSystem && hasEllipsis;
+						const showThinking =
+							( isSystem && hasEllipsis ) || isInProgressStatus;
 						const displayContent = showThinking
 							? content.replace( /\s*(\.\.\.|…)\s*$/, '' )
 							: content;
@@ -128,9 +145,10 @@ const PanelMessages = ( {
 						return (
 							<div
 								key={ item.data.id || item.data.content }
-								className={ `clawpress-msg clawpress-${ item.data.role }` }
+								className={ `clawpress-msg clawpress-${ messageRole }` }
 							>
-								{ isSystem || isAssistant ? (
+								{ ( isSystem || isAssistant ) &&
+								! isInProgressStatus ? (
 									<div className="clawpress-msg-label">
 										{ isSystem
 											? __( 'System', 'clawpress' )
@@ -174,7 +192,9 @@ const PanelMessages = ( {
 					/>
 				)
 			) }
-			{ waitingForResponse && ! currentStreamText ? (
+			{ waitingForResponse &&
+			! currentStreamText &&
+			! latestInProgressStatusVisible ? (
 				<div className="clawpress-msg clawpress-system">
 					<div className="clawpress-msg-content clawpress-thinking">
 						{ __( 'Thinking', 'clawpress' ) }
