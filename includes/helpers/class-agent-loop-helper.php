@@ -1,6 +1,6 @@
 <?php
 /**
- * Chat helper.
+ * Agent loop runtime helper.
  *
  * @package ClawPress
  */
@@ -10,7 +10,9 @@ declare( strict_types=1 );
 namespace ClawPress\Helpers;
 
 use ClawPress\Commands\Command_Confirmation_Store;
-use ClawPress\Commands\Commands;
+use ClawPress\Transports\Agent_Transport;
+use ClawPress\Transports\Null_Transport;
+use ClawPress\Transports\Polling_Transport;
 use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Builders\MessageBuilder;
@@ -26,19 +28,9 @@ use WordPress\AiClient\Tools\DTO\FunctionResponse;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Reply generation helper.
+ * Reusable transport-agnostic agent loop runtime.
  */
-final class Chat_Helper {
-	/**
-	 * Maximum tool-calling rounds per user message.
-	 */
-	private const MAX_TOOL_ROUNDS = 4;
-
-	/**
-	 * Maximum tool calls executed in one assistant turn.
-	 */
-	private const MAX_TOOL_CALLS_PER_ROUND = 6;
-
+final class Agent_Loop_Helper {
 	/**
 	 * Known context windows for common model families.
 	 *
@@ -63,6 +55,16 @@ final class Chat_Helper {
 			'gemini-1.5' => 1048576,
 		],
 	];
+
+	/**
+	 * Default max tool rounds.
+	 */
+	private const DEFAULT_MAX_TOOL_ROUNDS = 4;
+
+	/**
+	 * Default max tool calls per round.
+	 */
+	private const DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 6;
 
 	/**
 	 * Singleton instance.
@@ -114,47 +116,15 @@ final class Chat_Helper {
 	private Policy_Helper $policy_helper;
 
 	/**
-	 * Agent loop runtime helper.
-	 *
-	 * @var Agent_Loop_Helper
-	 */
-	private Agent_Loop_Helper $agent_loop_helper;
-
-	/**
-	 * LLM reply generator.
-	 *
-	 * @var callable|null
-	 */
-	private $online_reply_generator;
-
-	/**
-	 * Provider/model resolver.
-	 *
-	 * @var callable|null
-	 */
-	private $provider_model_resolver;
-
-	/**
 	 * Constructor.
-	 *
-	 * @param Context_Helper|null $context_helper Optional context helper.
-	 * @param callable|null       $online_reply_generator Optional online reply generator.
-	 * @param callable|null       $provider_model_resolver Optional provider/model resolver.
 	 */
-	private function __construct(
-		?Context_Helper $context_helper = null,
-		?callable $online_reply_generator = null,
-		?callable $provider_model_resolver = null
-	) {
-		$this->settings_helper         = Settings_Helper::get_instance();
-		$this->provider_helper         = Provider_Helper::get_instance();
-		$this->context_helper          = $context_helper ?? Context_Helper::get_instance();
-		$this->abilities_helper        = Abilities_Helper::get_instance();
-		$this->confirmation_store      = new Command_Confirmation_Store();
-		$this->policy_helper           = Policy_Helper::get_instance();
-		$this->agent_loop_helper       = Agent_Loop_Helper::get_instance();
-		$this->online_reply_generator  = $online_reply_generator;
-		$this->provider_model_resolver = $provider_model_resolver ?? [ $this, 'resolve_provider_and_model' ];
+	private function __construct() {
+		$this->settings_helper    = Settings_Helper::get_instance();
+		$this->provider_helper    = Provider_Helper::get_instance();
+		$this->context_helper     = Context_Helper::get_instance();
+		$this->abilities_helper   = Abilities_Helper::get_instance();
+		$this->confirmation_store = new Command_Confirmation_Store();
+		$this->policy_helper      = Policy_Helper::get_instance();
 	}
 
 	/**
@@ -169,143 +139,195 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Create a test-scoped helper with optional dependency overrides.
+	 * Execute a full turn.
 	 *
-	 * @param Context_Helper|null $context_helper Optional context helper.
-	 * @param callable|null       $online_reply_generator Optional reply generator.
-	 * @param callable|null       $provider_model_resolver Optional provider/model resolver.
+	 * @param array<string,mixed> $turn_request Turn request payload.
+	 * @return array<string,mixed>
 	 */
-	public static function create_for_testing(
-		?Context_Helper $context_helper = null,
-		?callable $online_reply_generator = null,
-		?callable $provider_model_resolver = null
-	): self {
-		return new self( $context_helper, $online_reply_generator, $provider_model_resolver );
+	public function run_turn( array $turn_request ): array {
+		return $this->run_internal( $turn_request, false );
 	}
 
 	/**
-	 * Generate a model reply payload.
+	 * Execute a bounded runtime slice.
 	 *
-	 * @param string $message User message.
+	 * @param array<string,mixed> $turn_request Turn request payload.
 	 * @return array<string,mixed>
 	 */
-	public function generate_ai_reply( string $message ): array {
-		$settings = $this->settings_helper->get_settings();
-		$resolved = call_user_func( $this->provider_model_resolver, $settings );
-		$provider = isset( $resolved['provider'] ) ? trim( (string) $resolved['provider'] ) : '';
-		$model    = isset( $resolved['model'] ) ? trim( (string) $resolved['model'] ) : '';
+	public function run_slice( array $turn_request ): array {
+		return $this->run_internal( $turn_request, true );
+	}
+
+	/**
+	 * Execute turn/slice internals.
+	 *
+	 * @param array<string,mixed> $turn_request Turn request payload.
+	 * @param bool                $is_slice Whether slice execution mode is enabled.
+	 */
+	private function run_internal( array $turn_request, bool $is_slice ): array {
+		$settings                = $this->settings_helper->get_settings();
+		$provider_model_resolver = isset( $turn_request['provider_model_resolver'] ) && is_callable( $turn_request['provider_model_resolver'] )
+			? $turn_request['provider_model_resolver']
+			: [ $this, 'resolve_provider_and_model' ];
+		$resolved                = call_user_func( $provider_model_resolver, $settings );
+		$provider                = isset( $resolved['provider'] ) ? trim( (string) $resolved['provider'] ) : '';
+		$model                   = isset( $resolved['model'] ) ? trim( (string) $resolved['model'] ) : '';
+		$run_id                  = isset( $turn_request['run_id'] ) ? (int) $turn_request['run_id'] : 0;
+		$session_id              = isset( $turn_request['session_id'] ) ? (int) $turn_request['session_id'] : 0;
+		$trigger                 = isset( $turn_request['trigger'] ) ? (string) $turn_request['trigger'] : 'chat';
+		$transport_mode          = isset( $turn_request['transport_mode'] ) ? (string) $turn_request['transport_mode'] : 'polling';
 
 		if ( '' === $provider ) {
 			return [
-				'reply'       => $this->build_offline_reply( $message ),
-				'mode'        => 'offline',
-				'provider'    => null,
-				'model'       => null,
-				'suggestions' => $this->get_default_offline_suggestions(),
+				'status'         => 'success',
+				'next_action'    => 'stop',
+				'mode'           => 'offline',
+				'provider'       => null,
+				'model'          => null,
+				'assistant_text' => '',
+				'tool_calls'     => [],
+				'card'           => null,
+				'context'        => null,
 			];
 		}
 
+		$transport              = $this->create_transport( $transport_mode, $run_id, $session_id );
+		$online_reply_generator = isset( $turn_request['online_reply_generator'] ) && is_callable( $turn_request['online_reply_generator'] )
+			? $turn_request['online_reply_generator']
+			: [ $this, 'generate_online_reply' ];
+
 		try {
-			$turn_request = [
-				'message'                 => $message,
-				'trigger'                 => 'chat',
-				'transport_mode'          => 'polling',
-				'requesting_user_id'      => function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0,
-				'execution_user_id'       => $this->settings_helper->resolve_agent_user_id( $settings ),
-				'provider_model_resolver' => $this->provider_model_resolver,
-			];
-			if ( null !== $this->online_reply_generator ) {
-				$turn_request['online_reply_generator'] = $this->online_reply_generator;
-			}
+			$requesting_user_id = isset( $turn_request['requesting_user_id'] )
+				? (int) $turn_request['requesting_user_id']
+				: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
 
-			$runtime_result = $this->agent_loop_helper->run_turn( $turn_request );
+			$context                        = $this->context_helper->build_model_context(
+				isset( $turn_request['message'] ) ? (string) $turn_request['message'] : '',
+				$requesting_user_id > 0 ? $requesting_user_id : null
+			);
+			$context['request_timeout']     = $this->settings_helper->get_request_timeout( $settings );
+			$context['generation_settings'] = $this->settings_helper->get_generation_settings( $settings );
 
-			if ( isset( $runtime_result['error'] ) && is_array( $runtime_result['error'] ) ) {
-				$payload = [
-					'reply'       => sprintf(
-						/* translators: %s: provider/transport error message */
-						__( 'AI request failed: %s', 'clawpress' ),
-						(string) ( $runtime_result['error']['message'] ?? __( 'Unknown provider error.', 'clawpress' ) )
-					),
-					'mode'        => 'error',
-					'provider'    => $provider,
-					'model'       => '' !== $model ? $model : null,
-					'suggestions' => $this->get_default_offline_suggestions(),
-					'error'       => $runtime_result['error'],
-					'card'        => [
-						'type' => 'error',
-						'data' => [
-							'title'    => __( 'Request Error', 'clawpress' ),
-							'subtitle' => 'timeout' === (string) ( $runtime_result['error']['type'] ?? '' )
-								? __( 'Request timed out', 'clawpress' )
-								: __( 'Provider error', 'clawpress' ),
-							'message'  => (string) ( $runtime_result['error']['message'] ?? __( 'Unknown provider error.', 'clawpress' ) ),
-						],
+			$transport->emit(
+				[
+					'type'    => 'agent.run.started',
+					'payload' => [
+						'run_id'     => $run_id > 0 ? $run_id : null,
+						'session_id' => $session_id > 0 ? $session_id : null,
+						'trigger'    => $trigger,
+						'attempt'    => isset( $turn_request['attempt'] ) ? (int) $turn_request['attempt'] : 1,
+						'transport'  => $transport_mode,
+						'slice_mode' => $is_slice,
 					],
-				];
+				]
+			);
 
-				return $payload;
-			}
+			$online_reply_payload = $this->normalize_online_reply_payload(
+				$this->invoke_online_reply_generator(
+					$online_reply_generator,
+					$context,
+					$provider,
+					$model,
+					$turn_request,
+					$transport,
+					$is_slice
+				)
+			);
 
-			$reply         = isset( $runtime_result['assistant_text'] ) ? trim( (string) $runtime_result['assistant_text'] ) : '';
-			$card          = isset( $runtime_result['card'] ) && is_array( $runtime_result['card'] ) ? $runtime_result['card'] : null;
-			$context_usage = isset( $runtime_result['context'] ) && is_array( $runtime_result['context'] ) ? $runtime_result['context'] : null;
-			$tool_calls    = isset( $runtime_result['tool_calls'] ) && is_array( $runtime_result['tool_calls'] ) ? $runtime_result['tool_calls'] : [];
-
-			if ( '' === $reply && null === $card ) {
-				return [
-					'reply'       => $this->build_offline_reply( $message ),
-					'mode'        => 'offline',
-					'provider'    => $provider,
-					'model'       => '' !== $model ? $model : null,
-					'suggestions' => $this->get_default_offline_suggestions(),
-				];
-			}
-
-			if ( '' === $reply && null !== $card ) {
-				$reply = $this->build_card_fallback_reply( $card );
-			}
-
-			$payload = [
-				'reply'       => $reply,
-				'mode'        => 'online',
-				'provider'    => $provider,
-				'model'       => '' !== $model ? $model : null,
-				'suggestions' => $this->get_online_suggestions( $reply, $provider, $model ),
+			$result = [
+				'status'         => isset( $online_reply_payload['status'] ) ? (string) $online_reply_payload['status'] : 'success',
+				'next_action'    => isset( $online_reply_payload['next_action'] ) ? (string) $online_reply_payload['next_action'] : 'stop',
+				'mode'           => 'online',
+				'provider'       => $provider,
+				'model'          => '' !== $model ? $model : null,
+				'assistant_text' => (string) $online_reply_payload['reply'],
+				'card'           => $online_reply_payload['card'],
+				'context'        => $online_reply_payload['context'],
+				'tool_calls'     => $online_reply_payload['tool_calls'],
+				'resume_cursor'  => isset( $online_reply_payload['resume_cursor'] ) ? $online_reply_payload['resume_cursor'] : null,
 			];
 
-			if ( null !== $card ) {
-				$payload['card'] = $card;
+			if ( isset( $online_reply_payload['events_cursor'] ) ) {
+				$result['events_cursor'] = (int) $online_reply_payload['events_cursor'];
 			}
 
-			if ( null !== $context_usage ) {
-				$payload['context'] = $context_usage;
+			if ( isset( $online_reply_payload['error'] ) && is_array( $online_reply_payload['error'] ) ) {
+				$result['error'] = $online_reply_payload['error'];
+				$result['mode']  = 'error';
 			}
 
-			if ( [] !== $tool_calls ) {
-				$payload['tool_calls'] = $tool_calls;
+			$transport->emit(
+				[
+					'type'    => 'agent.run.finished',
+					'payload' => [
+						'status'      => $result['status'],
+						'next_action' => $result['next_action'],
+					],
+				]
+			);
+
+			if ( $transport instanceof Polling_Transport ) {
+				$result['events_cursor'] = $transport->get_last_event_id();
 			}
 
-			return $payload;
+			return $result;
 		} catch ( Throwable $throwable ) {
-			return $this->build_error_reply_payload( $throwable, $provider, $model );
+			$error_message = trim( sanitize_text_field( $throwable->getMessage() ) );
+			if ( '' === $error_message ) {
+				$error_message = __( 'Unknown provider error.', 'clawpress' );
+			}
+
+			$error_type = $this->classify_error_type( $throwable, $error_message );
+			$transport->emit(
+				[
+					'type'    => 'agent.run.error',
+					'payload' => [
+						'error_type' => $error_type,
+						'message'    => $error_message,
+					],
+				]
+			);
+
+			$result = [
+				'status'         => 'timeout' === $error_type ? 'timeout' : 'error',
+				'next_action'    => 'stop',
+				'mode'           => 'error',
+				'provider'       => $provider,
+				'model'          => '' !== $model ? $model : null,
+				'assistant_text' => '',
+				'card'           => null,
+				'context'        => null,
+				'tool_calls'     => [],
+				'error'          => [
+					'type'      => $error_type,
+					'message'   => $error_message,
+					'code'      => is_int( $throwable->getCode() ) || is_string( $throwable->getCode() ) ? $throwable->getCode() : 0,
+					'retryable' => 'timeout' === $error_type,
+				],
+			];
+
+			if ( $transport instanceof Polling_Transport ) {
+				$result['events_cursor'] = $transport->get_last_event_id();
+			}
+
+			return $result;
+		} finally {
+			$transport->close();
 		}
 	}
 
 	/**
-	 * Default online reply generator using php-ai-client.
+	 * Generate online reply using model/tool execution loop.
 	 *
-	 * @param array<string,mixed> $context Model context payload.
-	 * @param string              $provider Provider identifier.
-	 * @param string              $model Model identifier.
-	 * @return array{
-	 *     reply:string,
-	 *     card:array<string,mixed>|null,
-	 *     context:array<string,mixed>|null,
-	 *     tool_calls:array<int,array<string,mixed>>
-	 * }
+	 * @param array<string,mixed>  $context Model context payload.
+	 * @param string               $provider Provider identifier.
+	 * @param string               $model Model identifier.
+	 * @param array<string,mixed>  $turn_request Turn request metadata.
+	 * @param Agent_Transport|null $transport Transport implementation.
+	 * @param bool                 $is_slice Whether slice execution mode is enabled.
+	 * @return array<string,mixed>
 	 */
-	private function generate_online_reply( array $context, string $provider, string $model ): array {
+	private function generate_online_reply( array $context, string $provider, string $model, array $turn_request = [], ?Agent_Transport $transport = null, bool $is_slice = false ): array {
 		$current_message     = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
 		$system_prompt       = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
 		$request_timeout     = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 45;
@@ -314,33 +336,96 @@ final class Chat_Helper {
 			: $this->settings_helper->get_generation_settings();
 		$history_messages    = $this->normalize_history_messages( $context );
 		$tool_declarations   = $this->normalize_tool_declarations( $context );
-		$requesting_user_id  = isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0;
-		$execution_user_id   = isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0;
-		$trigger_type        = isset( $context['trigger_type'] ) ? (string) $context['trigger_type'] : 'chat';
+		$requesting_user_id  = isset( $turn_request['requesting_user_id'] ) ? (int) $turn_request['requesting_user_id'] : ( isset( $context['requesting_user_id'] ) ? (int) $context['requesting_user_id'] : 0 );
+		$execution_user_id   = isset( $turn_request['execution_user_id'] ) ? (int) $turn_request['execution_user_id'] : ( isset( $context['execution_user_id'] ) ? (int) $context['execution_user_id'] : 0 );
+		$trigger_type        = isset( $turn_request['trigger'] ) ? (string) $turn_request['trigger'] : ( isset( $context['trigger_type'] ) ? (string) $context['trigger_type'] : 'chat' );
 		$runtime_policy      = $this->policy_helper->resolve_runtime_policy(
 			$trigger_type,
-			isset( $context['session_metadata'] ) && is_array( $context['session_metadata'] )
-				? $context['session_metadata']
+			isset( $turn_request['session_metadata'] ) && is_array( $turn_request['session_metadata'] )
+				? $turn_request['session_metadata']
 				: [],
-			isset( $context['policy_overrides'] ) && is_array( $context['policy_overrides'] )
-				? $context['policy_overrides']
+			isset( $turn_request['policy_overrides'] ) && is_array( $turn_request['policy_overrides'] )
+				? $turn_request['policy_overrides']
 				: []
 		);
+		$run_id              = isset( $turn_request['run_id'] ) ? (int) $turn_request['run_id'] : 0;
+		$session_id          = isset( $turn_request['session_id'] ) ? (int) $turn_request['session_id'] : 0;
+		$slice_budget_ms     = $is_slice ? max( 1, (int) ( $turn_request['slice_budget_ms'] ?? 1500 ) ) : 0;
+		$max_steps_per_slice = $is_slice ? max( 1, (int) ( $turn_request['max_steps_per_slice'] ?? 1 ) ) : PHP_INT_MAX;
+		$resume_state        = $this->normalize_resume_cursor( $turn_request['resume_cursor'] ?? null );
+		$transport           = $transport ?? new Null_Transport();
+
 		$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
 
-		$conversation = $history_messages;
-		if ( '' !== $current_message ) {
-			$conversation[] = ( new MessageBuilder( $current_message ) )
-				->usingUserRole()
-				->get();
+		$conversation = [];
+		if ( isset( $resume_state['conversation'] ) && is_array( $resume_state['conversation'] ) ) {
+			$conversation = $this->restore_conversation( $resume_state['conversation'] );
 		}
 
-		$latest_assistant_text = '';
-		$confirmation_batch    = [];
-		$latest_context_usage  = null;
-		$tool_call_trace       = [];
+		if ( [] === $conversation ) {
+			$conversation = $history_messages;
+			if ( '' !== $current_message ) {
+				$conversation[] = ( new MessageBuilder( $current_message ) )
+					->usingUserRole()
+					->get();
+			}
+		}
 
-		for ( $round = 0; $round < (int) $runtime_policy['max_tool_rounds']; ++$round ) {
+		$latest_assistant_text = isset( $resume_state['assistant_text'] ) ? (string) $resume_state['assistant_text'] : '';
+		$latest_context_usage  = isset( $resume_state['context'] ) && is_array( $resume_state['context'] )
+			? $this->normalize_context_usage_payload( $resume_state['context'] )
+			: null;
+		$tool_call_trace       = isset( $resume_state['tool_calls'] ) && is_array( $resume_state['tool_calls'] )
+			? $this->normalize_tool_call_trace_payload( $resume_state['tool_calls'] )
+			: [];
+		$round_start           = isset( $resume_state['round'] ) ? max( 0, (int) $resume_state['round'] ) : 0;
+		$steps_completed       = isset( $resume_state['steps_completed'] ) ? max( 0, (int) $resume_state['steps_completed'] ) : 0;
+
+		if ( $is_slice && $round_start > 0 ) {
+			$transport->emit(
+				[
+					'type'    => 'agent.slice.resumed',
+					'payload' => [
+						'round' => $round_start,
+					],
+				]
+			);
+		}
+
+		$started_at_ms = $this->now_ms();
+
+		for ( $round = $round_start; $round < (int) $runtime_policy['max_tool_rounds']; ++$round ) {
+			if ( $is_slice && $steps_completed > 0 && $this->should_pause_slice( $steps_completed, $max_steps_per_slice, $started_at_ms, $slice_budget_ms ) ) {
+				$resume_cursor = $this->build_resume_cursor(
+					$conversation,
+					$round,
+					$steps_completed,
+					$latest_assistant_text,
+					$tool_call_trace,
+					$latest_context_usage
+				);
+
+				$transport->emit(
+					[
+						'type'    => 'agent.slice.paused',
+						'payload' => [
+							'round'           => $round,
+							'steps_completed' => $steps_completed,
+						],
+					]
+				);
+
+				return [
+					'status'        => 'in_progress',
+					'next_action'   => 'continue_later',
+					'reply'         => $latest_assistant_text,
+					'card'          => null,
+					'context'       => $latest_context_usage,
+					'tool_calls'    => $tool_call_trace,
+					'resume_cursor' => $resume_cursor,
+				];
+			}
+
 			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
 			if ( '' !== $system_prompt ) {
 				$builder = $builder->usingSystemInstruction( $system_prompt );
@@ -361,13 +446,34 @@ final class Chat_Helper {
 			$conversation[]        = $assistant_message;
 			$latest_assistant_text = $this->extract_text_from_message( $assistant_message );
 			$latest_context_usage  = $this->extract_context_usage_from_result( $result, $provider, $model );
+			++$steps_completed;
 
 			$function_calls = $this->extract_function_calls( $assistant_message );
+			$transport->emit(
+				[
+					'type'    => 'agent.llm.response',
+					'payload' => [
+						'round'             => $round + 1,
+						'tool_call_count'   => count( $function_calls ),
+						'assistant_excerpt' => '' !== $latest_assistant_text ? mb_substr( $latest_assistant_text, 0, 300 ) : '',
+					],
+				]
+			);
+
 			if ( [] === $function_calls ) {
-				break;
+				return [
+					'status'      => 'success',
+					'next_action' => 'stop',
+					'reply'       => $latest_assistant_text,
+					'card'        => null,
+					'context'     => $latest_context_usage,
+					'tool_calls'  => $tool_call_trace,
+				];
 			}
 
 			$function_responses = [];
+			$confirmation_batch = [];
+
 			foreach ( array_slice( $function_calls, 0, (int) $runtime_policy['max_tool_calls_per_round'] ) as $index => $function_call ) {
 				$tool_name = trim( (string) $function_call->getName() );
 				if ( '' === $tool_name ) {
@@ -383,6 +489,8 @@ final class Chat_Helper {
 					$tool_name,
 					$function_call->getArgs(),
 					[
+						'run_id'             => $run_id,
+						'session_id'         => $session_id,
 						'requesting_user_id' => $requesting_user_id,
 						'execution_user_id'  => $execution_user_id,
 						'confirmation_scope' => 'batch',
@@ -396,6 +504,20 @@ final class Chat_Helper {
 					$tool_result,
 					$round + 1,
 					$index + 1
+				);
+
+				$transport->emit(
+					[
+						'type'    => 'agent.tool_call',
+						'payload' => [
+							'round'     => $round + 1,
+							'sequence'  => $index + 1,
+							'tool_name' => strtolower( trim( $tool_name ) ),
+							'status'    => isset( $tool_call_trace[ count( $tool_call_trace ) - 1 ]['status'] )
+								? $tool_call_trace[ count( $tool_call_trace ) - 1 ]['status']
+								: 'success',
+						],
+					]
 				);
 
 				$pending_confirmation = $this->normalize_pending_confirmation_tool_call(
@@ -415,7 +537,14 @@ final class Chat_Helper {
 			}
 
 			if ( [] === $function_responses ) {
-				break;
+				return [
+					'status'      => 'success',
+					'next_action' => 'stop',
+					'reply'       => $latest_assistant_text,
+					'card'        => null,
+					'context'     => $latest_context_usage,
+					'tool_calls'  => $tool_call_trace,
+				];
 			}
 
 			if ( [] !== $confirmation_batch ) {
@@ -424,11 +553,23 @@ final class Chat_Helper {
 					$requesting_user_id > 0 ? $requesting_user_id : null
 				);
 
+				$transport->emit(
+					[
+						'type'    => 'agent.confirmation.required',
+						'payload' => [
+							'round'      => $round + 1,
+							'tool_count' => count( $confirmation_batch ),
+						],
+					]
+				);
+
 				return [
-					'reply'      => $latest_assistant_text,
-					'card'       => $this->build_tool_confirmation_card( $issued_batch ),
-					'context'    => $latest_context_usage,
-					'tool_calls' => $tool_call_trace,
+					'status'      => 'requires_confirmation',
+					'next_action' => 'stop',
+					'reply'       => $latest_assistant_text,
+					'card'        => $this->build_tool_confirmation_card( $issued_batch ),
+					'context'     => $latest_context_usage,
+					'tool_calls'  => $tool_call_trace,
 				];
 			}
 
@@ -438,26 +579,54 @@ final class Chat_Helper {
 				$tool_response_message_builder->withFunctionResponse( $function_response );
 				$conversation[] = $tool_response_message_builder->get();
 			}
+
+			if ( $is_slice && $this->should_pause_slice( $steps_completed, $max_steps_per_slice, $started_at_ms, $slice_budget_ms ) ) {
+				$resume_cursor = $this->build_resume_cursor(
+					$conversation,
+					$round + 1,
+					$steps_completed,
+					$latest_assistant_text,
+					$tool_call_trace,
+					$latest_context_usage
+				);
+
+				$transport->emit(
+					[
+						'type'    => 'agent.slice.paused',
+						'payload' => [
+							'round'           => $round + 1,
+							'steps_completed' => $steps_completed,
+						],
+					]
+				);
+
+				return [
+					'status'        => 'in_progress',
+					'next_action'   => 'continue_later',
+					'reply'         => $latest_assistant_text,
+					'card'          => null,
+					'context'       => $latest_context_usage,
+					'tool_calls'    => $tool_call_trace,
+					'resume_cursor' => $resume_cursor,
+				];
+			}
 		}
 
 		return [
-			'reply'      => $latest_assistant_text,
-			'card'       => null,
-			'context'    => $latest_context_usage,
-			'tool_calls' => $tool_call_trace,
+			'status'      => 'success',
+			'next_action' => 'stop',
+			'reply'       => $latest_assistant_text,
+			'card'        => null,
+			'context'     => $latest_context_usage,
+			'tool_calls'  => $tool_call_trace,
 		];
 	}
 
 	/**
-	 * Normalize online generator output into reply + optional card payload.
+	 * Normalize online generator output.
 	 *
 	 * @param mixed $raw_output Raw callback output.
-	 * @return array{
-	 *     reply:string,
-	 *     card:array<string,mixed>|null,
-	 *     context:array<string,mixed>|null,
-	 *     tool_calls:array<int,array<string,mixed>>
-	 * }
+	 * @return array<string,mixed>
 	 */
 	private function normalize_online_reply_payload( $raw_output ): array {
 		if ( is_array( $raw_output ) ) {
@@ -472,20 +641,162 @@ final class Chat_Helper {
 				? $this->normalize_tool_call_trace_payload( $raw_output['tool_calls'] )
 				: [];
 
-			return [
-				'reply'      => $reply,
-				'card'       => $card,
-				'context'    => $context,
-				'tool_calls' => $tool_calls,
+			$payload = [
+				'reply'       => $reply,
+				'card'        => $card,
+				'context'     => $context,
+				'tool_calls'  => $tool_calls,
+				'status'      => isset( $raw_output['status'] ) ? (string) $raw_output['status'] : 'success',
+				'next_action' => isset( $raw_output['next_action'] ) ? (string) $raw_output['next_action'] : 'stop',
 			];
+
+			if ( isset( $raw_output['resume_cursor'] ) ) {
+				$payload['resume_cursor'] = $raw_output['resume_cursor'];
+			}
+
+			if ( isset( $raw_output['error'] ) && is_array( $raw_output['error'] ) ) {
+				$payload['error'] = $raw_output['error'];
+			}
+
+			if ( isset( $raw_output['events_cursor'] ) ) {
+				$payload['events_cursor'] = (int) $raw_output['events_cursor'];
+			}
+
+			return $payload;
 		}
 
 		return [
-			'reply'      => (string) $raw_output,
-			'card'       => null,
-			'context'    => null,
-			'tool_calls' => [],
+			'reply'       => (string) $raw_output,
+			'card'        => null,
+			'context'     => null,
+			'tool_calls'  => [],
+			'status'      => 'success',
+			'next_action' => 'stop',
 		];
+	}
+
+	/**
+	 * Create transport from transport mode.
+	 *
+	 * @param string $transport_mode Transport mode.
+	 * @param int    $run_id Run identifier.
+	 * @param int    $session_id Session identifier.
+	 */
+	private function create_transport( string $transport_mode, int $run_id, int $session_id ): Agent_Transport {
+		$transport_mode = strtolower( trim( $transport_mode ) );
+		if ( in_array( $transport_mode, [ 'polling', 'streaming' ], true ) && ( $run_id > 0 || $session_id > 0 ) ) {
+			return new Polling_Transport( $run_id, $session_id );
+		}
+
+		return new Null_Transport();
+	}
+
+	/**
+	 * Determine whether current slice should pause.
+	 *
+	 * @param int $steps_completed Completed steps in current run.
+	 * @param int $max_steps_per_slice Max steps allowed per slice.
+	 * @param int $started_at_ms Slice start timestamp in milliseconds.
+	 * @param int $slice_budget_ms Wall-time budget for this slice.
+	 */
+	private function should_pause_slice( int $steps_completed, int $max_steps_per_slice, int $started_at_ms, int $slice_budget_ms ): bool {
+		if ( $steps_completed >= $max_steps_per_slice ) {
+			return true;
+		}
+
+		if ( $slice_budget_ms <= 0 ) {
+			return false;
+		}
+
+		return ( $this->now_ms() - $started_at_ms ) >= $slice_budget_ms;
+	}
+
+	/**
+	 * Create resume cursor payload.
+	 *
+	 * @param array<int,Message>             $conversation Conversation state.
+	 * @param int                            $round Next round.
+	 * @param int                            $steps_completed Completed steps.
+	 * @param string                         $assistant_text Latest assistant text.
+	 * @param array<int,array<string,mixed>> $tool_calls Tool trace.
+	 * @param array<string,mixed>|null       $context_usage Context usage payload.
+	 * @return array<string,mixed>
+	 */
+	private function build_resume_cursor(
+		array $conversation,
+		int $round,
+		int $steps_completed,
+		string $assistant_text,
+		array $tool_calls,
+		?array $context_usage
+	): array {
+		return [
+			'version'         => 1,
+			'round'           => max( 0, $round ),
+			'steps_completed' => max( 0, $steps_completed ),
+			'assistant_text'  => $assistant_text,
+			'tool_calls'      => $tool_calls,
+			'context'         => $context_usage,
+			'conversation'    => array_values(
+				array_map(
+					static fn ( Message $message ): array => $message->toArray(),
+					$conversation
+				)
+			),
+		];
+	}
+
+	/**
+	 * Normalize resume cursor payload.
+	 *
+	 * @param mixed $resume_cursor Resume cursor payload.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_resume_cursor( $resume_cursor ): array {
+		if ( is_string( $resume_cursor ) && '' !== trim( $resume_cursor ) ) {
+			$decoded = json_decode( $resume_cursor, true );
+			if ( is_array( $decoded ) ) {
+				$resume_cursor = $decoded;
+			}
+		}
+
+		if ( ! is_array( $resume_cursor ) ) {
+			return [];
+		}
+
+		if ( ! isset( $resume_cursor['conversation'] ) || ! is_array( $resume_cursor['conversation'] ) ) {
+			$resume_cursor['conversation'] = [];
+		}
+
+		return $resume_cursor;
+	}
+
+	/**
+	 * Restore conversation from serialized resume payload.
+	 *
+	 * @param array<int,mixed> $serialized_conversation Serialized conversation array.
+	 * @return array<int,Message>
+	 */
+	private function restore_conversation( array $serialized_conversation ): array {
+		$conversation = [];
+
+		foreach ( $serialized_conversation as $message ) {
+			if ( ! is_array( $message ) ) {
+				continue;
+			}
+
+			try {
+				$converted = Message::fromArray( $message );
+				if ( $converted instanceof Message ) {
+					$conversation[] = $converted;
+				}
+			} catch ( Throwable $throwable ) {
+				unset( $throwable );
+				continue;
+			}
+		}
+
+		return $conversation;
 	}
 
 	/**
@@ -694,7 +1005,7 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Normalize card payload for chat responses.
+	 * Normalize card payload.
 	 *
 	 * @param array<string,mixed> $card Raw card payload.
 	 * @return array<string,mixed>|null
@@ -712,24 +1023,6 @@ final class Chat_Helper {
 				? $card['data']
 				: [],
 		];
-	}
-
-	/**
-	 * Build text fallback for card-only responses.
-	 *
-	 * @param array<string,mixed> $card Card payload.
-	 */
-	private function build_card_fallback_reply( array $card ): string {
-		$message = isset( $card['data']['message'] ) ? trim( (string) $card['data']['message'] ) : '';
-		if ( '' !== $message ) {
-			return $message;
-		}
-
-		if ( 'user_confirmation' === (string) ( $card['type'] ?? '' ) ) {
-			return __( 'A destructive action is waiting for your confirmation.', 'clawpress' );
-		}
-
-		return __( 'Action required.', 'clawpress' );
 	}
 
 	/**
@@ -758,7 +1051,7 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Build a user-confirmation card payload from a pending batch.
+	 * Build a user-confirmation card payload.
 	 *
 	 * @param array<string,mixed>|null $confirmation_batch Pending confirmation batch.
 	 * @return array<string,mixed>|null
@@ -842,9 +1135,9 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Normalize tool-call args for prompt interpolation.
+	 * Normalize tool-call args.
 	 *
-	 * @param mixed $raw_args Raw tool-call args payload.
+	 * @param mixed $raw_args Raw args payload.
 	 * @return array<string,mixed>
 	 */
 	private function normalize_tool_args_for_prompt( $raw_args ): array {
@@ -936,9 +1229,6 @@ final class Chat_Helper {
 	/**
 	 * Apply generation settings to prompt builder.
 	 *
-	 * Gracefully ignores unsupported parameters (or provider-specific rejections)
-	 * by catching option-level exceptions and continuing with the remaining options.
-	 *
 	 * @param PromptBuilder       $builder Prompt builder.
 	 * @param array<string,mixed> $generation_settings Generation settings.
 	 * @param string              $provider Provider identifier.
@@ -973,11 +1263,8 @@ final class Chat_Helper {
 	/**
 	 * Apply max output token setting to prompt builder.
 	 *
-	 * Uses `max_completion_tokens` for OpenAI model families that reject
-	 * legacy `max_tokens`.
-	 *
-	 * @param PromptBuilder $builder Prompt builder instance.
-	 * @param int           $max_output_tokens Max output tokens.
+	 * @param PromptBuilder $builder Prompt builder.
+	 * @param int           $max_output_tokens Max output token count.
 	 * @param string        $provider Provider identifier.
 	 * @param string        $model Model identifier.
 	 */
@@ -998,7 +1285,7 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Extract function calls from an assistant/model message.
+	 * Extract function calls from a message.
 	 *
 	 * @param Message $message Model message.
 	 * @return array<int,FunctionCall>
@@ -1017,7 +1304,7 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Extract text content from an assistant/model message.
+	 * Extract text content from a message.
 	 *
 	 * @param Message $message Model message.
 	 */
@@ -1050,117 +1337,6 @@ final class Chat_Helper {
 	}
 
 	/**
-	 * Build deterministic offline fallback response.
-	 *
-	 * @param string $message User message.
-	 */
-	public function build_offline_reply( string $message ): string {
-		return sprintf(
-			/* translators: %s: the original user message */
-			__( 'Offline mode: no configured AI provider was available. You said: "%s"', 'clawpress' ),
-			$message
-		);
-	}
-
-	/**
-	 * Get default offline command suggestions.
-	 *
-	 * @return array<int,string>
-	 */
-	private function get_default_offline_suggestions(): array {
-		return ( new Commands() )->get_default_suggestions();
-	}
-
-	/**
-	 * Resolve online suggestions from provider output via filter hook.
-	 *
-	 * @param string $reply Generated reply text.
-	 * @param string $provider Provider identifier.
-	 * @param string $model Model identifier.
-	 * @return array<int,string>
-	 */
-	private function get_online_suggestions( string $reply, string $provider, string $model ): array {
-		$suggestions = apply_filters(
-			'clawpress_ai_suggestions',
-			[],
-			[
-				'reply'    => $reply,
-				'provider' => $provider,
-				'model'    => $model,
-			]
-		);
-
-		if ( ! is_array( $suggestions ) ) {
-			return [];
-		}
-
-		$normalized = array_values(
-			array_filter(
-				array_map(
-					static fn ( $suggestion ): string => trim( (string) $suggestion ),
-					$suggestions
-				),
-				static fn ( string $suggestion ): bool => '' !== $suggestion
-			)
-		);
-
-		return array_slice( $normalized, 0, 8 );
-	}
-
-	/**
-	 * Build error payload for model/transport failures.
-	 *
-	 * @param Throwable $throwable Thrown exception.
-	 * @param string    $provider Provider identifier.
-	 * @param string    $model Model identifier.
-	 * @return array<string,mixed>
-	 */
-	private function build_error_reply_payload( Throwable $throwable, string $provider, string $model ): array {
-		$error_message = trim( sanitize_text_field( $throwable->getMessage() ) );
-		if ( '' === $error_message ) {
-			$error_message = __( 'Unknown provider error.', 'clawpress' );
-		}
-
-		$error_type = $this->classify_error_type( $throwable, $error_message );
-		$reply      = sprintf(
-			/* translators: %s: provider/transport error message */
-			__( 'AI request failed: %s', 'clawpress' ),
-			$error_message
-		);
-
-		$card_subtitle = 'timeout' === $error_type
-			? __( 'Request timed out', 'clawpress' )
-			: __( 'Provider error', 'clawpress' );
-
-		$error_code = $throwable->getCode();
-		if ( ! is_int( $error_code ) && ! is_string( $error_code ) ) {
-			$error_code = 0;
-		}
-
-		return [
-			'reply'       => $reply,
-			'mode'        => 'error',
-			'provider'    => '' !== $provider ? $provider : null,
-			'model'       => '' !== $model ? $model : null,
-			'suggestions' => $this->get_default_offline_suggestions(),
-			'error'       => [
-				'type'      => $error_type,
-				'message'   => $error_message,
-				'code'      => $error_code,
-				'retryable' => 'timeout' === $error_type,
-			],
-			'card'        => [
-				'type' => 'error',
-				'data' => [
-					'title'    => __( 'Request Error', 'clawpress' ),
-					'subtitle' => $card_subtitle,
-					'message'  => $error_message,
-				],
-			],
-		];
-	}
-
-	/**
 	 * Classify known provider error patterns.
 	 *
 	 * @param Throwable $throwable Thrown exception.
@@ -1183,5 +1359,62 @@ final class Chat_Helper {
 		}
 
 		return 'provider';
+	}
+
+	/**
+	 * Get current timestamp in milliseconds.
+	 */
+	private function now_ms(): int {
+		return (int) round( microtime( true ) * 1000 );
+	}
+
+	/**
+	 * Invoke the online reply generator with arity-safe argument slicing.
+	 *
+	 * @param callable            $online_reply_generator Online reply generator callback.
+	 * @param array<string,mixed> $context Model context.
+	 * @param string              $provider Provider ID.
+	 * @param string              $model Model ID.
+	 * @param array<string,mixed> $turn_request Turn request payload.
+	 * @param Agent_Transport     $transport Runtime transport.
+	 * @param bool                $is_slice Whether this is a slice execution.
+	 * @return mixed
+	 */
+	private function invoke_online_reply_generator(
+		callable $online_reply_generator,
+		array $context,
+		string $provider,
+		string $model,
+		array $turn_request,
+		Agent_Transport $transport,
+		bool $is_slice
+	) {
+		$args  = [ $context, $provider, $model, $turn_request, $transport, $is_slice ];
+		$arity = $this->resolve_callable_arity( $online_reply_generator );
+		if ( $arity > 0 && $arity < count( $args ) ) {
+			$args = array_slice( $args, 0, $arity );
+		}
+
+		return call_user_func_array( $online_reply_generator, $args );
+	}
+
+	/**
+	 * Resolve callable arity for safe callback invocation.
+	 *
+	 * @param callable $target_callable Callable to inspect.
+	 */
+	private function resolve_callable_arity( callable $target_callable ): int {
+		try {
+			if ( is_array( $target_callable ) ) {
+				$reflection = new \ReflectionMethod( $target_callable[0], (string) $target_callable[1] );
+				return $reflection->isVariadic() ? 0 : $reflection->getNumberOfParameters();
+			}
+
+			$reflection = new \ReflectionFunction( $target_callable );
+			return $reflection->isVariadic() ? 0 : $reflection->getNumberOfParameters();
+		} catch ( \ReflectionException $exception ) {
+			unset( $exception );
+			return 0;
+		}
 	}
 }
