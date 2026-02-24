@@ -154,6 +154,60 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertSame( 'spawned_agent', $result['policy']['trigger_type'] );
 	}
 
+	public function test_policy_violation_degrade_mode_returns_successful_degraded_result(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'                         => 'spawned_agent',
+					'policy_profile'                       => 'default',
+					'allow_tools'                          => true,
+					'allow_destructive_tools'              => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'                    => false,
+					'on_policy_violation'                  => 'degrade',
+				],
+			]
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( true, $result['degraded'] );
+		$this->assertArrayNotHasKey( 'error', $result );
+		$this->assertSame( 'degrade', $result['policy']['on_violation'] );
+		$this->assertSame( 'deny_file_delete', $result['policy']['decision'] );
+	}
+
+	public function test_policy_violation_fail_mode_returns_error_payload(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'                         => 'spawned_agent',
+					'policy_profile'                       => 'default',
+					'allow_tools'                          => true,
+					'allow_destructive_tools'              => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'                    => false,
+					'on_policy_violation'                  => 'fail',
+				],
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_file_delete_denied_fail', $result['error']['code'] );
+		$this->assertSame( 'fail', $result['policy']['on_violation'] );
+	}
+
 	public function test_destructive_confirmation_token_must_be_allowlisted_by_execution_context(): void {
 		$initial = Abilities_Helper::get_instance()->execute_tool_call(
 			'file_delete',

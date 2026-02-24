@@ -160,4 +160,34 @@ final class AgentRunnerTest extends TestCase {
 		$this->assertSame( 30, $method->invoke( $runner, 2 ) );
 		$this->assertSame( 60, $method->invoke( $runner, 3 ) );
 	}
+
+	public function test_runner_times_out_run_when_max_wall_time_is_exceeded(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session(
+			[
+				'status'             => 'paused',
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+		$run_id     = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'status'       => 'queued',
+				'trigger_type' => 'heartbeat',
+				'meta'         => [
+					'message' => 'Long running job',
+				],
+			]
+		);
+
+		$GLOBALS['wpdb']->runs[ $run_id ]['started_at_gmt'] = gmdate( 'Y-m-d H:i:s', time() - 300 );
+
+		$runner = new Agent_Runner();
+		$runner->run_scheduled_tasks();
+
+		$run = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 'timeout', $run['status'] );
+		$this->assertSame( 'wall_time_exceeded', $run['error_code'] );
+		$this->assertSame( 'timeout', $GLOBALS['wpdb']->sessions[ $session_id ]['last_run_status'] );
+	}
 }

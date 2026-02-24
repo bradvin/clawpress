@@ -13,6 +13,7 @@ use ClawPress\Helpers\Agent_Event_Helper;
 use ClawPress\Helpers\Agent_Loop_Helper;
 use ClawPress\Helpers\Agent_Run_Helper;
 use ClawPress\Helpers\Agent_Session_Helper;
+use ClawPress\Helpers\Policy_Helper;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -79,6 +80,13 @@ final class Agent_Runner {
 	private Agent_Loop_Helper $loop_helper;
 
 	/**
+	 * Policy helper.
+	 *
+	 * @var Policy_Helper
+	 */
+	private Policy_Helper $policy_helper;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -86,6 +94,7 @@ final class Agent_Runner {
 		$this->session_helper = Agent_Session_Helper::get_instance();
 		$this->event_helper   = Agent_Event_Helper::get_instance();
 		$this->loop_helper    = Agent_Loop_Helper::get_instance();
+		$this->policy_helper  = Policy_Helper::get_instance();
 
 		add_action( 'clawpress_run_scheduled_tasks', [ $this, 'run_scheduled_tasks' ] );
 		add_action( self::RUN_SLICE_ACTION_HOOK, [ $this, 'run_slice_action' ], 10, 1 );
@@ -197,6 +206,17 @@ final class Agent_Runner {
 			return;
 		}
 
+		$runtime_policy              = $this->policy_helper->resolve_runtime_policy(
+			isset( $run['trigger_type'] ) ? (string) $run['trigger_type'] : 'heartbeat',
+			[
+				'policy_profile' => isset( $session['policy_profile'] ) ? (string) $session['policy_profile'] : 'default',
+			]
+		);
+		$max_wall_time_seconds       = isset( $runtime_policy['max_wall_time_seconds'] )
+			? max( 1, (int) $runtime_policy['max_wall_time_seconds'] )
+			: 120;
+		$allow_background_followups = isset( $runtime_policy['allow_background_followups'] ) && true === $runtime_policy['allow_background_followups'];
+
 		$session_claim = $this->session_helper->claim_session( $session_id, $worker_id, self::SESSION_LEASE_TTL );
 		if ( empty( $session_claim['claimed'] ) ) {
 			$delay_seconds = self::RETRY_BACKOFF_BASE;
@@ -213,6 +233,34 @@ final class Agent_Runner {
 					]
 				);
 			$this->enqueue_run_slice( $run_id, $delay_seconds );
+			return;
+		}
+
+		if ( $this->has_run_exceeded_wall_time( $run, $max_wall_time_seconds ) ) {
+			$this->run_helper->complete_run(
+				$run_id,
+				$lock_token,
+				'timeout',
+				[
+					'error_code'    => 'wall_time_exceeded',
+					'error_message' => __( 'Run exceeded maximum wall time.', 'clawpress' ),
+					'meta'          => [
+						'max_wall_time_seconds' => $max_wall_time_seconds,
+					],
+				]
+			);
+			$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+			$this->event_helper->emit(
+				'agent.runner.run_timed_out',
+				[
+					'run_id'     => $run_id,
+					'session_id' => $session_id,
+					'payload'    => [
+						'reason'                => 'wall_time_exceeded',
+						'max_wall_time_seconds' => $max_wall_time_seconds,
+					],
+				]
+			);
 			return;
 		}
 
@@ -248,9 +296,44 @@ final class Agent_Runner {
 		$result = $this->loop_helper->run_slice( $turn_request );
 
 		$status = isset( $result['status'] ) ? (string) $result['status'] : 'error';
-		if ( 'in_progress' === $status ) {
-			$delay_seconds = 1;
-			$this->run_helper->pause_run(
+			if ( 'in_progress' === $status ) {
+				if ( $this->has_run_exceeded_wall_time( $run, $max_wall_time_seconds ) ) {
+					$this->run_helper->complete_run(
+						$run_id,
+						$lock_token,
+						'timeout',
+						[
+							'error_code'    => 'wall_time_exceeded',
+							'error_message' => __( 'Run exceeded maximum wall time.', 'clawpress' ),
+							'meta'          => [
+								'last_result'           => $result,
+								'max_wall_time_seconds' => $max_wall_time_seconds,
+							],
+						]
+					);
+					$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+					return;
+				}
+
+				if ( ! $allow_background_followups ) {
+					$this->run_helper->complete_run(
+						$run_id,
+						$lock_token,
+						'timeout',
+						[
+							'error_code'    => 'background_followups_disabled',
+							'error_message' => __( 'Background follow-up slices are disabled for this trigger.', 'clawpress' ),
+							'meta'          => [
+								'last_result' => $result,
+							],
+						]
+					);
+					$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+					return;
+				}
+
+				$delay_seconds = 1;
+				$this->run_helper->pause_run(
 				$run_id,
 				$lock_token,
 				[
@@ -308,6 +391,23 @@ final class Agent_Runner {
 			$retry_count  = isset( $run['retry_count'] ) ? max( 0, (int) $run['retry_count'] ) : 0;
 			$max_attempts = isset( $run['max_attempts'] ) ? (int) $run['max_attempts'] : 5;
 			if ( $retry_count < $max_attempts ) {
+				if ( ! $allow_background_followups ) {
+					$this->run_helper->complete_run(
+						$run_id,
+						$lock_token,
+						'timeout',
+						[
+							'error_code'    => 'background_followups_disabled',
+							'error_message' => __( 'Background follow-up slices are disabled for this trigger.', 'clawpress' ),
+							'meta'          => [
+								'last_result' => $result,
+							],
+						]
+					);
+					$this->session_helper->release_session( $session_id, (string) $session_claim['lease_token'], 'error' );
+					return;
+				}
+
 				$next_retry_count = $retry_count + 1;
 				$delay_seconds    = $this->calculate_retry_backoff( $next_retry_count );
 				$this->run_helper->pause_run(
@@ -363,5 +463,25 @@ final class Agent_Runner {
 		$retry_count = max( 1, $retry_count );
 		$delay       = self::RETRY_BACKOFF_BASE * ( 2 ** ( $retry_count - 1 ) );
 		return min( $delay, 15 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Check if run exceeded max wall time.
+	 *
+	 * @param array<string,mixed> $run Run row.
+	 * @param int                 $max_wall_time_seconds Max wall-time budget in seconds.
+	 */
+	private function has_run_exceeded_wall_time( array $run, int $max_wall_time_seconds ): bool {
+		$started_at = isset( $run['started_at_gmt'] ) ? (string) $run['started_at_gmt'] : '';
+		if ( '' === $started_at || $max_wall_time_seconds <= 0 ) {
+			return false;
+		}
+
+		$started_ts = strtotime( $started_at );
+		if ( false === $started_ts ) {
+			return false;
+		}
+
+		return ( time() - $started_ts ) >= $max_wall_time_seconds;
 	}
 }

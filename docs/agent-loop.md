@@ -110,6 +110,14 @@ Retry model notes:
 - `retry_count` tracks error-driven retries/backoff only.
 - continuation pauses (`in_progress`) do not increment `retry_count`.
 - paused progress releases run lock metadata (`lock_token`, `claimed_by`, lease timestamps) because lock scope is one slice.
+- runner enforces trigger policy `max_wall_time_seconds` and marks run `timeout` when exceeded.
+- when `allow_background_followups` is false, the runner does not enqueue additional slices after `in_progress` or retryable error outcomes.
+
+Policy violation modes:
+
+- `deny`: tool call is rejected with policy error payload.
+- `degrade`: tool call returns a successful degraded no-op payload so the model can continue.
+- `fail`: tool call returns an error payload tagged as fail mode (`*_fail` policy code).
 
 ## Manual Re-enqueue Safety
 
