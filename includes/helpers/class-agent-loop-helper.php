@@ -522,18 +522,22 @@ final class Agent_Loop_Helper {
 					$round + 1,
 					$index + 1
 				);
+				$latest_tool_trace = $tool_call_trace[ count( $tool_call_trace ) - 1 ];
+				$tool_call_status  = isset( $latest_tool_trace['status'] ) ? (string) $latest_tool_trace['status'] : 'success';
+				$tool_call_payload = [
+					'round'     => $round + 1,
+					'sequence'  => $index + 1,
+					'tool_name' => strtolower( trim( $tool_name ) ),
+					'status'    => $tool_call_status,
+				];
+				if ( isset( $latest_tool_trace['message'] ) && is_string( $latest_tool_trace['message'] ) && '' !== $latest_tool_trace['message'] ) {
+					$tool_call_payload['message'] = $latest_tool_trace['message'];
+				}
 
 				$transport->emit(
 					[
 						'type'    => 'agent.tool_call',
-						'payload' => [
-							'round'     => $round + 1,
-							'sequence'  => $index + 1,
-							'tool_name' => strtolower( trim( $tool_name ) ),
-							'status'    => isset( $tool_call_trace[ count( $tool_call_trace ) - 1 ]['status'] )
-								? $tool_call_trace[ count( $tool_call_trace ) - 1 ]['status']
-								: 'success',
-						],
+						'payload' => $tool_call_payload,
 					]
 				);
 

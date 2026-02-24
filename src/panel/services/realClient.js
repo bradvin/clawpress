@@ -321,6 +321,79 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			return;
 		}
 
+		const canonicalToolEvents = events.filter(
+			( event ) =>
+				isObjectRecord( event ) &&
+				typeof event.event_type === 'string' &&
+				event.event_type === 'agent.tool_call'
+		);
+		if ( canonicalToolEvents.length > 0 ) {
+			canonicalToolEvents.forEach( ( event, index ) => {
+				const payload = isObjectRecord( event.payload )
+					? event.payload
+					: {};
+				const status = normalizeRunStatus( payload.status );
+
+				let toolName = 'tool_call';
+				if (
+					typeof payload.tool_name === 'string' &&
+					payload.tool_name.trim()
+				) {
+					toolName = payload.tool_name.trim();
+				} else if (
+					typeof payload.ability_name === 'string' &&
+					payload.ability_name.trim()
+				) {
+					toolName = payload.ability_name.trim();
+				}
+
+				let normalizedStatus = 'success';
+				if (
+					status === 'error' ||
+					status === 'requires_confirmation'
+				) {
+					normalizedStatus = status;
+				}
+
+				const detailMessage =
+					typeof payload.message === 'string' &&
+					payload.message.trim()
+						? payload.message.trim()
+						: '';
+
+				const call = {
+					name: toolName,
+					ability:
+						typeof payload.ability_name === 'string' &&
+						payload.ability_name.trim()
+							? payload.ability_name.trim()
+							: null,
+					args: {},
+					status: normalizedStatus,
+					message: detailMessage || null,
+					round: Number.isFinite( Number( payload.round ) )
+						? Math.max( 1, Math.round( Number( payload.round ) ) )
+						: 1,
+					sequence: Number.isFinite( Number( payload.sequence ) )
+						? Math.max(
+								1,
+								Math.round( Number( payload.sequence ) )
+						  )
+						: index + 1,
+					requiresConfirmation: status === 'requires_confirmation',
+				};
+
+				emitToolCallIfNew(
+					call,
+					index + 1,
+					canonicalToolEvents.length,
+					seenToolCallKeys
+				);
+			} );
+			return;
+		}
+
+		// Fallback for older backends that only emit `tool_call` events.
 		const toolEvents = events.filter(
 			( event ) =>
 				isObjectRecord( event ) &&
