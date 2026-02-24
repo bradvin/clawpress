@@ -1,0 +1,72 @@
+<?php
+/**
+ * Tests for agent run slice runner.
+ *
+ * @package ClawPress\Tests
+ */
+
+declare( strict_types=1 );
+
+namespace ClawPress\Tests\Unit;
+
+use ClawPress\Helpers\Agent_Run_Helper;
+use ClawPress\Helpers\Agent_Session_Helper;
+use ClawPress\Runner\Agent_Runner;
+use ClawPress\Tests\Support\Agent_Runtime_Wpdb;
+use ClawPress\Tests\Support\TestCase;
+use ClawPress\Tests\Support\WordPress_Stubs;
+
+final class AgentRunnerTest extends TestCase {
+	protected function setUp(): void {
+		parent::setUp();
+		$GLOBALS['wpdb'] = new Agent_Runtime_Wpdb();
+	}
+
+	protected function tearDown(): void {
+		unset( $GLOBALS['wpdb'] );
+		parent::tearDown();
+	}
+
+	public function test_runner_processes_queued_run_when_session_is_paused(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session(
+			[
+				'status'             => 'paused',
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+		$run_id     = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'status' => 'queued',
+				'meta'   => [
+					'message' => 'Execute queued run.',
+				],
+			]
+		);
+
+		$runner = new Agent_Runner();
+		$runner->run_scheduled_tasks();
+
+		$run_row = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 'done', $run_row['status'] );
+		$this->assertNull( $run_row['lock_token'] );
+		$this->assertSame( 'idle', $GLOBALS['wpdb']->sessions[ $session_id ]['status'] );
+		$this->assertSame( 'done', $GLOBALS['wpdb']->sessions[ $session_id ]['last_run_status'] );
+	}
+
+	public function test_enqueue_run_slice_uses_async_and_delayed_single_actions(): void {
+		$runner = new Agent_Runner();
+
+		$runner->enqueue_run_slice( 22, 0 );
+		$runner->enqueue_run_slice( 23, 15 );
+
+		$this->assertCount( 1, WordPress_Stubs::$async_actions );
+		$this->assertSame( Agent_Runner::RUN_SLICE_ACTION_HOOK, WordPress_Stubs::$async_actions[0]['hook'] );
+		$this->assertSame( 22, WordPress_Stubs::$async_actions[0]['args']['run_id'] );
+		$this->assertCount( 1, WordPress_Stubs::$single_scheduled_actions );
+		$this->assertSame( Agent_Runner::RUN_SLICE_ACTION_HOOK, WordPress_Stubs::$single_scheduled_actions[0]['hook'] );
+		$this->assertSame( 23, WordPress_Stubs::$single_scheduled_actions[0]['args']['run_id'] );
+	}
+}
+
