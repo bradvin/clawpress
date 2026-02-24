@@ -159,16 +159,29 @@
   content: '...';
   display: inline-block;
   margin-left: 2px;
-  width: 1.2em;
+  width: 1ch;
   white-space: nowrap;
   overflow: hidden;
   vertical-align: baseline;
   line-height: 1;
-  clip-path: inset(0 100% 0 0);
-  animation: clawpress-thinking-dots 1.2s steps(3, end) infinite;
+  animation: clawpress-thinking-dots 1.2s steps(1, end) infinite;
 }
 
 @keyframes clawpress-thinking-dots {
-  0% { clip-path: inset(0 100% 0 0); }
-  100% { clip-path: inset(0 0 0 0); }
+  0%,
+  24.99% {
+    width: 1ch;
+  }
+  25%,
+  49.99% {
+    width: 2ch;
+  }
+  50%,
+  74.99% {
+    width: 3ch;
+  }
+  75%,
+  100% {
+    width: 1ch;
+  }
 }
