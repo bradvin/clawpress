@@ -1177,6 +1177,7 @@ const Panel = () => {
 					input={ input }
 					onInputChange={ ( e ) => setInput( e.target.value ) }
 					onSend={ sendPrompt }
+					panelOpen={ open }
 					suggestions={ suggestions }
 					contextUsage={ contextUsage }
 					onSendSuggestion={ ( suggestion ) =>
