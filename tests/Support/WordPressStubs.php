@@ -77,6 +77,9 @@ final class WordPress_Stubs {
 
 	public static bool $can_manage_options = true;
 
+	/** @var array<int,array<string,bool>> */
+	public static array $user_capabilities = array();
+
 	public static bool $is_rtl = false;
 
 	public static bool $has_scheduled_action = false;
@@ -113,6 +116,7 @@ final class WordPress_Stubs {
 		self::$post_meta            = array();
 		self::$next_post_id         = 1;
 		self::$can_manage_options   = true;
+		self::$user_capabilities    = array();
 		self::$is_rtl               = false;
 		self::$has_scheduled_action = false;
 		self::$current_user_id      = 1;
@@ -330,6 +334,11 @@ namespace {
 
 	if ( ! function_exists( 'current_user_can' ) ) {
 		function current_user_can( string $capability ): bool {
+			$current_user_id = WordPress_Stubs::$current_user_id;
+			if ( isset( WordPress_Stubs::$user_capabilities[ $current_user_id ][ $capability ] ) ) {
+				return true === WordPress_Stubs::$user_capabilities[ $current_user_id ][ $capability ];
+			}
+
 			if ( 'manage_options' === $capability ) {
 				return WordPress_Stubs::$can_manage_options;
 			}
@@ -340,7 +349,10 @@ namespace {
 
 	if ( ! function_exists( 'user_can' ) ) {
 		function user_can( int $user_id, string $capability ): bool {
-			unset( $user_id );
+			if ( isset( WordPress_Stubs::$user_capabilities[ $user_id ][ $capability ] ) ) {
+				return true === WordPress_Stubs::$user_capabilities[ $user_id ][ $capability ];
+			}
+
 			return current_user_can( $capability );
 		}
 	}

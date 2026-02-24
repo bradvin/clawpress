@@ -266,7 +266,9 @@ final class Abilities_Helper {
 			return $payload;
 		}
 
-		$access_check = $this->security->assert_requesting_user_allowed();
+		$access_check = $this->security->assert_requesting_user_allowed(
+			$requesting_user_id > 0 ? $requesting_user_id : null
+		);
 		if ( is_wp_error( $access_check ) ) {
 			$payload = [
 				'success' => false,
