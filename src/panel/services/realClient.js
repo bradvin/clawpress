@@ -1,8 +1,8 @@
 import { __, sprintf } from '@wordpress/i18n';
 
-const RUN_POLL_INTERVAL_MS = 2000;
+const RUN_POLL_INTERVAL_MS = 1000;
 const RUN_POLL_MAX_SECONDS = 180;
-const RUN_PROGRESS_MESSAGE_STEP_SECONDS = 10;
+const RUN_PROGRESS_MESSAGE_STEP_SECONDS = 8;
 const RUN_PROGRESS_MESSAGES = [
 	__( 'I am still working on this', 'clawpress' ),
 	__( 'Yes, still working on it.', 'clawpress' ),
