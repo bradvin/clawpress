@@ -231,5 +231,34 @@ final class AgentRunHelperTest extends TestCase {
 		$this->assertFalse( method_exists( Agent_Session_Helper::class, 'create_table' ) );
 		$this->assertFalse( method_exists( Agent_Session_Helper::class, 'get_table_name' ) );
 	}
+
+	public function test_create_run_recovers_from_duplicate_insert_race_with_idempotency_key(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
+		$wpdb       = $GLOBALS['wpdb'];
+		$this->assertInstanceOf( Agent_Runtime_Wpdb::class, $wpdb );
+		$wpdb->simulate_idempotency_race = true;
+
+		$run_id = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'idempotency_key' => 'race-key-123',
+				'meta'            => [
+					'message' => 'race test',
+				],
+			]
+		);
+
+		$this->assertGreaterThan( 0, $run_id );
+		$this->assertCount( 1, $wpdb->runs );
+		$this->assertSame( 'race-key-123', (string) $wpdb->runs[ $run_id ]['idempotency_key'] );
+
+		$run_id_2 = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'idempotency_key' => 'race-key-123',
+			]
+		);
+		$this->assertSame( $run_id, $run_id_2 );
+	}
 }
 }

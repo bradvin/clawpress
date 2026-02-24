@@ -109,10 +109,10 @@ final class Agent_Run_Helper {
 			$resume_cursor_json = false === $encoded_resume ? null : $encoded_resume;
 		}
 
-		return $this->store->insert_run(
-			[
-				'session_id'         => $session_id,
-				'run_uuid'           => isset( $args['run_uuid'] ) ? (string) $args['run_uuid'] : $this->generate_uuid(),
+			$run_id = $this->store->insert_run(
+				[
+					'session_id'         => $session_id,
+					'run_uuid'           => isset( $args['run_uuid'] ) ? (string) $args['run_uuid'] : $this->generate_uuid(),
 				'trigger_type'       => isset( $args['trigger_type'] ) ? (string) $args['trigger_type'] : 'chat',
 				'transport_mode'     => isset( $args['transport_mode'] ) ? (string) $args['transport_mode'] : 'polling',
 				'status'             => isset( $args['status'] ) ? (string) $args['status'] : 'queued',
@@ -123,10 +123,24 @@ final class Agent_Run_Helper {
 				'meta_json'          => $meta_json,
 				'idempotency_key'    => isset( $args['idempotency_key'] ) ? (string) $args['idempotency_key'] : null,
 				'created_at_gmt'     => $now,
-				'updated_at_gmt'     => $now,
-			]
-		);
-	}
+					'updated_at_gmt'     => $now,
+				]
+			);
+
+			if ( $run_id > 0 ) {
+				return $run_id;
+			}
+
+			// Handle write races for idempotent run creation (duplicate-key insert in concurrent request).
+			if ( $session_id > 0 && '' !== $idempotency_key ) {
+				$existing_run = $this->get_run_by_idempotency_key( $session_id, $idempotency_key );
+				if ( [] !== $existing_run && isset( $existing_run['id'] ) ) {
+					return (int) $existing_run['id'];
+				}
+			}
+
+			return 0;
+		}
 
 	/**
 	 * Fetch one run by idempotency key.

@@ -115,4 +115,36 @@ final class AgentRunnerTest extends TestCase {
 		$this->assertCount( 1, WordPress_Stubs::$single_scheduled_actions );
 		$this->assertSame( $run_id, WordPress_Stubs::$single_scheduled_actions[0]['args']['run_id'] );
 	}
+
+	public function test_runner_reclaims_stale_running_run_from_heartbeat_scan(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session(
+			[
+				'status'             => 'paused',
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+		$run_id     = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'status' => 'queued',
+				'meta'   => [
+					'message' => 'Reclaim stale run',
+				],
+			]
+		);
+
+		$GLOBALS['wpdb']->runs[ $run_id ]['status']              = 'running';
+		$GLOBALS['wpdb']->runs[ $run_id ]['attempt']             = 1;
+		$GLOBALS['wpdb']->runs[ $run_id ]['lock_token']          = 'stale-lock-token';
+		$GLOBALS['wpdb']->runs[ $run_id ]['lock_expires_at_gmt'] = gmdate( 'Y-m-d H:i:s', time() - 300 );
+
+		$runner = new Agent_Runner();
+		$runner->run_scheduled_tasks();
+
+		$run_row = Agent_Run_Helper::get_instance()->get_run( $run_id );
+		$this->assertSame( 'done', $run_row['status'] );
+		$this->assertSame( 2, (int) $run_row['attempt'] );
+		$this->assertNull( $run_row['lock_token'] );
+	}
 }

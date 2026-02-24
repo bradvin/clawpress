@@ -70,7 +70,7 @@ final class Agent_Run_Store {
 			? (string) $wpdb->get_charset_collate()
 			: '';
 
-		$sql = "CREATE TABLE {$this->get_table_name()} (
+			$sql = "CREATE TABLE {$this->get_table_name()} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			session_id bigint(20) unsigned NOT NULL,
 			run_uuid char(36) NOT NULL,
@@ -93,13 +93,14 @@ final class Agent_Run_Store {
 			idempotency_key varchar(128) NULL,
 			created_at_gmt datetime NOT NULL,
 			updated_at_gmt datetime NOT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY run_uuid (run_uuid),
-			KEY session_status (session_id, status),
-			KEY status_lock_expires_at_gmt (status, lock_expires_at_gmt),
-			KEY status_next_retry_at_gmt (status, next_retry_at_gmt),
-			KEY claimed_by (claimed_by)
-		) {$charset_collate};";
+				PRIMARY KEY  (id),
+				UNIQUE KEY run_uuid (run_uuid),
+				UNIQUE KEY session_idempotency_key (session_id, idempotency_key),
+				KEY session_status (session_id, status),
+				KEY status_lock_expires_at_gmt (status, lock_expires_at_gmt),
+				KEY status_next_retry_at_gmt (status, next_retry_at_gmt),
+				KEY claimed_by (claimed_by)
+			) {$charset_collate};";
 
 		if ( ! function_exists( 'dbDelta' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -340,16 +341,24 @@ final class Agent_Run_Store {
 
 		$limit      = max( 1, min( 100, $limit ) );
 		$table_name = $this->get_table_name();
-		$query      = $wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-			"SELECT * FROM {$table_name}
-				WHERE status IN ('queued', 'paused')
-					AND (next_retry_at_gmt IS NULL OR next_retry_at_gmt <= %s)
-				ORDER BY created_at_gmt ASC
-				LIMIT %d",
-			$now_gmt,
-			$limit
-		);
+			$query      = $wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
+				"SELECT * FROM {$table_name}
+					WHERE (
+						status IN ('queued', 'paused')
+						AND (next_retry_at_gmt IS NULL OR next_retry_at_gmt <= %s)
+					)
+					OR (
+						status = 'running'
+						AND lock_expires_at_gmt IS NOT NULL
+						AND lock_expires_at_gmt <= %s
+					)
+					ORDER BY created_at_gmt ASC
+					LIMIT %d",
+				$now_gmt,
+				$now_gmt,
+				$limit
+			);
 
 		if ( ! is_string( $query ) || '' === $query ) {
 			return [];

@@ -31,6 +31,10 @@ final class Agent_Runtime_Wpdb {
 
 	public bool $fail_session_update = false;
 
+	public bool $simulate_idempotency_race = false;
+
+	public string $last_error = '';
+
 	private bool $in_transaction = false;
 
 	/** @var array{sessions:array<int,array<string,mixed>>,runs:array<int,array<string,mixed>>,events:array<int,array<string,mixed>>,insert_id:int}|null */
@@ -48,6 +52,28 @@ final class Agent_Runtime_Wpdb {
 	 */
 	public function insert( string $table, array $data, array $format ) {
 		unset( $format );
+		$this->last_error = '';
+
+		if ( false !== strpos( $table, 'agent_runs' ) ) {
+			$idempotency_key = isset( $data['idempotency_key'] ) ? trim( (string) $data['idempotency_key'] ) : '';
+			$session_id      = isset( $data['session_id'] ) ? (int) $data['session_id'] : 0;
+			if ( $session_id > 0 && '' !== $idempotency_key ) {
+				$existing_run = $this->find_run_by_idempotency_key( $session_id, $idempotency_key );
+				if ( null === $existing_run && $this->simulate_idempotency_race ) {
+					$this->simulate_idempotency_race = false;
+					++$this->insert_id;
+					$data['id']                    = $this->insert_id;
+					$this->runs[ $this->insert_id ] = $data;
+					$this->last_error              = 'Duplicate entry for key session_idempotency_key';
+					return false;
+				}
+
+				if ( null !== $existing_run ) {
+					$this->last_error = 'Duplicate entry for key session_idempotency_key';
+					return false;
+				}
+			}
+		}
 
 		++$this->insert_id;
 		$data['id'] = $this->insert_id;
@@ -270,7 +296,7 @@ final class Agent_Runtime_Wpdb {
 	 */
 	private function get_runnable_runs(): array {
 		$now_gmt = isset( $this->last_prepare_args[0] ) ? (string) $this->last_prepare_args[0] : gmdate( 'Y-m-d H:i:s' );
-		$limit   = isset( $this->last_prepare_args[1] ) ? (int) $this->last_prepare_args[1] : 20;
+		$limit   = isset( $this->last_prepare_args[2] ) ? (int) $this->last_prepare_args[2] : ( isset( $this->last_prepare_args[1] ) ? (int) $this->last_prepare_args[1] : 20 );
 		$limit   = max( 1, $limit );
 		$now_ts  = strtotime( $now_gmt );
 		if ( false === $now_ts ) {
@@ -280,26 +306,40 @@ final class Agent_Runtime_Wpdb {
 		$rows = array_values(
 			array_filter(
 				$this->runs,
-				static function ( array $row ) use ( $now_ts ): bool {
-					$status = isset( $row['status'] ) ? (string) $row['status'] : '';
-					if ( ! in_array( $status, [ 'queued', 'paused' ], true ) ) {
+					static function ( array $row ) use ( $now_ts ): bool {
+						$status = isset( $row['status'] ) ? (string) $row['status'] : '';
+						if ( in_array( $status, [ 'queued', 'paused' ], true ) ) {
+							$retry_at = isset( $row['next_retry_at_gmt'] ) ? (string) $row['next_retry_at_gmt'] : '';
+							if ( '' === $retry_at ) {
+								return true;
+							}
+
+							$retry_ts = strtotime( $retry_at );
+							if ( false === $retry_ts ) {
+								return true;
+							}
+
+							return $retry_ts <= $now_ts;
+						}
+
+						if ( 'running' === $status ) {
+							$lock_expires_at = isset( $row['lock_expires_at_gmt'] ) ? (string) $row['lock_expires_at_gmt'] : '';
+							if ( '' === $lock_expires_at ) {
+								return false;
+							}
+
+							$lock_expires_ts = strtotime( $lock_expires_at );
+							if ( false === $lock_expires_ts ) {
+								return false;
+							}
+
+							return $lock_expires_ts <= $now_ts;
+						}
+
 						return false;
 					}
-
-					$retry_at = isset( $row['next_retry_at_gmt'] ) ? (string) $row['next_retry_at_gmt'] : '';
-					if ( '' === $retry_at ) {
-						return true;
-					}
-
-					$retry_ts = strtotime( $retry_at );
-					if ( false === $retry_ts ) {
-						return true;
-					}
-
-					return $retry_ts <= $now_ts;
-				}
-			)
-		);
+				)
+			);
 
 		usort(
 			$rows,
@@ -378,5 +418,33 @@ final class Agent_Runtime_Wpdb {
 		);
 
 		return array_slice( $rows, 0, $limit );
+	}
+
+	/**
+	 * Find run by session + idempotency key.
+	 *
+	 * @param int    $session_id Session identifier.
+	 * @param string $idempotency_key Idempotency key.
+	 * @return array<string,mixed>|null
+	 */
+	private function find_run_by_idempotency_key( int $session_id, string $idempotency_key ): ?array {
+		$matching = array_values(
+			array_filter(
+				$this->runs,
+				static fn( array $row ): bool => (int) ( $row['session_id'] ?? 0 ) === $session_id
+					&& (string) ( $row['idempotency_key'] ?? '' ) === $idempotency_key
+			)
+		);
+
+		if ( [] === $matching ) {
+			return null;
+		}
+
+		usort(
+			$matching,
+			static fn( array $left, array $right ): int => (int) ( $right['id'] ?? 0 ) <=> (int) ( $left['id'] ?? 0 )
+		);
+
+		return $matching[0];
 	}
 }

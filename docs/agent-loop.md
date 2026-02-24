@@ -58,6 +58,7 @@ If provider is unavailable, it returns deterministic offline mode without backgr
 
 1. `POST /clawpress/v1/agent/runs` creates session/run and enqueues slice action.
 2. Runner claims runnable run (`queued`/`paused`, retry time reached).
+   - Runnable scan also includes stale `running` rows whose run lock lease has expired.
 3. Runner claims session lease.
 4. Runner executes one slice via `Agent_Loop_Helper::run_slice`.
 5. Runner either:
@@ -80,6 +81,8 @@ If provider is unavailable, it returns deterministic offline mode without backgr
 - fresh claim from `queued` (attempt stays at current value; first claim remains `1`),
 - retry claim from `paused` (attempt increments),
 - stale reclaim from expired `running` lease (attempt increments).
+
+Heartbeat scan intentionally includes expired `running` leases so stale claims are actually discoverable in production.
 
 ### Session claim
 
@@ -117,6 +120,8 @@ This prevents accidental mutation of active runs and stale-state rewrites.
 - `POST /agent/runs` with the same `session_id + idempotency_key` returns the existing run instead of inserting a duplicate.
 - duplicate create requests return HTTP `200` with `deduplicated=true`.
 - unknown explicit `session_id` now returns HTTP `404` to prevent orphan run creation.
+- run table enforces unique `(session_id, idempotency_key)` for non-null keys to harden concurrent create races.
+- helper fallback re-reads by idempotency key when insert returns no ID, covering duplicate-key race windows.
 
 ## Agent Loop Callback Compatibility
 
