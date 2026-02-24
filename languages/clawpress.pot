@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-24T12:12:17+00:00\n"
+"POT-Creation-Date: 2026-02-24T15:52:13+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -218,23 +218,35 @@ msgstr ""
 msgid "Agent Memories"
 msgstr ""
 
-#: includes/class-agent-runner.php:213
+#: includes/class-agent-runner.php:222
 msgid "Run session could not be loaded."
 msgstr ""
 
-#: includes/class-agent-runner.php:256
-#: includes/class-agent-runner.php:317
+#: includes/class-agent-runner.php:265
+#: includes/class-agent-runner.php:326
 msgid "Run exceeded maximum wall time."
 msgstr ""
 
-#: includes/class-agent-runner.php:335
-#: includes/class-agent-runner.php:410
+#: includes/class-agent-runner.php:344
+#: includes/class-agent-runner.php:420
 msgid "Background follow-up slices are disabled for this trigger."
 msgstr ""
 
-#: includes/class-agent-runner.php:447
+#: includes/class-agent-runner.php:457
 #: includes/helpers/class-chat-helper.php:232
 msgid "Agent run failed."
+msgstr ""
+
+#: includes/class-agent-runner.php:496
+#: includes/helpers/class-agent-loop-helper.php:331
+#: src/panel/services/realClient.js:598
+msgid "Action requires confirmation before continuing."
+msgstr ""
+
+#: includes/class-agent-runner.php:497
+#: includes/helpers/class-agent-loop-helper.php:335
+#: src/panel/services/realClient.js:609
+msgid "I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here."
 msgstr ""
 
 #: includes/class-panel.php:116
@@ -682,7 +694,7 @@ msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:393
 #: includes/commands/handlers/class-test-command-handler.php:203
-#: includes/helpers/class-agent-loop-helper.php:267
+#: includes/helpers/class-agent-loop-helper.php:268
 #: includes/helpers/class-chat-helper.php:537
 #: includes/helpers/class-chat-helper.php:590
 msgid "Unknown provider error."
@@ -1140,45 +1152,45 @@ msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
 #. translators: %d: maximum number of tool calls executed per round.
-#: includes/helpers/class-agent-loop-helper.php:880
+#: includes/helpers/class-agent-loop-helper.php:917
 #, php-format
 msgid "Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round."
 msgstr ""
 
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1173
+#: includes/helpers/class-agent-loop-helper.php:1210
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1181
+#: includes/helpers/class-agent-loop-helper.php:1218
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1184
+#: includes/helpers/class-agent-loop-helper.php:1221
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1192
+#: includes/helpers/class-agent-loop-helper.php:1229
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1193
+#: includes/helpers/class-agent-loop-helper.php:1230
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1199
+#: includes/helpers/class-agent-loop-helper.php:1236
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1200
+#: includes/helpers/class-agent-loop-helper.php:1237
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1206
+#: includes/helpers/class-agent-loop-helper.php:1243
 msgid "Decline"
 msgstr ""
 
@@ -1191,7 +1203,10 @@ msgid "Unable to release session after pausing run."
 msgstr ""
 
 #: includes/helpers/class-chat-helper.php:388
-msgid "I am still working on this. Poll run progress to continue."
+#: src/panel/components/PanelMessages.jsx:45
+#: src/panel/Panel.jsx:602
+#: src/panel/services/realClient.js:7
+msgid "I am still working on this"
 msgstr ""
 
 #: includes/helpers/class-chat-helper.php:462
@@ -1540,12 +1555,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:787
+#: src/panel/Panel.jsx:794
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:791
+#: src/panel/Panel.jsx:798
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1619,58 +1634,78 @@ msgid "Close panel"
 msgstr ""
 
 #. translators: 1: percentage used, 2: percentage left
-#: src/panel/components/PanelInput.jsx:91
+#: src/panel/components/PanelInput.jsx:93
 #, js-format
 msgid "%1$d%% used (%2$d%% left)"
 msgstr ""
 
 #. translators: 1: used tokens, 2: available context-window tokens
-#: src/panel/components/PanelInput.jsx:99
+#: src/panel/components/PanelInput.jsx:101
 #, js-format
 msgid "%1$s / %2$s tokens used"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:165
-#: src/panel/components/PanelInput.jsx:168
+#: src/panel/components/PanelInput.jsx:185
+#: src/panel/components/PanelInput.jsx:188
 msgid "Suggestions"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:190
+#: src/panel/components/PanelInput.jsx:210
 msgid "Ask me anything…"
 msgstr ""
 
 #. translators: 1: context usage summary, 2: token usage summary
-#: src/panel/components/PanelInput.jsx:202
+#: src/panel/components/PanelInput.jsx:222
 #, js-format
 msgid "Context window: %1$s. %2$s."
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:222
+#: src/panel/components/PanelInput.jsx:242
 msgid "Context window:"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:231
+#: src/panel/components/PanelInput.jsx:251
 msgid "Codex automatically compacts its context"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:242
+#: src/panel/components/PanelInput.jsx:262
 msgid "Stop"
 msgstr ""
 
-#: src/panel/components/PanelInput.jsx:250
+#: src/panel/components/PanelInput.jsx:270
 msgid "Send"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:136
+#: src/panel/components/PanelMessages.jsx:46
+#: src/panel/services/realClient.js:8
+msgid "Yes, still working on it."
+msgstr ""
+
+#: src/panel/components/PanelMessages.jsx:47
+#: src/panel/services/realClient.js:9
+msgid "Ok, this is taking long now. Still on it."
+msgstr ""
+
+#: src/panel/components/PanelMessages.jsx:48
+#: src/panel/services/realClient.js:10
+msgid "Plot twist: still working on it. My keyboard is sweating."
+msgstr ""
+
+#: src/panel/components/PanelMessages.jsx:52
+#: src/panel/services/realClient.js:14
+msgid "At this point even my coffee is worried, but I am still on it."
+msgstr ""
+
+#: src/panel/components/PanelMessages.jsx:170
 msgid "System"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:137
-#: src/panel/components/PanelMessages.jsx:187
+#: src/panel/components/PanelMessages.jsx:171
+#: src/panel/components/PanelMessages.jsx:223
 msgid "AGENT"
 msgstr ""
 
-#: src/panel/components/PanelMessages.jsx:180
+#: src/panel/components/PanelMessages.jsx:216
 msgid "Thinking"
 msgstr ""
 
@@ -1754,8 +1789,8 @@ msgid "Network or API request error"
 msgstr ""
 
 #: src/panel/Panel.jsx:149
-#: src/panel/services/realClient.js:652
-#: src/panel/services/realClient.js:723
+#: src/panel/services/realClient.js:764
+#: src/panel/services/realClient.js:835
 msgid "Chat request failed."
 msgstr ""
 
@@ -1779,76 +1814,68 @@ msgstr ""
 msgid "Preparing tool plan…"
 msgstr ""
 
-#: src/panel/Panel.jsx:601
+#: src/panel/Panel.jsx:608
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:799
+#: src/panel/Panel.jsx:806
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:827
+#: src/panel/Panel.jsx:834
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:898
+#: src/panel/Panel.jsx:905
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:940
+#: src/panel/Panel.jsx:947
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:1007
-#: src/panel/Panel.jsx:1031
+#: src/panel/Panel.jsx:1014
+#: src/panel/Panel.jsx:1038
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:1018
+#: src/panel/Panel.jsx:1025
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:1074
+#: src/panel/Panel.jsx:1081
 #, js-format
 msgid "Mock: %s"
 msgstr ""
 
-#: src/panel/Panel.jsx:1164
+#: src/panel/Panel.jsx:1171
 msgid "Resize panel"
 msgstr ""
 
 #. translators: %d: HTTP status code
-#: src/panel/services/realClient.js:45
+#: src/panel/services/realClient.js:59
 #, js-format
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:433
+#: src/panel/services/realClient.js:535
 msgid "Run failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:496
-msgid "Action requires confirmation before continuing."
-msgstr ""
-
-#: src/panel/services/realClient.js:507
-msgid "Run completed."
-msgstr ""
-
-#: src/panel/services/realClient.js:517
+#: src/panel/services/realClient.js:622
 msgid "Run ended with an error."
 msgstr ""
 
-#: src/panel/services/realClient.js:547
+#: src/panel/services/realClient.js:653
 msgid "Run polling timed out before a terminal status was received."
 msgstr ""
 
-#: src/panel/services/realClient.js:705
+#: src/panel/services/realClient.js:817
 msgid "Run entered progress mode without a valid run ID."
 msgstr ""
 
-#: src/panel/services/realClient.js:735
+#: src/panel/services/realClient.js:847
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 
