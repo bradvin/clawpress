@@ -250,8 +250,9 @@ final class RestApiTest extends TestCase {
 					'tool_calls' => null,
 					'run_id'   => null,
 					'session_id' => null,
+					'events_cursor' => null,
 					'status'   => null,
-				),
+					),
 			),
 			$response->get_data()
 		);
@@ -267,10 +268,11 @@ final class RestApiTest extends TestCase {
 					'model'       => 'gpt-4.1-mini',
 					'run_id'      => 42,
 					'session_id'  => 84,
+					'events_cursor' => 123,
 					'status'      => 'in_progress',
-				);
-			}
-		);
+					);
+				}
+			);
 
 		$response = $chat_controller->send_message(
 			new \WP_REST_Request(
@@ -285,6 +287,7 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'in_progress', $data['meta']['mode'] );
 		$this->assertSame( 42, $data['meta']['run_id'] );
 		$this->assertSame( 84, $data['meta']['session_id'] );
+		$this->assertSame( 123, $data['meta']['events_cursor'] );
 		$this->assertSame( 'in_progress', $data['meta']['status'] );
 	}
 

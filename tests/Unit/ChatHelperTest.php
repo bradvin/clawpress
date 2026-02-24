@@ -325,6 +325,7 @@ final class ChatHelperTest extends TestCase {
 							'version' => 1,
 							'round'   => 2,
 						],
+						'events_cursor' => 55,
 						'tool_calls'    => [
 							[
 								'name'   => 'file_read',
@@ -341,8 +342,9 @@ final class ChatHelperTest extends TestCase {
 
 			$payload = $chat_helper->generate_ai_reply( 'Long running request' );
 
-			$this->assertSame( 'in_progress', $payload['mode'] );
-			$this->assertSame( 'in_progress', $payload['status'] );
+				$this->assertSame( 'in_progress', $payload['mode'] );
+				$this->assertSame( 'in_progress', $payload['status'] );
+				$this->assertSame( 55, (int) $payload['events_cursor'] );
 				$this->assertGreaterThan( 0, (int) $payload['run_id'] );
 				$this->assertGreaterThan( 0, (int) $payload['session_id'] );
 				$this->assertCount( 1, $GLOBALS['wpdb']->runs );

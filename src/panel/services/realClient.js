@@ -274,7 +274,49 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 	const normalizeRunStatus = ( value ) =>
 		typeof value === 'string' ? value.trim().toLowerCase() : '';
 
-	const emitToolCallEvents = ( events ) => {
+	const buildToolCallDedupKey = ( call ) => {
+		if ( ! call || typeof call !== 'object' ) {
+			return '';
+		}
+
+		const name = typeof call.name === 'string' ? call.name.trim() : '';
+		if ( ! name ) {
+			return '';
+		}
+
+		const status =
+			typeof call.status === 'string'
+				? call.status.trim().toLowerCase()
+				: '';
+		const message =
+			typeof call.message === 'string' ? call.message.trim() : '';
+		const round = Number.isFinite( Number( call.round ) )
+			? Math.max( 1, Math.round( Number( call.round ) ) )
+			: 1;
+		const sequence = Number.isFinite( Number( call.sequence ) )
+			? Math.max( 1, Math.round( Number( call.sequence ) ) )
+			: 1;
+
+		return `${ name }|${ status }|${ round }|${ sequence }|${ message }`;
+	};
+
+	const emitToolCallIfNew = ( call, index, total, seenToolCallKeys ) => {
+		const dedupKey = buildToolCallDedupKey( call );
+		if ( dedupKey && seenToolCallKeys instanceof Set ) {
+			if ( seenToolCallKeys.has( dedupKey ) ) {
+				return;
+			}
+			seenToolCallKeys.add( dedupKey );
+		}
+
+		onEvent( 'tool_call', {
+			call,
+			index,
+			total,
+		} );
+	};
+
+	const emitToolCallEvents = ( events, seenToolCallKeys ) => {
 		if ( ! Array.isArray( events ) || events.length === 0 ) {
 			return;
 		}
@@ -326,28 +368,39 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 				normalizedStatus = status;
 			}
 
-			onEvent( 'tool_call', {
-				call: {
-					name: toolName,
-					ability:
-						typeof payload.ability_name === 'string' &&
-						payload.ability_name.trim()
-							? payload.ability_name.trim()
-							: null,
-					args: {},
-					status: normalizedStatus,
-					message: detailMessage || null,
-					round: 1,
-					sequence: index + 1,
-					requiresConfirmation: status === 'requires_confirmation',
-				},
-				index: index + 1,
-				total: toolEvents.length,
-			} );
+			const call = {
+				name: toolName,
+				ability:
+					typeof payload.ability_name === 'string' &&
+					payload.ability_name.trim()
+						? payload.ability_name.trim()
+						: null,
+				args: {},
+				status: normalizedStatus,
+				message: detailMessage || null,
+				round: Number.isFinite( Number( payload.round ) )
+					? Math.max( 1, Math.round( Number( payload.round ) ) )
+					: 1,
+				sequence: Number.isFinite( Number( payload.sequence ) )
+					? Math.max( 1, Math.round( Number( payload.sequence ) ) )
+					: index + 1,
+				requiresConfirmation: status === 'requires_confirmation',
+			};
+
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolEvents.length,
+				seenToolCallKeys
+			);
 		} );
 	};
 
-	const emitRuntimeResult = ( runtimeResult, initialReply ) => {
+	const emitRuntimeResult = (
+		runtimeResult,
+		initialReply,
+		seenToolCallKeys
+	) => {
 		if ( ! isObjectRecord( runtimeResult ) ) {
 			return false;
 		}
@@ -363,11 +416,12 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 					.filter( Boolean )
 			: [];
 		toolCalls.forEach( ( call, index ) => {
-			onEvent( 'tool_call', {
+			emitToolCallIfNew(
 				call,
-				index: index + 1,
-				total: toolCalls.length,
-			} );
+				index + 1,
+				toolCalls.length,
+				seenToolCallKeys
+			);
 		} );
 
 		if ( isObjectRecord( runtimeResult.error ) ) {
@@ -414,7 +468,11 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 		return false;
 	};
 
-	const emitRunTerminalOutcome = ( runPayload, initialReply ) => {
+	const emitRunTerminalOutcome = (
+		runPayload,
+		initialReply,
+		seenToolCallKeys
+	) => {
 		const runMeta = isObjectRecord( runPayload?.meta )
 			? runPayload.meta
 			: {};
@@ -425,7 +483,9 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			runtimeResult = runMeta.last_result;
 		}
 
-		if ( emitRuntimeResult( runtimeResult, initialReply ) ) {
+		if (
+			emitRuntimeResult( runtimeResult, initialReply, seenToolCallKeys )
+		) {
 			return;
 		}
 
@@ -462,8 +522,16 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 		} );
 	};
 
-	const pollRunUntilTerminal = async ( { runId, initialReply, signal } ) => {
-		let afterEventId = 0;
+	const pollRunUntilTerminal = async ( {
+		runId,
+		initialReply,
+		signal,
+		initialEventsCursor = 0,
+		seenToolCallKeys = null,
+	} ) => {
+		let afterEventId = Number.isFinite( Number( initialEventsCursor ) )
+			? Math.max( 0, Math.round( Number( initialEventsCursor ) ) )
+			: 0;
 		const startedAt = Date.now();
 
 		while ( true ) {
@@ -494,7 +562,7 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 				const events = Array.isArray( eventPayload?.events )
 					? eventPayload.events
 					: [];
-				emitToolCallEvents( events );
+				emitToolCallEvents( events, seenToolCallKeys );
 
 				const nextCursor = Number( eventPayload?.next_cursor );
 				if ( Number.isFinite( nextCursor ) && nextCursor > 0 ) {
@@ -509,7 +577,11 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			const runPayload = await getRunStatus( runId, signal );
 			const status = normalizeRunStatus( runPayload?.status );
 			if ( TERMINAL_RUN_STATUSES.has( status ) ) {
-				emitRunTerminalOutcome( runPayload, initialReply );
+				emitRunTerminalOutcome(
+					runPayload,
+					initialReply,
+					seenToolCallKeys
+				);
 				return;
 			}
 
@@ -520,6 +592,7 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 	// Keep a stream-compatible interface for the existing panel flow.
 	const stream = ( prompt ) => {
 		const controller = new AbortController();
+		const seenToolCallKeys = new Set();
 
 		( async () => {
 			try {
@@ -552,11 +625,12 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 					: [];
 
 				toolCalls.forEach( ( call, index ) => {
-					onEvent( 'tool_call', {
+					emitToolCallIfNew(
 						call,
-						index: index + 1,
-						total: toolCalls.length,
-					} );
+						index + 1,
+						toolCalls.length,
+						seenToolCallKeys
+					);
 				} );
 
 				const responseError =
@@ -614,12 +688,17 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 
 				const runStatus = normalizeRunStatus( response?.meta?.status );
 				const runId = Number( response?.meta?.run_id );
+				const initialEventsCursor = Number(
+					response?.meta?.events_cursor
+				);
 				if ( runStatus === 'in_progress' ) {
 					if ( Number.isFinite( runId ) && runId > 0 ) {
 						await pollRunUntilTerminal( {
 							runId,
 							initialReply: reply,
 							signal: controller.signal,
+							initialEventsCursor,
+							seenToolCallKeys,
 						} );
 					} else {
 						onEvent( 'error', {

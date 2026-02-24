@@ -293,6 +293,10 @@ final class Chat_Helper {
 				$payload['tool_calls'] = $tool_calls;
 			}
 
+			if ( isset( $runtime_result['events_cursor'] ) ) {
+				$payload['events_cursor'] = (int) $runtime_result['events_cursor'];
+			}
+
 			return $payload;
 		} catch ( Throwable $throwable ) {
 			if ( $run_id > 0 && '' !== $run_lock_token ) {
@@ -394,6 +398,10 @@ final class Chat_Helper {
 			'run_id'      => $run_id,
 			'session_id'  => $session_id,
 		];
+
+		if ( isset( $runtime_result['events_cursor'] ) ) {
+			$payload['events_cursor'] = (int) $runtime_result['events_cursor'];
+		}
 
 		if ( isset( $runtime_result['context'] ) && is_array( $runtime_result['context'] ) ) {
 			$payload['context'] = $runtime_result['context'];
