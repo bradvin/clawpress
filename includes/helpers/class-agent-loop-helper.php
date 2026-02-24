@@ -479,34 +479,27 @@ final class Agent_Loop_Helper {
 				}
 
 				if ( $index >= $max_tool_calls_per_round ) {
-					$tool_result       = $this->build_tool_call_limit_tool_result( $max_tool_calls_per_round );
-					$tool_call_trace[] = $this->build_tool_call_trace_entry(
-						$tool_name,
-						$function_call->getArgs(),
-						$tool_result,
+					$deferred_count = count( $function_calls ) - $index;
+					$this->append_deferred_tool_call_responses(
+						$function_calls,
+						$index,
 						$round + 1,
-						$index + 1
+						$max_tool_calls_per_round,
+						$function_responses
 					);
 
 					$transport->emit(
 						[
-							'type'    => 'agent.tool_call',
+							'type'    => 'agent.tool_calls.deferred',
 							'payload' => [
-								'round'     => $round + 1,
-								'sequence'  => $index + 1,
-								'tool_name' => strtolower( trim( $tool_name ) ),
-								'status'    => 'error',
+								'round'          => $round + 1,
+								'deferred_count' => max( 1, $deferred_count ),
+								'executed_count' => $max_tool_calls_per_round,
 							],
 						]
 					);
 
-					$function_responses[] = new FunctionResponse(
-						$function_response_id,
-						$tool_name,
-						$tool_result
-					);
-
-					continue;
+					break;
 				}
 
 				$tool_result       = $this->abilities_helper->execute_tool_call(
@@ -884,9 +877,50 @@ final class Agent_Loop_Helper {
 			'error'                 => [
 				'code'    => 'tool_call_limit_exceeded',
 				/* translators: %d: maximum number of tool calls executed per round. */
-				'message' => sprintf( __( 'Tool call skipped because the per-round limit of %d was reached.', 'clawpress' ), max( 1, $max_tool_calls_per_round ) ),
+				'message' => sprintf( __( 'Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round.', 'clawpress' ), max( 1, $max_tool_calls_per_round ) ),
 			],
 		];
+	}
+
+	/**
+	 * Append synthetic responses for deferred tool calls once round cap is reached.
+	 *
+	 * @param array<int,FunctionCall>     $function_calls Full round function calls.
+	 * @param int                         $start_index First deferred call index.
+	 * @param int                         $round Tool round number.
+	 * @param int                         $max_tool_calls_per_round Per-round execution cap.
+	 * @param array<int,FunctionResponse> $function_responses Accumulator.
+	 */
+	private function append_deferred_tool_call_responses(
+		array $function_calls,
+		int $start_index,
+		int $round,
+		int $max_tool_calls_per_round,
+		array &$function_responses
+	): void {
+		$total_calls = count( $function_calls );
+		for ( $index = $start_index; $index < $total_calls; ++$index ) {
+			$function_call = $function_calls[ $index ];
+			if ( ! $function_call instanceof FunctionCall ) {
+				continue;
+			}
+
+			$tool_name = trim( (string) $function_call->getName() );
+			if ( '' === $tool_name ) {
+				$tool_name = 'unknown_tool';
+			}
+
+			$function_response_id = trim( (string) $function_call->getId() );
+			if ( '' === $function_response_id ) {
+				$function_response_id = sprintf( 'tool-call-%d-%d', $round, $index + 1 );
+			}
+
+			$function_responses[] = new FunctionResponse(
+				$function_response_id,
+				$tool_name,
+				$this->build_tool_call_limit_tool_result( $max_tool_calls_per_round )
+			);
+		}
 	}
 
 	/**
