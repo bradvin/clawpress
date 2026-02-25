@@ -23,6 +23,7 @@
     "lint:js": "wp-scripts lint-js",
     "lint:css": "wp-scripts lint-style",
     "lint:php": "composer lint",
+    "plugin:check": "bin/plugin-check",
     "test": "composer test",
     "lint:php:fix": "composer lint:fix",
     "lint:changed": "bin/lint-changed",
@@ -36,6 +37,7 @@
     "@wordpress/icons": "^11.6.0"
   },
   "devDependencies": {
+    "@wordpress/env": "^10.39.0",
     "@wordpress/scripts": "^31.4.0"
   }
 }
