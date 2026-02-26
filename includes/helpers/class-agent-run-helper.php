@@ -50,6 +50,15 @@ final class Agent_Run_Helper {
 	];
 
 	/**
+	 * Pause reasons that represent retry/backoff state.
+	 *
+	 * @var array<int,string>
+	 */
+	private const RETRY_PAUSE_REASONS = [
+		'retry_backoff',
+	];
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var ?self
@@ -251,7 +260,7 @@ final class Agent_Run_Helper {
 		}
 
 		$next_attempt = (int) ( $run['attempt'] ?? 1 );
-		if ( $is_stale || 'paused' === $current_status ) {
+		if ( $this->should_increment_attempt_on_claim( $run, $is_stale, $current_status ) ) {
 			$next_attempt = max( 1, $next_attempt + 1 );
 		}
 
@@ -508,6 +517,30 @@ final class Agent_Run_Helper {
 		}
 
 		return $row;
+	}
+
+	/**
+	 * Determine whether a new claim should increment run attempt.
+	 *
+	 * @param array<string,mixed> $run Run row.
+	 * @param bool                $is_stale True when reclaiming stale running lock.
+	 * @param string              $current_status Current persisted run status.
+	 */
+	private function should_increment_attempt_on_claim( array $run, bool $is_stale, string $current_status ): bool {
+		if ( $is_stale ) {
+			return true;
+		}
+
+		if ( 'paused' !== $current_status ) {
+			return false;
+		}
+
+		$pause_reason = '';
+		if ( isset( $run['meta'] ) && is_array( $run['meta'] ) && isset( $run['meta']['pause_reason'] ) ) {
+			$pause_reason = strtolower( trim( (string) $run['meta']['pause_reason'] ) );
+		}
+
+		return in_array( $pause_reason, self::RETRY_PAUSE_REASONS, true );
 	}
 
 	/**

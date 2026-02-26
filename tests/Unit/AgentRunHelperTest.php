@@ -104,6 +104,46 @@ final class AgentRunHelperTest extends TestCase {
 		$this->assertSame( 2, (int) $GLOBALS['wpdb']->runs[ $run_id ]['attempt'] );
 	}
 
+	public function test_claim_paused_continuation_does_not_increment_attempt(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
+		$run_id     = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'status'  => 'paused',
+				'attempt' => 1,
+				'meta'    => [
+					'pause_reason' => 'slice_budget',
+				],
+			]
+		);
+
+		$result = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-continuation', 120 );
+
+		$this->assertTrue( $result['claimed'] );
+		$this->assertSame( 1, $result['attempt'] );
+		$this->assertSame( 1, (int) $GLOBALS['wpdb']->runs[ $run_id ]['attempt'] );
+	}
+
+	public function test_claim_paused_retry_backoff_increments_attempt(): void {
+		$session_id = Agent_Session_Helper::get_instance()->create_session();
+		$run_id     = Agent_Run_Helper::get_instance()->create_run(
+			$session_id,
+			[
+				'status'  => 'paused',
+				'attempt' => 1,
+				'meta'    => [
+					'pause_reason' => 'retry_backoff',
+				],
+			]
+		);
+
+		$result = Agent_Run_Helper::get_instance()->claim_run( $run_id, 'worker-retry', 120 );
+
+		$this->assertTrue( $result['claimed'] );
+		$this->assertSame( 2, $result['attempt'] );
+		$this->assertSame( 2, (int) $GLOBALS['wpdb']->runs[ $run_id ]['attempt'] );
+	}
+
 	public function test_claim_session_allows_paused_status(): void {
 		$session_id = Agent_Session_Helper::get_instance()->create_session(
 			[
