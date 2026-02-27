@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$REPO_ROOT"
+
+echo "Starting wp-env for plugin check..."
+npx wp-env start
+
+echo "Installing/updating Plugin Check plugin..."
+npx wp-env run tests-cli wp plugin install plugin-check --activate --force
+
+echo "Running Plugin Check against clawpress..."
+npx wp-env run tests-cli wp plugin check clawpress

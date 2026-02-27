@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [develop, main]
+  push:
+    branches: [main]
 
 jobs:
   php:
@@ -51,3 +53,25 @@ jobs:
       - name: Skip JS lint (no JS changes)
         if: steps.changed-js.outputs.js != 'true'
         run: echo "No JS changes; skipping JS lint."
+
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Run plugin standards check
+        run: npm run plugin:check
