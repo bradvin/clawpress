@@ -37,7 +37,7 @@ final class RestApiTest extends TestCase {
 			WordPress_Stubs::$rest_routes
 		);
 
-		$this->assertCount( 7, WordPress_Stubs::$rest_routes );
+		$this->assertCount( 12, WordPress_Stubs::$rest_routes );
 		$this->assertContains( '/settings:GET', $routes );
 		$this->assertContains( '/settings:POST', $routes );
 		$this->assertContains( '/status:GET', $routes );
@@ -45,6 +45,11 @@ final class RestApiTest extends TestCase {
 		$this->assertContains( '/panel/state:POST', $routes );
 		$this->assertContains( '/chat/message:POST', $routes );
 		$this->assertContains( '/chat/history:GET', $routes );
+		$this->assertContains( '/agent/runs:POST', $routes );
+		$this->assertContains( '/agent/runs/(?P<run_id>\\d+)/enqueue:POST', $routes );
+		$this->assertContains( '/agent/runs/(?P<run_id>\\d+):GET', $routes );
+		$this->assertContains( '/agent/runs/(?P<run_id>\\d+)/events:GET', $routes );
+		$this->assertContains( '/agent/spawn:POST', $routes );
 	}
 
 	public function test_settings_routes_use_global_manage_options_permission_callback(): void {
@@ -243,10 +248,47 @@ final class RestApiTest extends TestCase {
 					'error'    => null,
 					'context'  => null,
 					'tool_calls' => null,
-				),
+					'run_id'   => null,
+					'session_id' => null,
+					'events_cursor' => null,
+					'status'   => null,
+					),
 			),
 			$response->get_data()
 		);
+	}
+
+	public function test_chat_send_message_exposes_in_progress_run_metadata(): void {
+		$chat_controller = new Chat_Controller(
+			static function ( string $message ): array {
+				return array(
+					'reply'       => 'Still working: ' . $message,
+					'mode'        => 'in_progress',
+					'provider'    => 'openai',
+					'model'       => 'gpt-4.1-mini',
+					'run_id'      => 42,
+					'session_id'  => 84,
+					'events_cursor' => 123,
+					'status'      => 'in_progress',
+					);
+				}
+			);
+
+		$response = $chat_controller->send_message(
+			new \WP_REST_Request(
+				array(
+					'message' => 'Continue',
+				)
+			)
+		);
+
+		$data = $response->get_data();
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'in_progress', $data['meta']['mode'] );
+		$this->assertSame( 42, $data['meta']['run_id'] );
+		$this->assertSame( 84, $data['meta']['session_id'] );
+		$this->assertSame( 123, $data['meta']['events_cursor'] );
+		$this->assertSame( 'in_progress', $data['meta']['status'] );
 	}
 
 	public function test_chat_command_dispatch_skips_reply_generator(): void {
@@ -611,4 +653,5 @@ final class RestApiTest extends TestCase {
 			$get_response->get_data()
 		);
 	}
+
 }

@@ -60,7 +60,7 @@ final class Agent_Session_Helper {
 		return $this->store->insert_session(
 			[
 				'uuid'                 => isset( $args['uuid'] ) ? (string) $args['uuid'] : $this->generate_uuid(),
-				'status'               => isset( $args['status'] ) ? (string) $args['status'] : 'active',
+				'status'               => isset( $args['status'] ) ? (string) $args['status'] : 'idle',
 				'trigger_type'         => isset( $args['trigger_type'] ) ? (string) $args['trigger_type'] : 'chat',
 				'requesting_user_id'   => isset( $args['requesting_user_id'] ) ? (int) $args['requesting_user_id'] : null,
 				'execution_user_id'    => isset( $args['execution_user_id'] ) ? (int) $args['execution_user_id'] : null,
@@ -73,6 +73,101 @@ final class Agent_Session_Helper {
 				'updated_at_gmt'       => $now,
 			]
 		);
+	}
+
+	/**
+	 * Fetch one session row by ID.
+	 *
+	 * @param int $session_id Session identifier.
+	 * @return array<string,mixed>
+	 */
+	public function get_session( int $session_id ): array {
+		return $this->store->get_session( $session_id );
+	}
+
+	/**
+	 * Claim session lease for one worker.
+	 *
+	 * @param int    $session_id Session identifier.
+	 * @param string $worker_id Worker claim id.
+	 * @param int    $lease_ttl_seconds Lease TTL in seconds.
+	 * @return array<string,mixed>
+	 */
+	public function claim_session( int $session_id, string $worker_id, int $lease_ttl_seconds = 120 ): array {
+		$session = $this->get_session( $session_id );
+		if ( [] === $session ) {
+			return [
+				'claimed' => false,
+				'reason'  => 'session_not_found',
+			];
+		}
+
+		$current_status   = isset( $session['status'] ) ? (string) $session['status'] : 'idle';
+		$now              = gmdate( 'Y-m-d H:i:s' );
+		$is_stale         = 'running' === $current_status
+			&& isset( $session['lease_expires_at_gmt'] )
+			&& is_string( $session['lease_expires_at_gmt'] )
+			&& '' !== $session['lease_expires_at_gmt']
+			&& strtotime( $session['lease_expires_at_gmt'] ) < strtotime( $now );
+		$is_claimable_now = in_array( $current_status, [ 'idle', 'paused' ], true );
+
+		if ( ! $is_claimable_now && ! $is_stale ) {
+			return [
+				'claimed' => false,
+				'reason'  => 'not_claimable',
+			];
+		}
+
+		$lease_token = hash( 'sha256', uniqid( $worker_id . ':session:', true ) );
+		$expires_at  = gmdate( 'Y-m-d H:i:s', strtotime( $now ) + max( 1, $lease_ttl_seconds ) );
+		$updated     = $this->store->update_claim(
+			$session_id,
+			$current_status,
+			$is_stale ? (string) $session['lease_expires_at_gmt'] : null,
+			[
+				'status'                => 'running',
+				'lease_owner'           => $worker_id,
+				'lease_token'           => $lease_token,
+				'lease_acquired_at_gmt' => $now,
+				'lease_expires_at_gmt'  => $expires_at,
+				'updated_at_gmt'        => $now,
+			],
+			$is_stale
+		);
+
+		if ( false === $updated || 0 === $updated ) {
+			return [
+				'claimed' => false,
+				'reason'  => 'claim_collision',
+			];
+		}
+
+		return [
+			'claimed'     => true,
+			'session_id'  => $session_id,
+			'lease_token' => $lease_token,
+			'reclaimed'   => $is_stale,
+		];
+	}
+
+	/**
+	 * Release session lease.
+	 *
+	 * @param int    $session_id Session identifier.
+	 * @param string $lease_token Lease token from claim response.
+	 * @param string $status New session status.
+	 */
+	public function release_session( int $session_id, string $lease_token, string $status = 'idle' ): bool {
+		$updated = $this->store->update_release(
+			$session_id,
+			$lease_token,
+			[
+				'status'         => $status,
+				'updated_at_gmt' => gmdate( 'Y-m-d H:i:s' ),
+			]
+		);
+
+		return false !== $updated && $updated > 0;
 	}
 
 	/**

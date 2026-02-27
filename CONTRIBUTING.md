@@ -63,7 +63,7 @@ npm run lint:changed
 npm run plugin:check
 ```
 
-`npm run plugin:check` starts a disposable local WordPress environment via `wp-env`, installs the official Plugin Check plugin, and runs `wp plugin check` against ClawPress.
+`npm run plugin:check` builds a distribution zip, starts a disposable local WordPress environment via `wp-env`, installs the official Plugin Check plugin, installs the dist zip under a temporary slug, and runs `wp plugin check` against that packaged artifact.
 
 ## Tests
 

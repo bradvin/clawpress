@@ -158,42 +158,33 @@ final class Action_Log_Store {
 		$limit  = $limit > 0 ? min( $limit, 500 ) : 50;
 		$offset = $offset >= 0 ? $offset : 0;
 
-		$where_clauses = [];
-		$where_values  = [];
+		$event_type         = isset( $args['event_type'] ) ? trim( (string) $args['event_type'] ) : '';
+		$status             = isset( $args['status'] ) ? trim( (string) $args['status'] ) : '';
+		$requesting_user_id = isset( $args['requesting_user_id'] ) ? max( 0, (int) $args['requesting_user_id'] ) : 0;
+		$execution_user_id  = isset( $args['execution_user_id'] ) ? max( 0, (int) $args['execution_user_id'] ) : 0;
 
-		if ( isset( $args['event_type'] ) && '' !== (string) $args['event_type'] ) {
-			$where_clauses[] = 'event_type = %s';
-			$where_values[]  = (string) $args['event_type'];
-		}
+		$prepared_query = $wpdb->prepare(
+			"SELECT id, event_type, action_name, status, message, requesting_user_id, execution_user_id, context, created_at
+				FROM %i
+				WHERE (%s = '' OR event_type = %s)
+					AND (%s = '' OR status = %s)
+					AND (%d = 0 OR requesting_user_id = %d)
+					AND (%d = 0 OR execution_user_id = %d)
+				ORDER BY id DESC
+				LIMIT %d OFFSET %d",
+			$this->get_table_name(),
+			$event_type,
+			$event_type,
+			$status,
+			$status,
+			$requesting_user_id,
+			$requesting_user_id,
+			$execution_user_id,
+			$execution_user_id,
+			$limit,
+			$offset
+		);
 
-		if ( isset( $args['status'] ) && '' !== (string) $args['status'] ) {
-			$where_clauses[] = 'status = %s';
-			$where_values[]  = (string) $args['status'];
-		}
-
-		if ( isset( $args['requesting_user_id'] ) && (int) $args['requesting_user_id'] > 0 ) {
-			$where_clauses[] = 'requesting_user_id = %d';
-			$where_values[]  = (int) $args['requesting_user_id'];
-		}
-
-		if ( isset( $args['execution_user_id'] ) && (int) $args['execution_user_id'] > 0 ) {
-			$where_clauses[] = 'execution_user_id = %d';
-			$where_values[]  = (int) $args['execution_user_id'];
-		}
-
-		$where_sql      = [] !== $where_clauses ? 'WHERE ' . implode( ' AND ', $where_clauses ) : '';
-		$where_values[] = $limit;
-		$where_values[] = $offset;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-		$query = "SELECT id, event_type, action_name, status, message, requesting_user_id, execution_user_id, context, created_at
-			FROM {$this->get_table_name()}
-			{$where_sql}
-			ORDER BY id DESC
-			LIMIT %d OFFSET %d";
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- query is prepared via `$wpdb->prepare()` on this line.
-		$prepared_query = $wpdb->prepare( $query, $where_values );
 		if ( ! is_string( $prepared_query ) || '' === $prepared_query ) {
 			return [];
 		}

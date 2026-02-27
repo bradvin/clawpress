@@ -328,11 +328,34 @@ const Panel = () => {
 
 	const ephemeralStatusIdRef = useRef( null );
 	const setEphemeralStatus = ( content ) => {
+		const text =
+			typeof content === 'string' && content.trim() ? content : '';
+		if ( ! text ) {
+			return;
+		}
+
+		const existingId = ephemeralStatusIdRef.current;
+		if ( existingId ) {
+			setMessages( ( prev ) =>
+				prev.map( ( message ) =>
+					message.id === existingId
+						? { ...message, content: text }
+						: message
+				)
+			);
+			return;
+		}
+
 		const id = `status-${ Date.now() }-${ Math.random() }`;
 		ephemeralStatusIdRef.current = id;
 		setMessages( ( prev ) => [
 			...prev,
-			{ id, role: 'system', content, createdAt: ++timelineRef.current },
+			{
+				id,
+				role: 'system',
+				content: text,
+				createdAt: ++timelineRef.current,
+			},
 		] );
 	};
 	const clearEphemeralStatus = () => {
@@ -524,9 +547,9 @@ const Panel = () => {
 	};
 
 	const processStreamEvent = ( eventType, parsed ) => {
-		clearEphemeralStatus();
 		switch ( eventType ) {
 			case 'delta':
+				clearEphemeralStatus();
 				if ( parsed.text ) {
 					const next = `${ currentStreamTextRef.current || '' }${
 						parsed.text
@@ -536,6 +559,7 @@ const Panel = () => {
 				}
 				break;
 			case 'response_message':
+				clearEphemeralStatus();
 				if ( parsed?.text ) {
 					appendMessage(
 						parsed?.role === 'system' ? 'system' : 'assistant',
@@ -544,6 +568,7 @@ const Panel = () => {
 				}
 				break;
 			case 'response_card':
+				clearEphemeralStatus();
 				if ( parsed?.card ) {
 					appendMessage(
 						parsed?.role === 'system' ? 'system' : 'assistant',
@@ -553,6 +578,7 @@ const Panel = () => {
 				}
 				break;
 			case 'history_reset':
+				clearEphemeralStatus();
 				setMessages( [] );
 				setToolDialogs( [] );
 				setToolPlans( [] );
@@ -595,7 +621,15 @@ const Panel = () => {
 				}
 				setToolPlanningShown( false );
 				break;
+			case 'run_progress':
+				setEphemeralStatus(
+					typeof parsed?.text === 'string' && parsed.text.trim()
+						? parsed.text
+						: __( 'I am still working on this', 'clawpress' )
+				);
+				break;
 			case 'error':
+				clearEphemeralStatus();
 				appendMessage(
 					'system',
 					parsed?.error || __( 'Stream error.', 'clawpress' ),
@@ -604,6 +638,7 @@ const Panel = () => {
 				);
 				break;
 			case 'done':
+				clearEphemeralStatus();
 				finishStream();
 				break;
 		}
@@ -660,7 +695,6 @@ const Panel = () => {
 
 	const handleStreamEvent = ( eventType, parsed ) => {
 		setWaitingForResponse( false );
-		clearEphemeralStatus();
 		eventQueueRef.current.push( { type: eventType, payload: parsed } );
 		processEventQueue();
 	};
@@ -1177,6 +1211,7 @@ const Panel = () => {
 					input={ input }
 					onInputChange={ ( e ) => setInput( e.target.value ) }
 					onSend={ sendPrompt }
+					panelOpen={ open }
 					suggestions={ suggestions }
 					contextUsage={ contextUsage }
 					onSendSuggestion={ ( suggestion ) =>

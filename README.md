@@ -1,8 +1,20 @@
-# ClawPress
+=== ClawPress ===
+Contributors: bradvin
+Tags: ai, assistant, admin
+Requires at least: 6.9
+Tested up to: 6.9
+Requires PHP: 8.1
+Stable tag: 0.0.2
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+AI assistant for WordPress admins.
+
+== Description ==
 
 ![ClawPress Logo](img/clawpress-logo-500x500.png)
 
-The AI for WordPress that actually does things
+ClawPress is the AI for WordPress that actually does things.
 
 [Preview in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
 

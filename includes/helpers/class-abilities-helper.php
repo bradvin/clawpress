@@ -266,7 +266,9 @@ final class Abilities_Helper {
 			return $payload;
 		}
 
-		$access_check = $this->security->assert_requesting_user_allowed();
+		$access_check = $this->security->assert_requesting_user_allowed(
+			$requesting_user_id > 0 ? $requesting_user_id : null
+		);
 		if ( is_wp_error( $access_check ) ) {
 			$payload = [
 				'success' => false,
@@ -294,7 +296,16 @@ final class Abilities_Helper {
 				$runtime_policy,
 				'deny_tools'
 			);
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$payload,
+				$event_context
+			);
 			return $payload;
 		}
 
@@ -308,7 +319,16 @@ final class Abilities_Helper {
 				$runtime_policy,
 				'deny_destructive_tools'
 			);
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$payload,
+				$event_context
+			);
 			return $payload;
 		}
 
@@ -322,7 +342,16 @@ final class Abilities_Helper {
 				$runtime_policy,
 				'deny_file_delete'
 			);
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$payload,
+				$event_context
+			);
 			return $payload;
 		}
 
@@ -571,22 +600,65 @@ final class Abilities_Helper {
 		array $runtime_policy,
 		string $decision
 	): array {
+		$on_violation = isset( $runtime_policy['on_policy_violation'] )
+			? strtolower( trim( (string) $runtime_policy['on_policy_violation'] ) )
+			: 'deny';
+		if ( ! in_array( $on_violation, [ 'deny', 'degrade', 'fail' ], true ) ) {
+			$on_violation = 'deny';
+		}
+
+		$policy = [
+			'trigger_type'   => isset( $runtime_policy['trigger_type'] ) ? (string) $runtime_policy['trigger_type'] : 'chat',
+			'policy_profile' => isset( $runtime_policy['policy_profile'] ) ? (string) $runtime_policy['policy_profile'] : 'default',
+			'on_violation'   => $on_violation,
+			'decision'       => $decision,
+		];
+
+		if ( 'degrade' === $on_violation ) {
+			return [
+				'success'      => true,
+				'degraded'     => true,
+				'tool'         => $tool_name,
+				'ability'      => $ability_name,
+				'safety_class' => $safety_class,
+				'result'       => [
+					'message'         => $message,
+					'policy_decision' => $decision,
+				],
+				'policy'       => $policy,
+			];
+		}
+
+		$error_code = 'fail' === $on_violation ? $code . '_fail' : $code;
+
 		return [
 			'success'      => false,
 			'error'        => [
-				'code'    => $code,
+				'code'    => $error_code,
 				'message' => $message,
 			],
 			'tool'         => $tool_name,
 			'ability'      => $ability_name,
 			'safety_class' => $safety_class,
-			'policy'       => [
-				'trigger_type'   => isset( $runtime_policy['trigger_type'] ) ? (string) $runtime_policy['trigger_type'] : 'chat',
-				'policy_profile' => isset( $runtime_policy['policy_profile'] ) ? (string) $runtime_policy['policy_profile'] : 'default',
-				'on_violation'   => isset( $runtime_policy['on_policy_violation'] ) ? (string) $runtime_policy['on_policy_violation'] : 'deny',
-				'decision'       => $decision,
-			],
+			'policy'       => $policy,
 		];
+	}
+
+	/**
+	 * Determine action-log status for policy violations.
+	 *
+	 * @param array<string,mixed> $payload Policy violation payload.
+	 */
+	private function resolve_policy_violation_log_status( array $payload ): string {
+		if ( ! empty( $payload['success'] ) ) {
+			return 'success';
+		}
+
+		$on_violation = isset( $payload['policy']['on_violation'] )
+			? strtolower( trim( (string) $payload['policy']['on_violation'] ) )
+			: 'deny';
+
+		return 'fail' === $on_violation ? 'error' : 'warning';
 	}
 
 	/**

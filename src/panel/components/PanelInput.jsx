@@ -1,4 +1,4 @@
-import { useRef } from '@wordpress/element';
+import { useEffect, useRef } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 const formatCompactTokens = ( rawValue ) => {
@@ -36,6 +36,7 @@ const PanelInput = ( {
 	onSend,
 	onStop,
 	streaming,
+	panelOpen,
 	suggestions,
 	contextUsage,
 	onSendSuggestion,
@@ -43,6 +44,7 @@ const PanelInput = ( {
 	onHistoryDown,
 } ) => {
 	const textareaRef = useRef( null );
+	const wasStreamingRef = useRef( streaming );
 	const normalizedUsedTokens = Number( contextUsage?.usedTokens );
 	const normalizedContextWindowTokens = Number(
 		contextUsage?.contextWindowTokens
@@ -101,6 +103,24 @@ const PanelInput = ( {
 				formatCompactTokens( contextWindowTokens )
 		  )
 		: '';
+
+	useEffect( () => {
+		const wasStreaming = wasStreamingRef.current;
+		wasStreamingRef.current = streaming;
+
+		if ( ! wasStreaming || streaming || ! panelOpen ) {
+			return;
+		}
+
+		const textarea = textareaRef.current;
+		if ( ! textarea ) {
+			return;
+		}
+
+		textarea.focus();
+		const end = textarea.value.length;
+		textarea.setSelectionRange( end, end );
+	}, [ streaming, panelOpen ] );
 
 	const handleKeyDown = ( e ) => {
 		if ( e.key === 'Enter' && ! e.shiftKey ) {

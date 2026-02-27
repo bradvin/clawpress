@@ -16,6 +16,7 @@ use ClawPress\Helpers\Panel_Helper;
 use ClawPress\Panel\Panel;
 use ClawPress\PostTypes\Post_Types;
 use ClawPress\RestAPI\Rest_API;
+use ClawPress\Runner\Agent_Runner;
 use ClawPress\Stores\Action_Log_Store;
 use ClawPress\Stores\Agent_Event_Store;
 use ClawPress\Stores\Agent_Run_Store;
@@ -44,6 +45,7 @@ final class Plugin {
 		new Admin_Page();
 		new Panel();
 		new Heartbeat();
+		new Agent_Runner();
 
 		// Initialize AI client. Goto Settings -> AI Credentials to set up.
 		add_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] );

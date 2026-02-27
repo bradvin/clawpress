@@ -73,5 +73,5 @@ jobs:
           tools: composer:v2
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Run plugin standards check
+      - name: Run dist plugin standards check
         run: npm run plugin:check

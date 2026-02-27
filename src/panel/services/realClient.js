@@ -1,5 +1,32 @@
 import { __, sprintf } from '@wordpress/i18n';
 
+const RUN_POLL_INTERVAL_MS = 1000;
+const RUN_POLL_MAX_SECONDS = 180;
+const RUN_PROGRESS_MESSAGE_STEP_SECONDS = 8;
+const RUN_PROGRESS_MESSAGES = [
+	__( 'I am still working on this', 'clawpress' ),
+	__( 'Yes, still working on it.', 'clawpress' ),
+	__( 'Ok, this is taking long now. Still on it.', 'clawpress' ),
+	__(
+		'Plot twist: still working on it. My keyboard is sweating.',
+		'clawpress'
+	),
+	__(
+		'At this point even my coffee is worried, but I am still on it.',
+		'clawpress'
+	),
+];
+const TERMINAL_RUN_STATUSES = new Set( [
+	'done',
+	'success',
+	'error',
+	'timeout',
+	'requires_confirmation',
+	'failed',
+	'cancelled',
+	'canceled',
+] );
+
 const requestJson = async ( { url, method = 'GET', nonce, body, signal } ) => {
 	const res = await fetch( url, {
 		method,
@@ -38,6 +65,9 @@ const requestJson = async ( { url, method = 'GET', nonce, body, signal } ) => {
 	return payload;
 };
 
+const isObjectRecord = ( value ) =>
+	Boolean( value ) && typeof value === 'object' && ! Array.isArray( value );
+
 const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 	const sendMessage = ( message, signal ) =>
 		requestJson( {
@@ -45,6 +75,22 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			method: 'POST',
 			nonce,
 			body: { message },
+			signal,
+		} );
+
+	const getRunStatus = ( runId, signal ) =>
+		requestJson( {
+			url: `${ restBase }/agent/runs/${ runId }`,
+			method: 'GET',
+			nonce,
+			signal,
+		} );
+
+	const getRunEvents = ( runId, after, signal ) =>
+		requestJson( {
+			url: `${ restBase }/agent/runs/${ runId }/events?after=${ after }&limit=100`,
+			method: 'GET',
+			nonce,
 			signal,
 		} );
 
@@ -76,6 +122,39 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			nonce,
 			body: state,
 		} );
+
+	const waitForNextPoll = ( signal ) =>
+		new Promise( ( resolve, reject ) => {
+			const timerId = setTimeout( () => {
+				signal?.removeEventListener( 'abort', onAbort );
+				resolve();
+			}, RUN_POLL_INTERVAL_MS );
+
+			const onAbort = () => {
+				clearTimeout( timerId );
+				signal?.removeEventListener( 'abort', onAbort );
+				const abortError = new Error( 'Aborted' );
+				abortError.name = 'AbortError';
+				reject( abortError );
+			};
+
+			signal?.addEventListener( 'abort', onAbort, { once: true } );
+		} );
+
+	const getRunProgressMessage = ( elapsedSeconds ) => {
+		const normalizedElapsedSeconds = Number.isFinite(
+			Number( elapsedSeconds )
+		)
+			? Math.max( 0, Number( elapsedSeconds ) )
+			: 0;
+		const index = Math.min(
+			Math.floor(
+				normalizedElapsedSeconds / RUN_PROGRESS_MESSAGE_STEP_SECONDS
+			),
+			RUN_PROGRESS_MESSAGES.length - 1
+		);
+		return RUN_PROGRESS_MESSAGES[ index ] || RUN_PROGRESS_MESSAGES[ 0 ];
+	};
 
 	const normalizeCard = ( rawCard ) => {
 		if ( ! rawCard || typeof rawCard !== 'object' ) {
@@ -221,9 +300,411 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 		};
 	};
 
+	const normalizeRunStatus = ( value ) =>
+		typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+	const buildToolCallDedupKey = ( call ) => {
+		if ( ! call || typeof call !== 'object' ) {
+			return '';
+		}
+
+		const name = typeof call.name === 'string' ? call.name.trim() : '';
+		if ( ! name ) {
+			return '';
+		}
+
+		const status =
+			typeof call.status === 'string'
+				? call.status.trim().toLowerCase()
+				: '';
+		const message =
+			typeof call.message === 'string' ? call.message.trim() : '';
+		const round = Number.isFinite( Number( call.round ) )
+			? Math.max( 1, Math.round( Number( call.round ) ) )
+			: 1;
+		const sequence = Number.isFinite( Number( call.sequence ) )
+			? Math.max( 1, Math.round( Number( call.sequence ) ) )
+			: 1;
+
+		return `${ name }|${ status }|${ round }|${ sequence }|${ message }`;
+	};
+
+	const emitToolCallIfNew = ( call, index, total, seenToolCallKeys ) => {
+		const dedupKey = buildToolCallDedupKey( call );
+		if ( dedupKey && seenToolCallKeys instanceof Set ) {
+			if ( seenToolCallKeys.has( dedupKey ) ) {
+				return;
+			}
+			seenToolCallKeys.add( dedupKey );
+		}
+
+		onEvent( 'tool_call', {
+			call,
+			index,
+			total,
+		} );
+	};
+
+	const emitToolCallEvents = ( events, seenToolCallKeys ) => {
+		if ( ! Array.isArray( events ) || events.length === 0 ) {
+			return;
+		}
+
+		const canonicalToolEvents = events.filter(
+			( event ) =>
+				isObjectRecord( event ) &&
+				typeof event.event_type === 'string' &&
+				event.event_type === 'agent.tool_call'
+		);
+		if ( canonicalToolEvents.length > 0 ) {
+			canonicalToolEvents.forEach( ( event, index ) => {
+				const payload = isObjectRecord( event.payload )
+					? event.payload
+					: {};
+				const status = normalizeRunStatus( payload.status );
+
+				let toolName = 'tool_call';
+				if (
+					typeof payload.tool_name === 'string' &&
+					payload.tool_name.trim()
+				) {
+					toolName = payload.tool_name.trim();
+				} else if (
+					typeof payload.ability_name === 'string' &&
+					payload.ability_name.trim()
+				) {
+					toolName = payload.ability_name.trim();
+				}
+
+				let normalizedStatus = 'success';
+				if (
+					status === 'error' ||
+					status === 'requires_confirmation'
+				) {
+					normalizedStatus = status;
+				}
+
+				const detailMessage =
+					typeof payload.message === 'string' &&
+					payload.message.trim()
+						? payload.message.trim()
+						: '';
+
+				const call = {
+					name: toolName,
+					ability:
+						typeof payload.ability_name === 'string' &&
+						payload.ability_name.trim()
+							? payload.ability_name.trim()
+							: null,
+					args: {},
+					status: normalizedStatus,
+					message: detailMessage || null,
+					round: Number.isFinite( Number( payload.round ) )
+						? Math.max( 1, Math.round( Number( payload.round ) ) )
+						: 1,
+					sequence: Number.isFinite( Number( payload.sequence ) )
+						? Math.max(
+								1,
+								Math.round( Number( payload.sequence ) )
+						  )
+						: index + 1,
+					requiresConfirmation: status === 'requires_confirmation',
+				};
+
+				emitToolCallIfNew(
+					call,
+					index + 1,
+					canonicalToolEvents.length,
+					seenToolCallKeys
+				);
+			} );
+			return;
+		}
+
+		// Fallback for older backends that only emit `tool_call` events.
+		const toolEvents = events.filter(
+			( event ) =>
+				isObjectRecord( event ) &&
+				typeof event.event_type === 'string' &&
+				event.event_type === 'tool_call'
+		);
+		if ( toolEvents.length === 0 ) {
+			return;
+		}
+
+		toolEvents.forEach( ( event, index ) => {
+			const payload = isObjectRecord( event.payload )
+				? event.payload
+				: {};
+			const status = normalizeRunStatus( payload.status );
+			const result = isObjectRecord( payload.result )
+				? payload.result
+				: {};
+			const error = isObjectRecord( payload.error ) ? payload.error : {};
+			let detailMessage = '';
+			if ( typeof error.message === 'string' && error.message.trim() ) {
+				detailMessage = error.message.trim();
+			} else if (
+				typeof result.message === 'string' &&
+				result.message.trim()
+			) {
+				detailMessage = result.message.trim();
+			}
+
+			let toolName = 'tool_call';
+			if (
+				typeof payload.tool_name === 'string' &&
+				payload.tool_name.trim()
+			) {
+				toolName = payload.tool_name.trim();
+			} else if (
+				typeof payload.ability_name === 'string' &&
+				payload.ability_name.trim()
+			) {
+				toolName = payload.ability_name.trim();
+			}
+
+			let normalizedStatus = 'success';
+			if ( status === 'error' || status === 'requires_confirmation' ) {
+				normalizedStatus = status;
+			}
+
+			const call = {
+				name: toolName,
+				ability:
+					typeof payload.ability_name === 'string' &&
+					payload.ability_name.trim()
+						? payload.ability_name.trim()
+						: null,
+				args: {},
+				status: normalizedStatus,
+				message: detailMessage || null,
+				round: Number.isFinite( Number( payload.round ) )
+					? Math.max( 1, Math.round( Number( payload.round ) ) )
+					: 1,
+				sequence: Number.isFinite( Number( payload.sequence ) )
+					? Math.max( 1, Math.round( Number( payload.sequence ) ) )
+					: index + 1,
+				requiresConfirmation: status === 'requires_confirmation',
+			};
+
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolEvents.length,
+				seenToolCallKeys
+			);
+		} );
+	};
+
+	const emitRuntimeResult = (
+		runtimeResult,
+		initialReply,
+		seenToolCallKeys
+	) => {
+		if ( ! isObjectRecord( runtimeResult ) ) {
+			return false;
+		}
+
+		const contextUsage = normalizeContextUsage( runtimeResult.context );
+		if ( contextUsage ) {
+			onEvent( 'context_usage', { context: contextUsage } );
+		}
+
+		const toolCalls = Array.isArray( runtimeResult.tool_calls )
+			? runtimeResult.tool_calls
+					.map( ( rawCall ) => normalizeToolCall( rawCall ) )
+					.filter( Boolean )
+			: [];
+		toolCalls.forEach( ( call, index ) => {
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolCalls.length,
+				seenToolCallKeys
+			);
+		} );
+
+		if ( isObjectRecord( runtimeResult.error ) ) {
+			const runtimeError = runtimeResult.error;
+			const errorMessage =
+				typeof runtimeError.message === 'string' &&
+				runtimeError.message.trim()
+					? runtimeError.message.trim()
+					: __( 'Run failed.', 'clawpress' );
+			onEvent( 'error', {
+				error: errorMessage,
+				type:
+					typeof runtimeError.type === 'string' &&
+					runtimeError.type.trim()
+						? runtimeError.type.trim()
+						: 'provider',
+				card: normalizeCard( runtimeResult.card ),
+			} );
+			return true;
+		}
+
+		const reply =
+			typeof runtimeResult.assistant_text === 'string'
+				? runtimeResult.assistant_text.trim()
+				: '';
+		const card = normalizeCard( runtimeResult.card );
+		if ( card ) {
+			onEvent( 'response_card', {
+				card,
+				text: reply,
+				role: 'assistant',
+			} );
+			return true;
+		}
+
+		if ( reply && reply !== initialReply ) {
+			onEvent( 'response_message', {
+				text: reply,
+				role: 'assistant',
+			} );
+			return true;
+		}
+
+		return false;
+	};
+
+	const emitRunTerminalOutcome = (
+		runPayload,
+		initialReply,
+		seenToolCallKeys
+	) => {
+		const runMeta = isObjectRecord( runPayload?.meta )
+			? runPayload.meta
+			: {};
+		let runtimeResult = null;
+		if ( isObjectRecord( runMeta.result ) ) {
+			runtimeResult = runMeta.result;
+		} else if ( isObjectRecord( runMeta.last_result ) ) {
+			runtimeResult = runMeta.last_result;
+		}
+
+		if (
+			emitRuntimeResult( runtimeResult, initialReply, seenToolCallKeys )
+		) {
+			return;
+		}
+
+		const runStatus = normalizeRunStatus( runPayload?.status );
+
+		if ( runStatus === 'requires_confirmation' ) {
+			onEvent( 'response_message', {
+				text: __(
+					'Action requires confirmation before continuing.',
+					'clawpress'
+				),
+				role: 'assistant',
+			} );
+			return;
+		}
+
+		if ( runStatus === 'done' || runStatus === 'success' ) {
+			onEvent( 'response_message', {
+				text: __(
+					'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
+					'clawpress'
+				),
+				role: 'assistant',
+			} );
+			return;
+		}
+
+		const errorMessage =
+			typeof runPayload?.error_message === 'string' &&
+			runPayload.error_message.trim()
+				? runPayload.error_message.trim()
+				: __( 'Run ended with an error.', 'clawpress' );
+
+		onEvent( 'error', {
+			error: errorMessage,
+			type: runStatus === 'timeout' ? 'timeout' : 'provider',
+		} );
+	};
+
+	const pollRunUntilTerminal = async ( {
+		runId,
+		initialReply,
+		signal,
+		initialEventsCursor = 0,
+		seenToolCallKeys = null,
+	} ) => {
+		let afterEventId = Number.isFinite( Number( initialEventsCursor ) )
+			? Math.max( 0, Math.round( Number( initialEventsCursor ) ) )
+			: 0;
+		const startedAt = Date.now();
+		let lastProgressMessage = '';
+
+		while ( true ) {
+			if ( signal?.aborted ) {
+				const abortError = new Error( 'Aborted' );
+				abortError.name = 'AbortError';
+				throw abortError;
+			}
+
+			const elapsedSeconds = ( Date.now() - startedAt ) / 1000;
+			if ( elapsedSeconds >= RUN_POLL_MAX_SECONDS ) {
+				onEvent( 'error', {
+					error: __(
+						'Run polling timed out before a terminal status was received.',
+						'clawpress'
+					),
+					type: 'timeout',
+				} );
+				return;
+			}
+
+			try {
+				const eventPayload = await getRunEvents(
+					runId,
+					afterEventId,
+					signal
+				);
+				const events = Array.isArray( eventPayload?.events )
+					? eventPayload.events
+					: [];
+				emitToolCallEvents( events, seenToolCallKeys );
+
+				const nextCursor = Number( eventPayload?.next_cursor );
+				if ( Number.isFinite( nextCursor ) && nextCursor > 0 ) {
+					afterEventId = Math.max( afterEventId, nextCursor );
+				}
+			} catch ( err ) {
+				if ( err?.name === 'AbortError' ) {
+					throw err;
+				}
+			}
+
+			const runPayload = await getRunStatus( runId, signal );
+			const status = normalizeRunStatus( runPayload?.status );
+			if ( TERMINAL_RUN_STATUSES.has( status ) ) {
+				emitRunTerminalOutcome(
+					runPayload,
+					initialReply,
+					seenToolCallKeys
+				);
+				return;
+			}
+
+			const progressMessage = getRunProgressMessage( elapsedSeconds );
+			if ( progressMessage && progressMessage !== lastProgressMessage ) {
+				onEvent( 'run_progress', { text: progressMessage } );
+				lastProgressMessage = progressMessage;
+			}
+
+			await waitForNextPoll( signal );
+		}
+	};
+
 	// Keep a stream-compatible interface for the existing panel flow.
 	const stream = ( prompt ) => {
 		const controller = new AbortController();
+		const seenToolCallKeys = new Set();
 
 		( async () => {
 			try {
@@ -256,11 +737,12 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 					: [];
 
 				toolCalls.forEach( ( call, index ) => {
-					onEvent( 'tool_call', {
+					emitToolCallIfNew(
 						call,
-						index: index + 1,
-						total: toolCalls.length,
-					} );
+						index + 1,
+						toolCalls.length,
+						seenToolCallKeys
+					);
 				} );
 
 				const responseError =
@@ -314,6 +796,31 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 						text: reply,
 						role: isCommandResponse ? 'system' : 'assistant',
 					} );
+				}
+
+				const runStatus = normalizeRunStatus( response?.meta?.status );
+				const runId = Number( response?.meta?.run_id );
+				const initialEventsCursor = Number(
+					response?.meta?.events_cursor
+				);
+				if ( runStatus === 'in_progress' ) {
+					if ( Number.isFinite( runId ) && runId > 0 ) {
+						await pollRunUntilTerminal( {
+							runId,
+							initialReply: reply,
+							signal: controller.signal,
+							initialEventsCursor,
+							seenToolCallKeys,
+						} );
+					} else {
+						onEvent( 'error', {
+							error: __(
+								'Run entered progress mode without a valid run ID.',
+								'clawpress'
+							),
+							type: 'request',
+						} );
+					}
 				}
 
 				onDone?.( { aborted: false } );

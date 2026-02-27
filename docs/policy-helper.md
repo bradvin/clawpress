@@ -25,7 +25,7 @@ Implementation: `includes/helpers/class-policy-helper.php`
 2. Performing permission checks.
 3. Enforcing all policy fields itself.
 
-Enforcement is done by consumers such as `Abilities_Helper` and `Chat_Helper`.
+Enforcement is done by consumers such as `Agent_Loop_Helper`, `Abilities_Helper`, and `Agent_Runner`.
 
 ## Runtime Policy Contract
 
@@ -92,15 +92,15 @@ Restrictive but less constrained than heartbeat:
 
 ## Where It Is Used
 
-## 1) Chat loop policy resolution
+## 1) Loop policy resolution
 
-`Chat_Helper::generate_online_reply()` resolves policy once per model run and then uses it to bound loop execution:
+`Agent_Loop_Helper::generate_online_reply()` resolves policy once per turn/slice and then uses it to bound loop execution:
 
 1. `max_tool_rounds` controls tool-call rounds.
 2. `max_tool_calls_per_round` caps calls per round.
 3. The resolved policy is passed into each `Abilities_Helper::execute_tool_call()` invocation as `runtime_policy`.
 
-Implementation: `includes/helpers/class-chat-helper.php`
+Implementation: `includes/helpers/class-agent-loop-helper.php`
 
 ## 2) Tool execution policy enforcement
 
@@ -118,6 +118,15 @@ On policy violation, it returns a structured payload with:
 3. `policy` block (`trigger_type`, `policy_profile`, `on_violation`, `decision`)
 
 Implementation: `includes/helpers/class-abilities-helper.php`
+
+## 3) Runner-level policy enforcement
+
+`Agent_Runner::process_claimed_run()` enforces run-lifecycle guardrails:
+
+1. `max_wall_time_seconds` is enforced before and after slice execution.
+2. `allow_background_followups` gates re-enqueue behavior for both continuation (`in_progress`) and retryable error outcomes.
+
+Implementation: `includes/class-agent-runner.php`
 
 ## Practical Usage Patterns
 
@@ -181,22 +190,18 @@ $result = Abilities_Helper::get_instance()->execute_tool_call(
    - override behavior
    - enforcement behavior
 
-## Extend policy violation handling
+## Policy violation handling
 
-`on_policy_violation` is currently normalized and returned in violation payload metadata. If richer behavior is needed (`degrade`, `fail` semantics), implement that behavior in enforcement consumers, not in the helper.
+`on_policy_violation` is normalized in `Policy_Helper` and enforced in `Abilities_Helper`:
 
-Recommended pattern:
-
-1. Keep helper deterministic and side-effect free.
-2. Implement runtime action semantics where the violation occurs.
-3. Maintain structured, machine-readable violation payloads.
+1. `deny`: returns policy error payload.
+2. `degrade`: returns successful degraded no-op payload.
+3. `fail`: returns policy error payload with `*_fail` code suffix.
 
 ## Suggested Future Improvements
 
-1. Enforce `max_wall_time_seconds` in `Chat_Helper` loop using elapsed wall-clock checks.
-2. Wire `allow_network` to network-capable tools or provider request constraints.
-3. Use `allow_background_followups` in scheduler/spawn logic.
-4. Add a policy filter hook (for example, `clawpress_runtime_policy_resolved`) if third-party plugins need policy customization without patching core code.
+1. Wire `allow_network` to network-capable tools or provider request constraints.
+2. Add a policy filter hook (for example, `clawpress_runtime_policy_resolved`) if third-party plugins need policy customization without patching core code.
 
 ## Test Coverage Today
 
@@ -210,4 +215,3 @@ Recommended additional coverage:
 
 1. Chat loop behavior under non-default `max_tool_rounds` and `max_tool_calls_per_round`.
 2. Any new enforcement path added for currently informational fields.
-

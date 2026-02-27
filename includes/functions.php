@@ -7,6 +7,8 @@
 
 declare( strict_types=1 );
 
+defined( 'ABSPATH' ) || exit;
+
 if ( ! function_exists( 'clawpress_sanitize_boolean' ) ) {
 	/**
 	 * Sanitize a boolean value.
@@ -259,6 +261,29 @@ if ( ! function_exists( 'clawpress_sanitize_provider' ) ) {
 	}
 }
 
+if ( ! function_exists( 'clawpress_check_permissions_for_user' ) ) {
+	/**
+	 * Check permissions for a specific user.
+	 *
+	 * Filter hook: `clawpress_permissions_capability`.
+	 *
+	 * @param int $user_id User ID.
+	 */
+	function clawpress_check_permissions_for_user( int $user_id ): bool {
+		$capability = apply_filters( 'clawpress_permissions_capability', 'manage_options' );
+
+		if ( empty( $capability ) ) {
+			$capability = 'manage_options';
+		}
+
+		if ( $user_id > 0 && function_exists( 'user_can' ) ) {
+			return user_can( $user_id, $capability );
+		}
+
+		return current_user_can( $capability );
+	}
+}
+
 if ( ! function_exists( 'clawpress_check_permissions' ) ) {
 	/**
 	 * Check permissions for ClawPress routes.
@@ -266,13 +291,8 @@ if ( ! function_exists( 'clawpress_check_permissions' ) ) {
 	 * Filter hook: `clawpress_permissions_capability`.
 	 */
 	function clawpress_check_permissions(): bool {
-		$capability = apply_filters( 'clawpress_permissions_capability', 'manage_options' );
-
-		if ( empty( $capability ) ) {
-			$capability = 'manage_options';
-		}
-
-		return current_user_can( $capability );
+		$user_id = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
+		return clawpress_check_permissions_for_user( $user_id );
 	}
 }
 

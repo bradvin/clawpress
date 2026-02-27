@@ -262,7 +262,10 @@ final class Context_Helper {
 			}
 
 			$normalized_history[] = $normalized_item;
+		}
+		$normalized_history = $this->trim_leading_non_user_history_items( $normalized_history );
 
+		foreach ( $normalized_history as $normalized_item ) {
 			$model_history_message = $this->convert_prompt_message_to_model_message( $normalized_item );
 			if ( $model_history_message instanceof Message ) {
 				$model_history_messages[] = $model_history_message;
@@ -297,6 +300,22 @@ final class Context_Helper {
 			'requesting_user_id' => $requesting_user_id,
 			'execution_user_id'  => $execution_user_id,
 		];
+	}
+
+	/**
+	 * Ensure history starts with a user message to satisfy provider constraints.
+	 *
+	 * @param array<int,array{role:string,content:string}> $history Normalized history messages.
+	 * @return array<int,array{role:string,content:string}>
+	 */
+	private function trim_leading_non_user_history_items( array $history ): array {
+		foreach ( $history as $index => $history_item ) {
+			if ( 'user' === $history_item['role'] ) {
+				return array_slice( $history, $index );
+			}
+		}
+
+		return [];
 	}
 
 	/**
