@@ -67,5 +67,11 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
       - name: Run plugin standards check
         run: npm run plugin:check
