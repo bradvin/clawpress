@@ -7,6 +7,8 @@
 
 declare( strict_types=1 );
 
+defined( 'ABSPATH' ) || exit;
+
 if ( ! function_exists( 'clawpress_sanitize_boolean' ) ) {
 	/**
 	 * Sanitize a boolean value.

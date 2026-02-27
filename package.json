@@ -7,6 +7,7 @@
     "languages",
     "vendor",
     "clawpress.php",
+    "composer.json",
     "README.md",
     "LICENSE"
   ],
