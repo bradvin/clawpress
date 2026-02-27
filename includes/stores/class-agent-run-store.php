@@ -135,10 +135,10 @@ final class Agent_Run_Store {
 				'run_uuid'           => isset( $data['run_uuid'] ) ? (string) $data['run_uuid'] : '',
 				'trigger_type'       => isset( $data['trigger_type'] ) ? (string) $data['trigger_type'] : 'chat',
 				'transport_mode'     => isset( $data['transport_mode'] ) ? (string) $data['transport_mode'] : 'polling',
-					'status'             => isset( $data['status'] ) ? (string) $data['status'] : 'queued',
-					'attempt'            => isset( $data['attempt'] ) ? (int) $data['attempt'] : 1,
-					'retry_count'        => isset( $data['retry_count'] ) ? max( 0, (int) $data['retry_count'] ) : 0,
-					'max_attempts'       => isset( $data['max_attempts'] ) ? (int) $data['max_attempts'] : 5,
+				'status'             => isset( $data['status'] ) ? (string) $data['status'] : 'queued',
+				'attempt'            => isset( $data['attempt'] ) ? (int) $data['attempt'] : 1,
+				'retry_count'        => isset( $data['retry_count'] ) ? max( 0, (int) $data['retry_count'] ) : 0,
+				'max_attempts'       => isset( $data['max_attempts'] ) ? (int) $data['max_attempts'] : 5,
 				'next_retry_at_gmt'  => $data['next_retry_at_gmt'] ?? null,
 				'resume_cursor_json' => $data['resume_cursor_json'] ?? null,
 				'meta_json'          => $data['meta_json'] ?? null,
@@ -151,12 +151,12 @@ final class Agent_Run_Store {
 				'%s',
 				'%s',
 				'%s',
-					'%s',
-					'%d',
-					'%d',
-					'%d',
-					'%s',
-					'%s',
+				'%s',
+				'%d',
+				'%d',
+				'%d',
+				'%s',
+				'%s',
 				'%s',
 				'%s',
 				'%s',
@@ -239,16 +239,16 @@ final class Agent_Run_Store {
 			return $wpdb->update(
 				$this->get_table_name(),
 				[
-					'status'             => isset( $data['status'] ) ? (string) $data['status'] : 'paused',
-					'next_retry_at_gmt'  => $data['next_retry_at_gmt'] ?? null,
-					'resume_cursor_json' => $data['resume_cursor_json'] ?? null,
-					'meta_json'          => $data['meta_json'] ?? null,
-					'retry_count'        => isset( $data['retry_count'] ) ? max( 0, (int) $data['retry_count'] ) : 0,
-					'lock_token'         => null,
-					'claimed_by'         => null,
+					'status'               => isset( $data['status'] ) ? (string) $data['status'] : 'paused',
+					'next_retry_at_gmt'    => $data['next_retry_at_gmt'] ?? null,
+					'resume_cursor_json'   => $data['resume_cursor_json'] ?? null,
+					'meta_json'            => $data['meta_json'] ?? null,
+					'retry_count'          => isset( $data['retry_count'] ) ? max( 0, (int) $data['retry_count'] ) : 0,
+					'lock_token'           => null,
+					'claimed_by'           => null,
 					'lock_acquired_at_gmt' => null,
-					'lock_expires_at_gmt' => null,
-					'updated_at_gmt'     => isset( $data['updated_at_gmt'] ) ? (string) $data['updated_at_gmt'] : null,
+					'lock_expires_at_gmt'  => null,
+					'updated_at_gmt'       => isset( $data['updated_at_gmt'] ) ? (string) $data['updated_at_gmt'] : null,
 				],
 				[
 					'id'         => $run_id,
@@ -257,7 +257,7 @@ final class Agent_Run_Store {
 				[ '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' ],
 				[ '%d', '%s' ]
 			);
-		}
+	}
 
 	/**
 	 * Complete a run with lock-token guard.
@@ -349,7 +349,7 @@ final class Agent_Run_Store {
 
 		$limit      = max( 1, min( 100, $limit ) );
 		$table_name = $this->get_table_name();
-			$query      = $wpdb->prepare(
+			$query  = $wpdb->prepare(
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
 				"SELECT * FROM {$table_name}
 					WHERE (

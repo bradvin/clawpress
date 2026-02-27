@@ -327,6 +327,12 @@ final class Agent_Loop_Helper {
 			return $result;
 		}
 
+		$card_message = isset( $result['card']['data']['message'] ) ? trim( (string) $result['card']['data']['message'] ) : '';
+		if ( '' !== $card_message ) {
+			$result['assistant_text'] = $card_message;
+			return $result;
+		}
+
 		if ( 'requires_confirmation' === $status ) {
 			$result['assistant_text'] = __( 'Action requires confirmation before continuing.', 'clawpress' );
 			return $result;
