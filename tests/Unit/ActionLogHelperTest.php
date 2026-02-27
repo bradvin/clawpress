@@ -101,8 +101,21 @@ final class ActionLogHelperTestWpdb {
 			$args = $args[0];
 		}
 
-		$this->last_prepare_args = $args;
-		return $query;
+		$prepared_query           = $query;
+		$non_identifier_arguments = [];
+
+		foreach ( $args as $argument ) {
+			if ( false !== strpos( $prepared_query, '%i' ) ) {
+				$identifier      = preg_replace( '/[^A-Za-z0-9_]/', '', (string) $argument );
+				$prepared_query = preg_replace( '/%i/', (string) $identifier, $prepared_query, 1 ) ?? $prepared_query;
+				continue;
+			}
+
+			$non_identifier_arguments[] = $argument;
+		}
+
+		$this->last_prepare_args = $non_identifier_arguments;
+		return $prepared_query;
 	}
 
 	/**

@@ -180,9 +180,7 @@ final class Agent_Session_Store {
 			return [];
 		}
 
-		$table_name = $this->get_table_name();
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-		$query = $wpdb->prepare( "SELECT * FROM {$table_name} WHERE id = %d", $session_id );
+		$query = $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $this->get_table_name(), $session_id );
 		if ( ! is_string( $query ) || '' === $query ) {
 			return [];
 		}
@@ -287,10 +285,8 @@ final class Agent_Session_Store {
 			return false;
 		}
 
-		$table_name = $this->get_table_name();
-		$query      = $wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-			"UPDATE {$table_name}
+		$query = $wpdb->prepare(
+			"UPDATE %i
 				SET
 					last_run_at_gmt = %s,
 					last_run_status = %s,
@@ -302,6 +298,7 @@ final class Agent_Session_Store {
 					next_run_at_gmt = %s,
 					updated_at_gmt = %s
 				WHERE id = %d",
+			$this->get_table_name(),
 			$updated_at_gmt,
 			$run_status,
 			$run_status,

@@ -146,36 +146,30 @@ final class Agent_Event_Store {
 		$after = isset( $args['after_event_id'] ) ? (int) $args['after_event_id'] : 0;
 		$after = $after > 0 ? $after : 0;
 
-		$where_clauses = [ 'id > %d' ];
-		$where_values  = [ $after ];
+		$run_id     = isset( $args['run_id'] ) ? max( 0, (int) $args['run_id'] ) : 0;
+		$session_id = isset( $args['session_id'] ) ? max( 0, (int) $args['session_id'] ) : 0;
+		$event_type = isset( $args['event_type'] ) ? trim( (string) $args['event_type'] ) : '';
 
-		if ( isset( $args['run_id'] ) && (int) $args['run_id'] > 0 ) {
-			$where_clauses[] = 'run_id = %d';
-			$where_values[]  = (int) $args['run_id'];
-		}
+		$prepared_query = $wpdb->prepare(
+			"SELECT id, run_id, session_id, event_type, payload_json, created_at_gmt
+				FROM %i
+				WHERE id > %d
+					AND (%d = 0 OR run_id = %d)
+					AND (%d = 0 OR session_id = %d)
+					AND (%s = '' OR event_type = %s)
+				ORDER BY id ASC
+				LIMIT %d",
+			$this->get_table_name(),
+			$after,
+			$run_id,
+			$run_id,
+			$session_id,
+			$session_id,
+			$event_type,
+			$event_type,
+			$limit
+		);
 
-		if ( isset( $args['session_id'] ) && (int) $args['session_id'] > 0 ) {
-			$where_clauses[] = 'session_id = %d';
-			$where_values[]  = (int) $args['session_id'];
-		}
-
-		if ( isset( $args['event_type'] ) && '' !== (string) $args['event_type'] ) {
-			$where_clauses[] = 'event_type = %s';
-			$where_values[]  = (string) $args['event_type'];
-		}
-
-		$where_values[] = $limit;
-		$where_sql      = 'WHERE ' . implode( ' AND ', $where_clauses );
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-		$query = "SELECT id, run_id, session_id, event_type, payload_json, created_at_gmt
-			FROM {$this->get_table_name()}
-			{$where_sql}
-			ORDER BY id ASC
-			LIMIT %d";
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- query is prepared via `$wpdb->prepare()` on this line.
-		$prepared_query = $wpdb->prepare( $query, $where_values );
 		if ( ! is_string( $prepared_query ) || '' === $prepared_query ) {
 			return [];
 		}

@@ -347,26 +347,25 @@ final class Agent_Run_Store {
 			return [];
 		}
 
-		$limit      = max( 1, min( 100, $limit ) );
-		$table_name = $this->get_table_name();
-			$query  = $wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-				"SELECT * FROM {$table_name}
-					WHERE (
-						status IN ('queued', 'paused')
-						AND (next_retry_at_gmt IS NULL OR next_retry_at_gmt <= %s)
-					)
-					OR (
-						status = 'running'
-						AND lock_expires_at_gmt IS NOT NULL
-						AND lock_expires_at_gmt <= %s
-					)
-					ORDER BY created_at_gmt ASC
-					LIMIT %d",
-				$now_gmt,
-				$now_gmt,
-				$limit
-			);
+		$limit = max( 1, min( 100, $limit ) );
+		$query = $wpdb->prepare(
+			"SELECT * FROM %i
+				WHERE (
+					status IN ('queued', 'paused')
+					AND (next_retry_at_gmt IS NULL OR next_retry_at_gmt <= %s)
+				)
+				OR (
+					status = 'running'
+					AND lock_expires_at_gmt IS NOT NULL
+					AND lock_expires_at_gmt <= %s
+				)
+				ORDER BY created_at_gmt ASC
+				LIMIT %d",
+			$this->get_table_name(),
+			$now_gmt,
+			$now_gmt,
+			$limit
+		);
 
 		if ( ! is_string( $query ) || '' === $query ) {
 			return [];
@@ -390,9 +389,7 @@ final class Agent_Run_Store {
 			return [];
 		}
 
-		$table_name = $this->get_table_name();
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-		$query = $wpdb->prepare( "SELECT * FROM {$table_name} WHERE id = %d", $run_id );
+		$query = $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $this->get_table_name(), $run_id );
 		if ( ! is_string( $query ) || '' === $query ) {
 			return [];
 		}
@@ -421,14 +418,13 @@ final class Agent_Run_Store {
 			return [];
 		}
 
-		$table_name = $this->get_table_name();
-		$query      = $wpdb->prepare(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is fixed plugin-owned identifier.
-			"SELECT * FROM {$table_name}
+		$query = $wpdb->prepare(
+			"SELECT * FROM %i
 				WHERE session_id = %d
 					AND idempotency_key = %s
 				ORDER BY id DESC
 				LIMIT 1",
+			$this->get_table_name(),
 			$session_id,
 			$idempotency_key
 		);
