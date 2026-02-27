@@ -19,6 +19,7 @@ npm run build
 make test
 make lint
 make lint-changed
+npm run plugin:check
 ```
 
 ## Key Features
@@ -102,6 +103,7 @@ Custom endpoints with permission callbacks and parameter validation.
 
 ### Development (npm)
 - `@wordpress/scripts` - Build tooling
+- `@wordpress/env` - Local disposable WordPress environment for plugin checks
 
 ### Development (Composer)
 - `wp-coding-standards/wpcs` - WordPress Coding Standards for PHP_CodeSniffer

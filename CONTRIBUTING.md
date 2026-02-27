@@ -60,7 +60,10 @@ npm run lint:css
 npm run lint:php
 npm run lint:php:fix
 npm run lint:changed
+npm run plugin:check
 ```
+
+`npm run plugin:check` starts a disposable local WordPress environment via `wp-env`, installs the official Plugin Check plugin, and runs `wp plugin check` against ClawPress.
 
 ## Tests
 
