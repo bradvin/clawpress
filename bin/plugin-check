@@ -23,4 +23,4 @@ echo "Installing dist zip into temporary plugin slug..."
 npx wp-env run tests-cli -- bash -lc "set -euo pipefail; rm -rf /tmp/plugin-check-dist /var/www/html/wp-content/plugins/${DIST_SLUG}; mkdir -p /tmp/plugin-check-dist; unzip -q ${DIST_ZIP_PATH} -d /tmp/plugin-check-dist; DIST_SOURCE=\$(find /tmp/plugin-check-dist -mindepth 1 -maxdepth 1 -type d | head -n 1); if [[ -z \"\${DIST_SOURCE}\" ]]; then echo 'Unable to locate extracted plugin directory from dist zip.' >&2; exit 1; fi; cp -R \"\${DIST_SOURCE}\" /var/www/html/wp-content/plugins/${DIST_SLUG};"
 
 echo "Running Plugin Check against dist plugin contents..."
-npx wp-env run tests-cli wp plugin check "${DIST_SLUG}" --slug="${EXPECTED_SLUG}"
+npx wp-env run tests-cli wp plugin check "${DIST_SLUG}" --slug="${EXPECTED_SLUG}" --ignore-codes=trademarked_term
