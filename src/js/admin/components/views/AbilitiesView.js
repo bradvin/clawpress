@@ -9,7 +9,7 @@ import {
 	ToggleControl,
 } from '@wordpress/components';
 import { useEffect, useMemo, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _x, sprintf } from '@wordpress/i18n';
 import { requestJson } from '../../utils/requestJson';
 
 const DEFAULT_STATE = {
@@ -43,6 +43,7 @@ const normalizeAbility = ( ability = {} ) => ( {
 	description:
 		typeof ability.description === 'string' ? ability.description : '',
 	registered: Boolean( ability.registered ),
+	manageable: Boolean( ability.manageable ),
 	enabled: Boolean( ability.enabled ),
 	category: normalizeCategory( ability.category ),
 	annotations: {
@@ -304,22 +305,23 @@ export default function AbilitiesView() {
 														}
 													</p>
 												</div>
-												<ToggleControl
-													checked={ ability.enabled }
+											<ToggleControl
+												checked={ ability.enabled }
 													onChange={ ( enabled ) =>
 														toggleAbility(
 															ability.ability_name,
 															enabled
 														)
 													}
-													label={ __(
-														'Enabled',
-														'clawpress'
-													) }
-													disabled={
-														! ability.registered
-													}
-												/>
+												label={ __(
+													'Enabled',
+													'clawpress'
+												) }
+												disabled={
+													! ability.registered ||
+													! ability.manageable
+												}
+											/>
 											</div>
 
 											{ ability.description ? (
@@ -329,89 +331,27 @@ export default function AbilitiesView() {
 											) : null }
 
 											<div className="clawpress-abilities__annotations">
-												<span
-													className={ `clawpress-abilities__annotation ${
-														ability.annotations
-															.readonly
-															? 'is-enabled'
-															: 'is-disabled'
-													}` }
-												>
-													{ sprintf(
-														/* translators: %s: yes/no safety annotation state. */
-														__(
-															'readonly: %s',
+												{ ability.annotations
+													.readonly ? (
+													<span className="clawpress-abilities__annotation is-readonly">
+														{ _x(
+															'readonly',
+															'Ability safety annotation pill label',
 															'clawpress'
-														),
-														ability.annotations
-															.readonly
-															? __(
-																	'yes',
-																	'clawpress'
-															  )
-															: __(
-																	'no',
-																	'clawpress'
-															  )
-													) }
-												</span>
-												<span
-													className={ `clawpress-abilities__annotation ${
-														ability.annotations
-															.destructive
-															? 'is-enabled'
-															: 'is-disabled'
-													}` }
-												>
-													{ sprintf(
-														/* translators: %s: yes/no safety annotation state. */
-														__(
-															'destructive: %s',
+														) }
+													</span>
+												) : null }
+												{ ability.annotations
+													.destructive ? (
+													<span className="clawpress-abilities__annotation is-destructive">
+														{ _x(
+															'destructive',
+															'Ability safety annotation pill label',
 															'clawpress'
-														),
-														ability.annotations
-															.destructive
-															? __(
-																	'yes',
-																	'clawpress'
-															  )
-															: __(
-																	'no',
-																	'clawpress'
-															  )
-													) }
-												</span>
-												<span
-													className={ `clawpress-abilities__annotation ${
-														ability.annotations
-															.idempotent
-															? 'is-enabled'
-															: 'is-disabled'
-													}` }
-												>
-													{ sprintf(
-														/* translators: %s: yes/no safety annotation state. */
-														__(
-															'idempotent: %s',
-															'clawpress'
-														),
-														ability.annotations
-															.idempotent
-															? __(
-																	'yes',
-																	'clawpress'
-															  )
-															: __(
-																	'no',
-																	'clawpress'
-															  )
-													) }
-												</span>
+														) }
+													</span>
+												) : null }
 											</div>
-
-											<p className="clawpress-abilities__meta">
-												{ ability.ability_name }
-											</p>
 											{ ! ability.registered ? (
 												<p className="clawpress-abilities__warning">
 													{ __(

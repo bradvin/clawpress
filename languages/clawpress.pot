@@ -1,5 +1,5 @@
 # Copyright (C) 2026 
-# This file is distributed under the same license as the ClawPress plugin.
+# This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
 "Project-Id-Version: ClawPress 0.0.2\n"
@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-02-24T15:52:13+00:00\n"
+"POT-Creation-Date: 2026-03-01T13:49:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -24,6 +24,11 @@ msgstr ""
 #: includes/class-admin-page.php:102
 #: src/panel/components/PanelToggle.jsx:9
 msgid "ClawPress"
+msgstr ""
+
+#. Description of the plugin
+#: clawpress.php
+msgid "AI assistant tools for WordPress admin workflows."
 msgstr ""
 
 #: includes/abilities/class-file-delete-ability.php:35
@@ -207,7 +212,7 @@ msgstr ""
 #: includes/class-post-types.php:55
 #: includes/class-post-types.php:56
 #: includes/commands/handlers/class-setup-command-handler.php:674
-#: src/js/admin/components/App.js:18
+#: src/js/admin/components/App.js:19
 msgid "Agent Files"
 msgstr ""
 
@@ -238,13 +243,13 @@ msgid "Agent run failed."
 msgstr ""
 
 #: includes/class-agent-runner.php:496
-#: includes/helpers/class-agent-loop-helper.php:331
+#: includes/helpers/class-agent-loop-helper.php:337
 #: src/panel/services/realClient.js:598
 msgid "Action requires confirmation before continuing."
 msgstr ""
 
 #: includes/class-agent-runner.php:497
-#: includes/helpers/class-agent-loop-helper.php:335
+#: includes/helpers/class-agent-loop-helper.php:341
 #: src/panel/services/realClient.js:609
 msgid "I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here."
 msgstr ""
@@ -322,7 +327,7 @@ msgstr ""
 msgid "No agent memories found in Trash."
 msgstr ""
 
-#: includes/class-security.php:70
+#: includes/class-security.php:80
 msgid "The requesting user is not allowed to use ClawPress."
 msgstr ""
 
@@ -770,12 +775,12 @@ msgid "Agent files created."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:669
-#: src/js/admin/components/views/SettingsView.js:211
+#: src/js/admin/components/views/SettingsView.js:165
 msgid "Provider"
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:670
-#: src/js/admin/components/views/SettingsView.js:239
+#: src/js/admin/components/views/SettingsView.js:193
 msgid "Model"
 msgstr ""
 
@@ -1096,101 +1101,95 @@ msgid "disabled (provider/model not configured)"
 msgstr ""
 
 #: includes/commands/handlers/class-tools-command-handler.php:113
-msgid "Available tools/actions:"
-msgstr ""
-
-#: includes/commands/handlers/class-tools-command-handler.php:114
-msgid "- offline_commands: enabled"
-msgstr ""
-
-#. translators: %s: online chat status
-#: includes/commands/handlers/class-tools-command-handler.php:117
-#, php-format
-msgid "- online_chat: %s"
+msgid "Available tools/abilities:"
 msgstr ""
 
 #. translators: 1: tool name, 2: safety class
-#: includes/commands/handlers/class-tools-command-handler.php:132
+#: includes/commands/handlers/class-tools-command-handler.php:126
 #, php-format
 msgid "- %1$s: enabled (%2$s)"
 msgstr ""
 
-#: includes/commands/handlers/class-tools-command-handler.php:139
-msgid "- tool_execution: unavailable (no registered abilities)"
+#: includes/commands/handlers/class-tools-command-handler.php:133
+msgid "- tool_execution: unavailable (no enabled abilities)"
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:232
+#: includes/helpers/class-abilities-helper.php:356
 msgid "The requested tool is not allowlisted."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:245
+#: includes/helpers/class-abilities-helper.php:369
+msgid "The requested ability is disabled in settings."
+msgstr ""
+
+#: includes/helpers/class-abilities-helper.php:383
 msgid "The WordPress Abilities API is unavailable."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:260
+#: includes/helpers/class-abilities-helper.php:398
 msgid "The requested ability is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:290
+#: includes/helpers/class-abilities-helper.php:430
 msgid "Tool execution is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:313
+#: includes/helpers/class-abilities-helper.php:453
 msgid "Destructive tools are not allowed for this runtime trigger."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:336
+#: includes/helpers/class-abilities-helper.php:476
 msgid "File delete is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:363
+#: includes/helpers/class-abilities-helper.php:503
 msgid "This destructive action is pending batch confirmation."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:388
+#: includes/helpers/class-abilities-helper.php:528
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
 #. translators: %d: maximum number of tool calls executed per round.
-#: includes/helpers/class-agent-loop-helper.php:917
+#: includes/helpers/class-agent-loop-helper.php:923
 #, php-format
 msgid "Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round."
 msgstr ""
 
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1210
+#: includes/helpers/class-agent-loop-helper.php:1216
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1218
+#: includes/helpers/class-agent-loop-helper.php:1224
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1221
+#: includes/helpers/class-agent-loop-helper.php:1227
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1229
+#: includes/helpers/class-agent-loop-helper.php:1235
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1230
+#: includes/helpers/class-agent-loop-helper.php:1236
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1236
+#: includes/helpers/class-agent-loop-helper.php:1242
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1237
+#: includes/helpers/class-agent-loop-helper.php:1243
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1243
+#: includes/helpers/class-agent-loop-helper.php:1249
 msgid "Decline"
 msgstr ""
 
@@ -1204,7 +1203,7 @@ msgstr ""
 
 #: includes/helpers/class-chat-helper.php:388
 #: src/panel/components/PanelMessages.jsx:45
-#: src/panel/Panel.jsx:602
+#: src/panel/Panel.jsx:628
 #: src/panel/services/realClient.js:7
 msgid "I am still working on this"
 msgstr ""
@@ -1265,6 +1264,10 @@ msgstr ""
 msgid "Unable to create workspace directory structure."
 msgstr ""
 
+#: includes/rest/class-abilities-settings-controller.php:109
+msgid "No abilities payload provided."
+msgstr ""
+
 #: includes/rest/class-agent-run-controller.php:233
 msgid "Session not found."
 msgstr ""
@@ -1302,136 +1305,206 @@ msgstr ""
 msgid "Message is required."
 msgstr ""
 
-#: src/js/admin/components/App.js:23
-#: src/js/admin/components/views/SettingsView.js:366
+#: src/js/admin/components/App.js:24
+#: src/js/admin/components/views/SettingsView.js:320
 msgid "Settings"
+msgstr ""
+
+#: src/js/admin/components/App.js:29
+#: src/js/admin/components/views/AbilitiesView.js:211
+msgid "Abilities"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:99
+msgid "Unable to load abilities."
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:112
+msgid "All Categories"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:168
+msgid "Abilities saved."
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:171
+msgid "Unable to save abilities."
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:192
+msgid "Abilities reset to defaults."
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:195
+msgid "Unable to reset abilities."
+msgstr ""
+
+#. translators: %d: Number of enabled abilities.
+#: src/js/admin/components/views/AbilitiesView.js:215
+#, js-format
+msgid "%d abilities enabled"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:245
+msgid "Filter by category"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:261
+msgid "Resetting…"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:262
+msgid "Reset to Defaults"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:274
+#: src/js/admin/components/views/SettingsView.js:356
+msgid "Saving…"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:275
+msgid "Save Abilities"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:285
+msgid "No abilities found for this category."
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:315
+msgid "Enabled"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:335
+msgctxt "Ability safety annotation pill label"
+msgid "readonly"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:345
+msgctxt "Ability safety annotation pill label"
+msgid "destructive"
+msgstr ""
+
+#: src/js/admin/components/views/AbilitiesView.js:355
+msgid "This ability is not currently registered."
 msgstr ""
 
 #: src/js/admin/components/views/PagesView.js:27
 msgid "Showing ClawPress Agent Files."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:53
-msgid "Request failed."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:131
+#: src/js/admin/components/views/SettingsView.js:85
 msgid "Unable to load settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:197
+#: src/js/admin/components/views/SettingsView.js:151
 msgid "Settings saved."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:200
+#: src/js/admin/components/views/SettingsView.js:154
 msgid "Unable to save settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:212
+#: src/js/admin/components/views/SettingsView.js:166
 msgid "Choose which AI service ClawPress should use."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:219
+#: src/js/admin/components/views/SettingsView.js:173
 msgid "Select a provider"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:223
+#: src/js/admin/components/views/SettingsView.js:177
 msgid "OpenAI"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:227
+#: src/js/admin/components/views/SettingsView.js:181
 msgid "Anthropic"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:231
+#: src/js/admin/components/views/SettingsView.js:185
 msgid "Google"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:240
+#: src/js/admin/components/views/SettingsView.js:194
 msgid "Enter the model name you want to use for replies."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:249
+#: src/js/admin/components/views/SettingsView.js:203
 msgid "Temperature"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:250
+#: src/js/admin/components/views/SettingsView.js:204
 msgid "Lower values make replies more focused and consistent. Higher values make replies more creative and varied."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:258
+#: src/js/admin/components/views/SettingsView.js:212
 msgid "Top P"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:259
+#: src/js/admin/components/views/SettingsView.js:213
 msgid "Lower values keep replies more predictable. Higher values allow more variety in wording and ideas."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:267
+#: src/js/admin/components/views/SettingsView.js:221
 msgid "Max Output Tokens"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:268
+#: src/js/admin/components/views/SettingsView.js:222
 msgid "Sets the maximum reply length. Higher values allow longer answers; lower values keep answers shorter."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:276
+#: src/js/admin/components/views/SettingsView.js:230
 msgid "Frequency Penalty"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:277
+#: src/js/admin/components/views/SettingsView.js:231
 msgid "Higher values reduce repeated words and phrases. Lower values allow more repetition."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:285
+#: src/js/admin/components/views/SettingsView.js:239
 msgid "Presence Penalty"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:286
+#: src/js/admin/components/views/SettingsView.js:240
 msgid "Higher values encourage fresh ideas. Lower values keep replies closer to what has already been said."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:294
+#: src/js/admin/components/views/SettingsView.js:248
 msgid "Request Timeout (seconds)"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:295
+#: src/js/admin/components/views/SettingsView.js:249
 msgid "How long ClawPress waits for a reply before stopping the request."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:303
+#: src/js/admin/components/views/SettingsView.js:257
 msgid "Agent User ID"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:304
+#: src/js/admin/components/views/SettingsView.js:258
 msgid "Use 0 if this is not configured yet."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:312
+#: src/js/admin/components/views/SettingsView.js:266
 msgid "Enable Memory"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:313
+#: src/js/admin/components/views/SettingsView.js:267
 msgid "When enabled, ClawPress can remember useful details from earlier chats."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:322
+#: src/js/admin/components/views/SettingsView.js:276
 msgid "Setup Completed"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:323
+#: src/js/admin/components/views/SettingsView.js:277
 msgid "Turn this on after you finish the initial setup."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:345
+#: src/js/admin/components/views/SettingsView.js:299
 msgid "LLM Reply Settings"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:402
-msgid "Saving…"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:403
+#: src/js/admin/components/views/SettingsView.js:357
 msgid "Save Settings"
 msgstr ""
 
@@ -1508,6 +1581,10 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: src/js/admin/utils/requestJson.js:43
+msgid "Request failed."
+msgstr ""
+
 #: src/panel/components/cards/SetupCard.jsx:63
 msgid "Follow these steps to finish setup."
 msgstr ""
@@ -1555,12 +1632,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:794
+#: src/panel/Panel.jsx:821
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:798
+#: src/panel/Panel.jsx:825
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1810,46 +1887,46 @@ msgstr ""
 msgid "[%1$d/%2$d] %3$s"
 msgstr ""
 
-#: src/panel/Panel.jsx:587
+#: src/panel/Panel.jsx:613
 msgid "Preparing tool plan…"
 msgstr ""
 
-#: src/panel/Panel.jsx:608
+#: src/panel/Panel.jsx:635
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:806
+#: src/panel/Panel.jsx:833
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:834
+#: src/panel/Panel.jsx:861
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:905
+#: src/panel/Panel.jsx:932
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:947
+#: src/panel/Panel.jsx:974
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:1014
-#: src/panel/Panel.jsx:1038
+#: src/panel/Panel.jsx:1041
+#: src/panel/Panel.jsx:1065
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:1025
+#: src/panel/Panel.jsx:1052
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:1081
+#: src/panel/Panel.jsx:1108
 #, js-format
 msgid "Mock: %s"
 msgstr ""
 
-#: src/panel/Panel.jsx:1171
+#: src/panel/Panel.jsx:1198
 msgid "Resize panel"
 msgstr ""
 
