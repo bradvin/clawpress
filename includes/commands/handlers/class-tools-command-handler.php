@@ -110,13 +110,7 @@ final class Tools_Command_Handler implements Command_Handler {
 			: __( 'disabled (provider/model not configured)', 'clawpress' );
 
 		$lines         = [
-			__( 'Available tools/actions:', 'clawpress' ),
-			__( '- offline_commands: enabled', 'clawpress' ),
-			sprintf(
-				/* translators: %s: online chat status */
-				__( '- online_chat: %s', 'clawpress' ),
-				$online_chat_status
-			),
+			__( 'Available tools/abilities:', 'clawpress' ),
 		];
 		$tool_rows     = $this->abilities_helper->get_tool_status_list();
 		$enabled_count = 0;
