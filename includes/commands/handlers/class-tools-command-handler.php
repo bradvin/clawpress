@@ -116,7 +116,7 @@ final class Tools_Command_Handler implements Command_Handler {
 		$enabled_count = 0;
 
 		foreach ( $tool_rows as $row ) {
-			if ( empty( $row['registered'] ) ) {
+			if ( empty( $row['registered'] ) || empty( $row['enabled'] ) ) {
 				continue;
 			}
 
@@ -130,7 +130,7 @@ final class Tools_Command_Handler implements Command_Handler {
 		}
 
 		if ( 0 === $enabled_count ) {
-			$lines[] = __( '- tool_execution: unavailable (no registered abilities)', 'clawpress' );
+			$lines[] = __( '- tool_execution: unavailable (no enabled abilities)', 'clawpress' );
 		}
 
 		return Command_Response::success(

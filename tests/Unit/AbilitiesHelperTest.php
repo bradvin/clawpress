@@ -73,6 +73,54 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertContains( 'memory_long_term_delete', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
 	}
 
+	public function test_tool_declarations_respect_enabled_abilities_option(): void {
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'clawpress/file-read',
+				'clawpress/file-list',
+			]
+		);
+
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+		$names        = array_map(
+			static fn( FunctionDeclaration $item ): string => $item->getName(),
+			$declarations
+		);
+
+		$this->assertSame(
+			[
+				'file_read',
+				'file_list',
+			],
+			$names
+		);
+	}
+
+	public function test_disabled_ability_returns_disabled_error_before_execution(): void {
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'clawpress/file-read',
+			]
+		);
+
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_write',
+			[
+				'path'    => 'notes.md',
+				'content' => 'hello',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_ability_disabled', $result['error']['code'] );
+	}
+
 	public function test_destructive_tool_requires_confirmation_before_execution(): void {
 		$result = Abilities_Helper::get_instance()->execute_tool_call(
 			'memory_long_term_delete',

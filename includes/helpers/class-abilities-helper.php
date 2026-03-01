@@ -19,6 +19,11 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Abilities_Helper {
 	/**
+	 * Enabled abilities option key.
+	 */
+	public const ENABLED_ABILITIES_OPTION = 'clawpress_enabled_abilities';
+
+	/**
 	 * Tool-name to ability-id mapping.
 	 *
 	 * @var array<string,string>
@@ -120,8 +125,13 @@ final class Abilities_Helper {
 			return [];
 		}
 
+		$enabled_abilities = array_fill_keys( $this->get_enabled_ability_ids(), true );
 		$declarations = [];
 		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
+			if ( ! isset( $enabled_abilities[ $ability_name ] ) ) {
+				continue;
+			}
+
 			$ability = wp_get_ability( $ability_name );
 			if ( ! $ability instanceof \WP_Ability ) {
 				continue;
@@ -152,26 +162,140 @@ final class Abilities_Helper {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function get_tool_status_list(): array {
-		$rows = [];
+		$abilities = $this->get_ability_settings_state()['abilities'];
+
+		return array_map(
+			static function ( array $ability ): array {
+				return [
+					'tool_name'    => $ability['tool_name'] ?? '',
+					'ability_name' => $ability['ability_name'] ?? '',
+					'registered'   => ! empty( $ability['registered'] ),
+					'enabled'      => ! empty( $ability['enabled'] ),
+					'safety_class' => isset( $ability['safety_class'] ) ? (string) $ability['safety_class'] : 'unknown',
+				];
+			},
+			$abilities
+		);
+	}
+
+	/**
+	 * Get ability settings state for UI/API usage.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function get_ability_settings_state(): array {
+		$defaults           = $this->get_default_enabled_ability_ids();
+		$enabled            = $this->get_enabled_ability_ids();
+		$enabled_lookup     = array_fill_keys( $enabled, true );
+		$abilities          = [];
+		$category_index     = [];
 
 		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
 			$ability = function_exists( 'wp_get_ability' )
 				? wp_get_ability( $ability_name )
 				: null;
 
-			$safety_class = $ability instanceof \WP_Ability
-				? $this->infer_safety_class( $ability )
-				: 'unknown';
+			$annotations = $ability instanceof \WP_Ability
+				? $this->get_ability_annotations( $ability )
+				: [
+					'readonly'    => false,
+					'destructive' => false,
+					'idempotent'  => false,
+				];
 
-			$rows[] = [
+			$category_slug = $ability instanceof \WP_Ability
+				? $this->resolve_ability_category_slug( $ability )
+				: 'clawpress';
+			$category      = $this->build_category_payload( $category_slug );
+
+			if ( ! isset( $category_index[ $category['slug'] ] ) ) {
+				$category_index[ $category['slug'] ] = $category;
+			}
+
+			$abilities[] = [
 				'tool_name'    => $tool_name,
 				'ability_name' => $ability_name,
+				'label'        => $ability instanceof \WP_Ability ? (string) $ability->get_label() : $tool_name,
+				'description'  => $ability instanceof \WP_Ability ? (string) $ability->get_description() : '',
 				'registered'   => $ability instanceof \WP_Ability,
-				'safety_class' => $safety_class,
+				'enabled'      => isset( $enabled_lookup[ $ability_name ] ),
+				'safety_class' => $ability instanceof \WP_Ability ? $this->infer_safety_class( $ability ) : 'unknown',
+				'annotations'  => $annotations,
+				'category'     => $category,
 			];
 		}
 
-		return $rows;
+		usort(
+			$abilities,
+			static fn( array $left, array $right ): int => strcmp(
+				strtolower( (string) ( $left['label'] ?? '' ) ),
+				strtolower( (string) ( $right['label'] ?? '' ) )
+			)
+		);
+
+		$categories = array_values( $category_index );
+		usort(
+			$categories,
+			static fn( array $left, array $right ): int => strcmp(
+				strtolower( (string) ( $left['label'] ?? '' ) ),
+				strtolower( (string) ( $right['label'] ?? '' ) )
+			)
+		);
+
+		return [
+			'abilities'          => $abilities,
+			'enabled_abilities'  => $enabled,
+			'default_abilities'  => $defaults,
+			'categories'         => $categories,
+		];
+	}
+
+	/**
+	 * Persist enabled abilities.
+	 *
+	 * @param array<int,mixed> $enabled_abilities Ability IDs.
+	 * @return array<int,string>
+	 */
+	public function set_enabled_ability_ids( array $enabled_abilities ): array {
+		$sanitized = $this->sanitize_enabled_ability_ids( $enabled_abilities );
+		update_option( self::ENABLED_ABILITIES_OPTION, $sanitized, false );
+		return $sanitized;
+	}
+
+	/**
+	 * Reset enabled abilities to defaults (all ClawPress abilities).
+	 *
+	 * @return array<int,string>
+	 */
+	public function reset_enabled_ability_ids_to_defaults(): array {
+		$defaults = $this->get_default_enabled_ability_ids();
+		update_option( self::ENABLED_ABILITIES_OPTION, $defaults, false );
+		return $defaults;
+	}
+
+	/**
+	 * Get enabled abilities; defaults to all ClawPress abilities when option is missing.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_enabled_ability_ids(): array {
+		$stored = get_option( self::ENABLED_ABILITIES_OPTION, null );
+		if ( null === $stored ) {
+			return $this->get_default_enabled_ability_ids();
+		}
+
+		if ( ! is_array( $stored ) ) {
+			return $this->get_default_enabled_ability_ids();
+		}
+
+		return $this->sanitize_enabled_ability_ids( $stored );
+	}
+
+	/**
+	 * Whether a specific allowlisted ability is enabled.
+	 */
+	public function is_ability_enabled( string $ability_name ): bool {
+		return in_array( $ability_name, $this->get_enabled_ability_ids(), true );
 	}
 
 	/**
@@ -232,6 +356,20 @@ final class Abilities_Helper {
 					'message' => __( 'The requested tool is not allowlisted.', 'clawpress' ),
 				],
 				'tool'    => $normalized_tool_name,
+			];
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			return $payload;
+		}
+
+		if ( ! $this->is_ability_enabled( $ability_name ) ) {
+			$payload = [
+				'success' => false,
+				'error'   => [
+					'code'    => 'clawpress_ability_disabled',
+					'message' => __( 'The requested ability is disabled in settings.', 'clawpress' ),
+				],
+				'tool'    => $normalized_tool_name,
+				'ability' => $ability_name,
 			];
 			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
@@ -566,6 +704,111 @@ final class Abilities_Helper {
 		}
 
 		return 'write';
+	}
+
+	/**
+	 * Resolve ability annotations from meta.
+	 *
+	 * @param \WP_Ability $ability Ability instance.
+	 * @return array<string,bool>
+	 */
+	private function get_ability_annotations( \WP_Ability $ability ): array {
+		$annotations = $ability->get_meta_item( 'annotations', [] );
+		if ( ! is_array( $annotations ) ) {
+			$annotations = [];
+		}
+
+		return [
+			'readonly'    => true === ( $annotations['readonly'] ?? false ),
+			'destructive' => true === ( $annotations['destructive'] ?? false ),
+			'idempotent'  => true === ( $annotations['idempotent'] ?? false ),
+		];
+	}
+
+	/**
+	 * Resolve ability category slug.
+	 *
+	 * @param \WP_Ability $ability Ability instance.
+	 */
+	private function resolve_ability_category_slug( \WP_Ability $ability ): string {
+		if ( method_exists( $ability, 'get_category' ) ) {
+			$category = (string) $ability->get_category();
+			if ( '' !== $category ) {
+				return $category;
+			}
+		}
+
+		if ( method_exists( $ability, 'get_category_slug' ) ) {
+			$category = (string) $ability->get_category_slug();
+			if ( '' !== $category ) {
+				return $category;
+			}
+		}
+
+		return 'clawpress';
+	}
+
+	/**
+	 * Build category payload for UI consumers.
+	 *
+	 * @param string $category_slug Category slug.
+	 * @return array<string,string>
+	 */
+	private function build_category_payload( string $category_slug ): array {
+		$slug = '' !== trim( $category_slug ) ? sanitize_key( $category_slug ) : 'uncategorized';
+		if ( '' === $slug ) {
+			$slug = 'uncategorized';
+		}
+
+		$label = ucwords( str_replace( [ '-', '_' ], ' ', $slug ) );
+
+		if ( function_exists( 'wp_get_ability_category' ) ) {
+			$category = wp_get_ability_category( $slug );
+			if ( is_object( $category ) ) {
+				if ( method_exists( $category, 'get_label' ) ) {
+					$resolved_label = trim( (string) $category->get_label() );
+					if ( '' !== $resolved_label ) {
+						$label = $resolved_label;
+					}
+				}
+			}
+		}
+
+		return [
+			'slug'  => $slug,
+			'label' => $label,
+		];
+	}
+
+	/**
+	 * Default enabled abilities (all ClawPress allowlisted abilities).
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_default_enabled_ability_ids(): array {
+		return array_values( self::TOOL_TO_ABILITY );
+	}
+
+	/**
+	 * Sanitize enabled ability IDs.
+	 *
+	 * @param array<int,mixed> $enabled_abilities Raw ability IDs.
+	 * @return array<int,string>
+	 */
+	private function sanitize_enabled_ability_ids( array $enabled_abilities ): array {
+		$allowlist = array_fill_keys( $this->get_allowlisted_ability_ids(), true );
+		$sanitized = [];
+
+		foreach ( $enabled_abilities as $ability_name ) {
+			$normalized = strtolower( trim( (string) $ability_name ) );
+			if ( '' === $normalized || ! isset( $allowlist[ $normalized ] ) ) {
+				continue;
+			}
+
+			$sanitized[] = $normalized;
+		}
+
+		return array_values( array_unique( $sanitized ) );
 	}
 
 	/**

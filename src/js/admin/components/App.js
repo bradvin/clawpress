@@ -6,6 +6,7 @@
 import { TabPanel } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useNavigation } from '../hooks/useNavigation';
+import AbilitiesView from './views/AbilitiesView';
 import PagesView from './views/PagesView';
 import SettingsView from './views/SettingsView';
 
@@ -22,6 +23,11 @@ export default function App() {
 			name: VIEWS.SETTINGS,
 			title: __( 'Settings', 'clawpress' ),
 			content: <SettingsView />,
+		},
+		{
+			name: VIEWS.ABILITIES,
+			title: __( 'Abilities', 'clawpress' ),
+			content: <AbilitiesView />,
 		},
 	];
 
