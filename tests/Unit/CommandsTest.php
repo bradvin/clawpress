@@ -117,6 +117,40 @@ final class CommandsTest extends TestCase {
 		$this->assertStringNotContainsString( '- file_write: enabled (write)', $payload['reply'] );
 	}
 
+	public function test_tools_command_lists_enabled_non_clawpress_ability_names(): void {
+		( new Abilities() );
+		do_action( 'wp_abilities_api_categories_init' );
+		do_action( 'wp_abilities_api_init' );
+
+		wp_register_ability(
+			'vendor/custom-ability',
+			[
+				'label'               => 'Custom Ability',
+				'description'         => 'External ability.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+				'meta'                => [
+					'annotations' => [
+						'readonly'    => true,
+						'destructive' => false,
+						'idempotent'  => true,
+					],
+				],
+			]
+		);
+		WordPress_Stubs::$options[ Abilities_Helper::ENABLED_ABILITIES_OPTION ] = [
+			'vendor/custom-ability',
+		];
+
+		$commands = new Commands();
+		$payload  = $commands->maybe_dispatch( '/tools list' );
+
+		$this->assertIsArray( $payload );
+		$this->assertSame( '/tools', $payload['command']['name'] );
+		$this->assertStringContainsString( '- vendor/custom-ability: enabled (read)', $payload['reply'] );
+	}
+
 	public function test_reset_command_is_hidden_from_help_but_dispatchable(): void {
 		WordPress_Stubs::$user_meta[1] = array(
 			'clawpress_panel_state' => array( 'open' => true ),

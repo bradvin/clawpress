@@ -120,11 +120,18 @@ final class Tools_Command_Handler implements Command_Handler {
 				continue;
 			}
 
+			$display_name = isset( $row['tool_name'] ) && '' !== trim( (string) $row['tool_name'] )
+				? (string) $row['tool_name']
+				: (string) ( $row['ability_name'] ?? '' );
+			if ( '' === $display_name ) {
+				continue;
+			}
+
 			++$enabled_count;
 			$lines[] = sprintf(
 				/* translators: 1: tool name, 2: safety class */
 				__( '- %1$s: enabled (%2$s)', 'clawpress' ),
-				(string) $row['tool_name'],
+				$display_name,
 				(string) $row['safety_class']
 			);
 		}
