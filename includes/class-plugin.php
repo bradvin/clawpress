@@ -47,8 +47,10 @@ final class Plugin {
 		new Heartbeat();
 		new Agent_Runner();
 
-		// Initialize AI client. Goto Settings -> AI Credentials to set up.
-		add_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] );
+		// Initialize AI client bridge when available. Core AI integrations can work without it.
+		if ( class_exists( '\WordPress\AI_Client\AI_Client' ) ) {
+			add_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] );
+		}
 	}
 	/**
 	 * Get singleton instance.
