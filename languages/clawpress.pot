@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-03-01T13:49:06+00:00\n"
+"POT-Creation-Date: 2026-03-01T13:57:02+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -1114,39 +1114,39 @@ msgstr ""
 msgid "- tool_execution: unavailable (no enabled abilities)"
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:356
+#: includes/helpers/class-abilities-helper.php:398
 msgid "The requested tool is not allowlisted."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:369
+#: includes/helpers/class-abilities-helper.php:411
 msgid "The requested ability is disabled in settings."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:383
+#: includes/helpers/class-abilities-helper.php:425
 msgid "The WordPress Abilities API is unavailable."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:398
+#: includes/helpers/class-abilities-helper.php:440
 msgid "The requested ability is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:430
+#: includes/helpers/class-abilities-helper.php:472
 msgid "Tool execution is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:453
+#: includes/helpers/class-abilities-helper.php:495
 msgid "Destructive tools are not allowed for this runtime trigger."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:476
+#: includes/helpers/class-abilities-helper.php:518
 msgid "File delete is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:503
+#: includes/helpers/class-abilities-helper.php:545
 msgid "This destructive action is pending batch confirmation."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:528
+#: includes/helpers/class-abilities-helper.php:570
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
