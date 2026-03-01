@@ -142,20 +142,24 @@ Custom endpoints with permission callbacks and parameter validation.
 
 ## TODO
 
-- Fix context usage info / limit / tooltip.
-- Add current admin screen to context.
-- Persist tool calls to chat history
-- Define actual scope of agent user. (should the user only be used for heartbeat tasks?)
-- Agent skills!
+### Approved
+
+- Add a separate settings page to enable clawpress abilities. Only enabled abilities are passed to the LLM as tools. Create a modern card layout where all abilities are listed from the built in registry. By default, only clawpress abilities are enabled in a fresh install.
+- Add more agent abilities for reading general WordPress content (posts, pages, etc.)
+- Add abilities to read memory files (long and short term).
+- Add abilities for bulk file_reads and bulk memory_reads.
+- Add ability to send emails to administrator using built-in WP mail functions.
 - Chat threads - have multiple conversation threads at once, per user.
-- Improve agent loop for multi-step messages
-- Add heartbeat wizard for setting up useful nightly site health email report.
-- Implement working heartbeat tasks.
-- Use WP_Filesystem to read/write files
-- Add abilities to read memory files (long and short term)
+- Implement a working heartbeat task. Start small and test how it works. Create a built in nightly healthcheck that checks site health and emails admin. Add wizard for setting up useful nightly site health email report.
+- Agent skills! Create abilities to read, create, update, execute a skill. Consider limitations and security.
+
+### Backlog
+
+- Add current site context, when doing direct chat messages. Consider an ability to pull this info, including all active plugins.
+- Improve context usage info / limit / tooltip. (right now its not useful and not accurate. Also need to decide on a suitable max context size - maybe 200K)
+- Define actual scope of agent user. (should the user only be used for heartbeat tasks?)
 - Fix boostrap agent file setup and writing (doesnt always run)
-- /reset command should clear everything (like uninstall + activation)
-- Add more agent abilities for general WordPress content (posts, pages, etc.)
+- /reset command should clear everything (like uninstall + activation). All history will be wiped and Welcome card should show. Even after page refreshes.
 - Consider how browser search and use will work within WordPress.
 - Mulit agent support. (can configure multiple agents)
 - Multi-user support. (each user has their own agents)
