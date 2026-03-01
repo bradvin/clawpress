@@ -231,7 +231,37 @@ final class RestApiTest extends TestCase {
 		$this->assertContains( 'clawpress/file-read', $data['enabled_abilities'] );
 	}
 
-	public function test_update_abilities_settings_saves_allowlisted_ability_ids_only(): void {
+	public function test_get_abilities_settings_includes_non_clawpress_registered_abilities(): void {
+		wp_register_ability(
+			'vendor/custom-ability',
+			[
+				'label'               => 'Custom Ability',
+				'description'         => 'Registered externally.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+
+		$controller = new Abilities_Settings_Controller();
+		$response   = $controller->get_abilities_settings();
+		$data       = $response->get_data();
+
+		$this->assertContains( 'vendor/custom-ability', array_column( $data['abilities'], 'ability_name' ) );
+	}
+
+	public function test_update_abilities_settings_saves_registered_ability_ids_only(): void {
+		wp_register_ability(
+			'vendor/custom-ability',
+			[
+				'label'               => 'Custom Ability',
+				'description'         => 'Registered externally.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+
 		$controller = new Abilities_Settings_Controller();
 		$response   = $controller->update_abilities_settings(
 			new \WP_REST_Request(
@@ -239,6 +269,7 @@ final class RestApiTest extends TestCase {
 					'abilities' => [
 						'clawpress/file-read',
 						'clawpress/file-write',
+						'vendor/custom-ability',
 						'clawpress/not-real',
 					],
 				]
@@ -252,6 +283,7 @@ final class RestApiTest extends TestCase {
 			[
 				'clawpress/file-read',
 				'clawpress/file-write',
+				'vendor/custom-ability',
 			],
 			$data['enabled_abilities']
 		);
@@ -259,6 +291,7 @@ final class RestApiTest extends TestCase {
 			[
 				'clawpress/file-read',
 				'clawpress/file-write',
+				'vendor/custom-ability',
 			],
 			WordPress_Stubs::$options['clawpress_enabled_abilities']
 		);

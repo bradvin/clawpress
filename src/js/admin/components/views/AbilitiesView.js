@@ -43,7 +43,6 @@ const normalizeAbility = ( ability = {} ) => ( {
 	description:
 		typeof ability.description === 'string' ? ability.description : '',
 	registered: Boolean( ability.registered ),
-	manageable: Boolean( ability.manageable ),
 	enabled: Boolean( ability.enabled ),
 	category: normalizeCategory( ability.category ),
 	annotations: {
@@ -305,23 +304,22 @@ export default function AbilitiesView() {
 														}
 													</p>
 												</div>
-											<ToggleControl
-												checked={ ability.enabled }
+												<ToggleControl
+													checked={ ability.enabled }
 													onChange={ ( enabled ) =>
 														toggleAbility(
 															ability.ability_name,
 															enabled
 														)
 													}
-												label={ __(
-													'Enabled',
-													'clawpress'
-												) }
-												disabled={
-													! ability.registered ||
-													! ability.manageable
-												}
-											/>
+													label={ __(
+														'Enabled',
+														'clawpress'
+													) }
+													disabled={
+														! ability.registered
+													}
+												/>
 											</div>
 
 											{ ability.description ? (

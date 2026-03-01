@@ -121,6 +121,55 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertSame( 'clawpress_ability_disabled', $result['error']['code'] );
 	}
 
+	public function test_ability_settings_state_includes_non_clawpress_registered_abilities(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+
+		$state         = Abilities_Helper::get_instance()->get_ability_settings_state();
+		$ability_names = array_column( $state['abilities'], 'ability_name' );
+		$custom_index  = array_search( 'vendor/custom-tool', $ability_names, true );
+
+		$this->assertNotFalse( $custom_index );
+		$this->assertFalse( ! $state['abilities'][ $custom_index ]['registered'] );
+	}
+
+	public function test_set_enabled_ability_ids_allows_non_clawpress_registered_abilities(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+
+		$result = Abilities_Helper::get_instance()->set_enabled_ability_ids(
+			[
+				'vendor/custom-tool',
+				'clawpress/file-read',
+				'vendor/unknown-tool',
+			]
+		);
+
+		$this->assertSame(
+			[
+				'vendor/custom-tool',
+				'clawpress/file-read',
+			],
+			$result
+		);
+	}
+
 	public function test_destructive_tool_requires_confirmation_before_execution(): void {
 		$result = Abilities_Helper::get_instance()->execute_tool_call(
 			'memory_long_term_delete',

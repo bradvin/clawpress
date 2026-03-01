@@ -187,8 +187,10 @@ final class Abilities_Helper {
 		$defaults           = $this->get_default_enabled_ability_ids();
 		$enabled            = $this->get_enabled_ability_ids();
 		$enabled_lookup     = array_fill_keys( $enabled, true );
+		$allowlisted_lookup = array_flip( self::TOOL_TO_ABILITY );
 		$abilities          = [];
 		$category_index     = [];
+		$included           = [];
 
 		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
 			$ability = function_exists( 'wp_get_ability' )
@@ -223,6 +225,41 @@ final class Abilities_Helper {
 				'annotations'  => $annotations,
 				'category'     => $category,
 			];
+			$included[ $ability_name ] = true;
+		}
+
+		if ( function_exists( 'wp_get_abilities' ) ) {
+			$registered_abilities = wp_get_abilities();
+			if ( is_array( $registered_abilities ) ) {
+				foreach ( $registered_abilities as $ability_name => $ability ) {
+					$ability_name = strtolower( trim( (string) $ability_name ) );
+					if ( '' === $ability_name || isset( $included[ $ability_name ] ) || ! $ability instanceof \WP_Ability ) {
+						continue;
+					}
+
+					$annotations = $this->get_ability_annotations( $ability );
+
+					$category_slug = $this->resolve_ability_category_slug( $ability );
+					$category      = $this->build_category_payload( $category_slug );
+
+					if ( ! isset( $category_index[ $category['slug'] ] ) ) {
+						$category_index[ $category['slug'] ] = $category;
+					}
+
+					$abilities[] = [
+						'tool_name'    => isset( $allowlisted_lookup[ $ability_name ] ) ? (string) $allowlisted_lookup[ $ability_name ] : '',
+						'ability_name' => $ability_name,
+						'label'        => (string) $ability->get_label(),
+						'description'  => (string) $ability->get_description(),
+						'registered'   => true,
+						'enabled'      => isset( $enabled_lookup[ $ability_name ] ),
+						'safety_class' => $this->infer_safety_class( $ability ),
+						'annotations'  => $annotations,
+						'category'     => $category,
+					];
+					$included[ $ability_name ] = true;
+				}
+			}
 		}
 
 		usort(
@@ -796,12 +833,12 @@ final class Abilities_Helper {
 	 * @return array<int,string>
 	 */
 	private function sanitize_enabled_ability_ids( array $enabled_abilities ): array {
-		$allowlist = array_fill_keys( $this->get_allowlisted_ability_ids(), true );
+		$registered = array_fill_keys( $this->get_registered_ability_ids(), true );
 		$sanitized = [];
 
 		foreach ( $enabled_abilities as $ability_name ) {
 			$normalized = strtolower( trim( (string) $ability_name ) );
-			if ( '' === $normalized || ! isset( $allowlist[ $normalized ] ) ) {
+			if ( '' === $normalized || ! isset( $registered[ $normalized ] ) ) {
 				continue;
 			}
 
@@ -809,6 +846,34 @@ final class Abilities_Helper {
 		}
 
 		return array_values( array_unique( $sanitized ) );
+	}
+
+	/**
+	 * Resolve registered ability IDs.
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_registered_ability_ids(): array {
+		if ( function_exists( 'wp_get_abilities' ) ) {
+			$registered = wp_get_abilities();
+			if ( is_array( $registered ) ) {
+				$ability_ids = [];
+				foreach ( array_keys( $registered ) as $ability_id ) {
+					$normalized = strtolower( trim( (string) $ability_id ) );
+					if ( '' === $normalized ) {
+						continue;
+					}
+
+					$ability_ids[] = $normalized;
+				}
+
+				if ( [] !== $ability_ids ) {
+					return array_values( array_unique( $ability_ids ) );
+				}
+			}
+		}
+
+		return $this->get_default_enabled_ability_ids();
 	}
 
 	/**
