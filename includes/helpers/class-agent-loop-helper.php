@@ -1390,11 +1390,11 @@ final class Agent_Loop_Helper {
 	 * @param string        $model Model identifier.
 	 */
 	private function apply_max_output_tokens_to_prompt_builder( PromptBuilder $builder, int $max_output_tokens, string $provider, string $model ): PromptBuilder {
-		if ( $this->provider_helper->should_use_max_completion_tokens( $provider, $model ) ) {
+		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) ) {
 			$model_config = ModelConfig::fromArray(
 				[
 					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_completion_tokens' => $max_output_tokens,
+						'max_output_tokens' => $max_output_tokens,
 					],
 				]
 			);

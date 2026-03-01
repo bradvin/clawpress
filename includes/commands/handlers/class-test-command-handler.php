@@ -251,8 +251,8 @@ final class Test_Command_Handler implements Command_Handler {
 	/**
 	 * Apply max output token setting to prompt builder.
 	 *
-	 * Uses `max_completion_tokens` for OpenAI model families that reject
-	 * legacy `max_tokens`.
+	 * Uses `max_output_tokens` for OpenAI model families that reject
+	 * legacy `max_tokens` in the Responses API.
 	 *
 	 * @param object $builder Prompt builder instance.
 	 * @param int    $max_output_tokens Max output tokens.
@@ -261,11 +261,11 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_max_output_tokens( object $builder, int $max_output_tokens, string $provider, string $model ): object {
-		if ( $this->provider_helper->should_use_max_completion_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
+		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
 			$model_config = ModelConfig::fromArray(
 				[
 					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_completion_tokens' => $max_output_tokens,
+						'max_output_tokens' => $max_output_tokens,
 					],
 				]
 			);
