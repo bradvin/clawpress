@@ -15,7 +15,7 @@ use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Central helper for ClawPress ability allowlisting and execution.
+ * Central helper for ClawPress ability settings and execution.
  */
 final class Abilities_Helper {
 	/**
@@ -24,22 +24,9 @@ final class Abilities_Helper {
 	public const ENABLED_ABILITIES_OPTION = 'clawpress_enabled_abilities';
 
 	/**
-	 * Tool-name to ability-id mapping.
-	 *
-	 * @var array<string,string>
+	 * ClawPress ability namespace.
 	 */
-	private const TOOL_TO_ABILITY = [
-		'file_read'                => 'clawpress/file-read',
-		'file_write'               => 'clawpress/file-write',
-		'file_delete'              => 'clawpress/file-delete',
-		'file_list'                => 'clawpress/file-list',
-		'memory_short_term_add'    => 'clawpress/memory-short-term-add',
-		'memory_short_term_update' => 'clawpress/memory-short-term-update',
-		'memory_short_term_delete' => 'clawpress/memory-short-term-delete',
-		'memory_long_term_add'     => 'clawpress/memory-long-term-add',
-		'memory_long_term_update'  => 'clawpress/memory-long-term-update',
-		'memory_long_term_delete'  => 'clawpress/memory-long-term-delete',
-	];
+	private const CLAWPRESS_ABILITY_NAMESPACE = 'clawpress';
 
 	/**
 	 * Singleton instance.
@@ -98,41 +85,45 @@ final class Abilities_Helper {
 	}
 
 	/**
-	 * Get allowlisted tool names.
+	 * Get registered tool aliases.
 	 *
 	 * @return array<int,string>
 	 */
 	public function get_allowlisted_tool_names(): array {
-		return array_keys( self::TOOL_TO_ABILITY );
+		$ability_ids = $this->get_registered_ability_ids();
+		$tool_map    = $this->build_tool_alias_map( $ability_ids );
+		return array_keys( $tool_map );
 	}
 
 	/**
-	 * Get allowlisted ability IDs.
+	 * Get registered ability IDs.
 	 *
 	 * @return array<int,string>
 	 */
 	public function get_allowlisted_ability_ids(): array {
-		return array_values( self::TOOL_TO_ABILITY );
+		return $this->get_registered_ability_ids();
 	}
 
 	/**
-	 * Build model function declarations from registered allowlisted abilities.
+	 * Build model function declarations from enabled registered abilities.
 	 *
 	 * @return array<int,FunctionDeclaration>
 	 */
 	public function get_tool_declarations(): array {
-		if ( ! function_exists( 'wp_get_ability' ) ) {
+		$registered_abilities = $this->get_registered_abilities();
+		if ( [] === $registered_abilities ) {
 			return [];
 		}
 
 		$enabled_abilities = array_fill_keys( $this->get_enabled_ability_ids(), true );
+		$tool_alias_map    = $this->build_tool_alias_map( array_keys( $registered_abilities ) );
 		$declarations = [];
-		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
+		foreach ( $tool_alias_map as $tool_name => $ability_name ) {
 			if ( ! isset( $enabled_abilities[ $ability_name ] ) ) {
 				continue;
 			}
 
-			$ability = wp_get_ability( $ability_name );
+			$ability = $registered_abilities[ $ability_name ] ?? null;
 			if ( ! $ability instanceof \WP_Ability ) {
 				continue;
 			}
@@ -184,30 +175,24 @@ final class Abilities_Helper {
 	 * @return array<string,mixed>
 	 */
 	public function get_ability_settings_state(): array {
-		$defaults           = $this->get_default_enabled_ability_ids();
-		$enabled            = $this->get_enabled_ability_ids();
-		$enabled_lookup     = array_fill_keys( $enabled, true );
-		$allowlisted_lookup = array_flip( self::TOOL_TO_ABILITY );
-		$abilities          = [];
-		$category_index     = [];
-		$included           = [];
+		$registered_abilities = $this->get_registered_abilities();
+		$registered_ids       = array_keys( $registered_abilities );
+		$tool_alias_map       = $this->build_tool_alias_map( $registered_ids );
+		$ability_alias_map    = [];
+		foreach ( $tool_alias_map as $tool_alias => $ability_name ) {
+			$ability_alias_map[ $ability_name ] = $tool_alias;
+		}
 
-		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
-			$ability = function_exists( 'wp_get_ability' )
-				? wp_get_ability( $ability_name )
-				: null;
+		$defaults       = $this->get_default_enabled_ability_ids();
+		$enabled        = $this->get_enabled_ability_ids();
+		$enabled_lookup = array_fill_keys( $enabled, true );
+		$abilities      = [];
+		$category_index = [];
 
-			$annotations = $ability instanceof \WP_Ability
-				? $this->get_ability_annotations( $ability )
-				: [
-					'readonly'    => false,
-					'destructive' => false,
-					'idempotent'  => false,
-				];
+		foreach ( $registered_abilities as $ability_name => $ability ) {
+			$annotations = $this->get_ability_annotations( $ability );
 
-			$category_slug = $ability instanceof \WP_Ability
-				? $this->resolve_ability_category_slug( $ability )
-				: 'clawpress';
+			$category_slug = $this->resolve_ability_category_slug( $ability );
 			$category      = $this->build_category_payload( $category_slug );
 
 			if ( ! isset( $category_index[ $category['slug'] ] ) ) {
@@ -215,51 +200,18 @@ final class Abilities_Helper {
 			}
 
 			$abilities[] = [
-				'tool_name'    => $tool_name,
+				'tool_name'    => 0 === strpos( $ability_name, self::CLAWPRESS_ABILITY_NAMESPACE . '/' ) && isset( $ability_alias_map[ $ability_name ] )
+					? (string) $ability_alias_map[ $ability_name ]
+					: '',
 				'ability_name' => $ability_name,
-				'label'        => $ability instanceof \WP_Ability ? (string) $ability->get_label() : $tool_name,
-				'description'  => $ability instanceof \WP_Ability ? (string) $ability->get_description() : '',
-				'registered'   => $ability instanceof \WP_Ability,
+				'label'        => (string) $ability->get_label(),
+				'description'  => (string) $ability->get_description(),
+				'registered'   => true,
 				'enabled'      => isset( $enabled_lookup[ $ability_name ] ),
-				'safety_class' => $ability instanceof \WP_Ability ? $this->infer_safety_class( $ability ) : 'unknown',
+				'safety_class' => $this->infer_safety_class( $ability ),
 				'annotations'  => $annotations,
 				'category'     => $category,
 			];
-			$included[ $ability_name ] = true;
-		}
-
-		if ( function_exists( 'wp_get_abilities' ) ) {
-			$registered_abilities = wp_get_abilities();
-			if ( is_array( $registered_abilities ) ) {
-				foreach ( $registered_abilities as $ability_name => $ability ) {
-					$ability_name = strtolower( trim( (string) $ability_name ) );
-					if ( '' === $ability_name || isset( $included[ $ability_name ] ) || ! $ability instanceof \WP_Ability ) {
-						continue;
-					}
-
-					$annotations = $this->get_ability_annotations( $ability );
-
-					$category_slug = $this->resolve_ability_category_slug( $ability );
-					$category      = $this->build_category_payload( $category_slug );
-
-					if ( ! isset( $category_index[ $category['slug'] ] ) ) {
-						$category_index[ $category['slug'] ] = $category;
-					}
-
-					$abilities[] = [
-						'tool_name'    => isset( $allowlisted_lookup[ $ability_name ] ) ? (string) $allowlisted_lookup[ $ability_name ] : '',
-						'ability_name' => $ability_name,
-						'label'        => (string) $ability->get_label(),
-						'description'  => (string) $ability->get_description(),
-						'registered'   => true,
-						'enabled'      => isset( $enabled_lookup[ $ability_name ] ),
-						'safety_class' => $this->infer_safety_class( $ability ),
-						'annotations'  => $annotations,
-						'category'     => $category,
-					];
-					$included[ $ability_name ] = true;
-				}
-			}
 		}
 
 		usort(
@@ -345,7 +297,7 @@ final class Abilities_Helper {
 	 */
 	public function execute_tool_call( string $tool_name, $raw_args = null, array $execution_context = [] ): array {
 		$normalized_tool_name        = strtolower( trim( $tool_name ) );
-		$ability_name                = self::TOOL_TO_ABILITY[ $normalized_tool_name ] ?? '';
+		$ability_name                = $this->resolve_ability_name_from_tool_name( $normalized_tool_name );
 		$args                        = $this->normalize_tool_args( $raw_args );
 		$requesting_user_id          = isset( $execution_context['requesting_user_id'] )
 			? (int) $execution_context['requesting_user_id']
@@ -389,8 +341,8 @@ final class Abilities_Helper {
 			$payload = [
 				'success' => false,
 				'error'   => [
-					'code'    => 'clawpress_tool_not_allowlisted',
-					'message' => __( 'The requested tool is not allowlisted.', 'clawpress' ),
+					'code'    => 'clawpress_tool_not_registered',
+					'message' => __( 'The requested tool is not registered.', 'clawpress' ),
 				],
 				'tool'    => $normalized_tool_name,
 			];
@@ -507,7 +459,7 @@ final class Abilities_Helper {
 			return $payload;
 		}
 
-		if ( 'file_delete' === $normalized_tool_name && ! $this->is_policy_enabled( $runtime_policy['allow_file_delete'] ?? true ) ) {
+		if ( 'clawpress/file-delete' === $ability_name && ! $this->is_policy_enabled( $runtime_policy['allow_file_delete'] ?? true ) ) {
 			$payload = $this->build_policy_violation_payload(
 				'clawpress_policy_file_delete_denied',
 				__( 'File delete is blocked by runtime policy.', 'clawpress' ),
@@ -782,7 +734,17 @@ final class Abilities_Helper {
 			}
 		}
 
-		return 'clawpress';
+		if ( method_exists( $ability, 'get_name' ) ) {
+			$ability_name = strtolower( trim( (string) $ability->get_name() ) );
+			if ( false !== strpos( $ability_name, '/' ) ) {
+				$parts = explode( '/', $ability_name, 2 );
+				if ( '' !== $parts[0] ) {
+					return $parts[0];
+				}
+			}
+		}
+
+		return self::CLAWPRESS_ABILITY_NAMESPACE;
 	}
 
 	/**
@@ -818,12 +780,19 @@ final class Abilities_Helper {
 	}
 
 	/**
-	 * Default enabled abilities (all ClawPress allowlisted abilities).
+	 * Default enabled abilities (all ClawPress namespaced registered abilities).
 	 *
 	 * @return array<int,string>
 	 */
 	private function get_default_enabled_ability_ids(): array {
-		return array_values( self::TOOL_TO_ABILITY );
+		$defaults = [];
+		foreach ( $this->get_registered_ability_ids() as $ability_id ) {
+			if ( 0 === strpos( $ability_id, self::CLAWPRESS_ABILITY_NAMESPACE . '/' ) ) {
+				$defaults[] = $ability_id;
+			}
+		}
+
+		return array_values( array_unique( $defaults ) );
 	}
 
 	/**
@@ -854,26 +823,119 @@ final class Abilities_Helper {
 	 * @return array<int,string>
 	 */
 	private function get_registered_ability_ids(): array {
-		if ( function_exists( 'wp_get_abilities' ) ) {
-			$registered = wp_get_abilities();
-			if ( is_array( $registered ) ) {
-				$ability_ids = [];
-				foreach ( array_keys( $registered ) as $ability_id ) {
-					$normalized = strtolower( trim( (string) $ability_id ) );
-					if ( '' === $normalized ) {
-						continue;
-					}
+		return array_keys( $this->get_registered_abilities() );
+	}
 
-					$ability_ids[] = $normalized;
-				}
-
-				if ( [] !== $ability_ids ) {
-					return array_values( array_unique( $ability_ids ) );
-				}
-			}
+	/**
+	 * Resolve registered abilities keyed by ability ID.
+	 *
+	 * @return array<string,\WP_Ability>
+	 */
+	private function get_registered_abilities(): array {
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			return [];
 		}
 
-		return $this->get_default_enabled_ability_ids();
+		$registered = wp_get_abilities();
+		if ( ! is_array( $registered ) ) {
+			return [];
+		}
+
+		$abilities = [];
+		foreach ( $registered as $ability_id => $ability ) {
+			$normalized_id = strtolower( trim( (string) $ability_id ) );
+			if ( '' === $normalized_id || ! $ability instanceof \WP_Ability ) {
+				continue;
+			}
+
+			$abilities[ $normalized_id ] = $ability;
+		}
+
+		ksort( $abilities );
+		return $abilities;
+	}
+
+	/**
+	 * Build deterministic tool-alias map for ability IDs.
+	 *
+	 * @param array<int,string> $ability_ids Ability IDs.
+	 * @return array<string,string> Tool alias => ability ID.
+	 */
+	private function build_tool_alias_map( array $ability_ids ): array {
+		$aliases = [];
+		sort( $ability_ids );
+
+		foreach ( $ability_ids as $ability_id ) {
+			$normalized_id = strtolower( trim( (string) $ability_id ) );
+			if ( '' === $normalized_id ) {
+				continue;
+			}
+
+			$alias = $this->build_tool_alias_base( $normalized_id );
+			if ( isset( $aliases[ $alias ] ) && $aliases[ $alias ] !== $normalized_id ) {
+				$suffix       = '_' . substr( md5( $normalized_id ), 0, 8 );
+				$max_base_len = max( 1, 64 - strlen( $suffix ) );
+				$alias        = substr( $alias, 0, $max_base_len ) . $suffix;
+			}
+
+			$aliases[ $alias ] = $normalized_id;
+		}
+
+		return $aliases;
+	}
+
+	/**
+	 * Build one tool alias from an ability ID.
+	 *
+	 * @param string $ability_id Ability ID.
+	 */
+	private function build_tool_alias_base( string $ability_id ): string {
+		$namespace = '';
+		$name      = $ability_id;
+
+		if ( false !== strpos( $ability_id, '/' ) ) {
+			$parts     = explode( '/', $ability_id, 2 );
+			$namespace = $parts[0];
+			$name      = $parts[1];
+		}
+
+		$raw_alias = self::CLAWPRESS_ABILITY_NAMESPACE === $namespace || '' === $namespace
+			? $name
+			: $namespace . '__' . $name;
+
+		$alias = (string) preg_replace( '/[^a-z0-9_]+/', '_', strtolower( $raw_alias ) );
+		$alias = (string) preg_replace( '/_+/', '_', $alias );
+		$alias = trim( $alias, '_' );
+
+		if ( '' === $alias ) {
+			$alias = 'ability_' . substr( md5( $ability_id ), 0, 8 );
+		}
+
+		if ( preg_match( '/^[0-9]/', $alias ) ) {
+			$alias = 'ability_' . $alias;
+		}
+
+		return substr( $alias, 0, 64 );
+	}
+
+	/**
+	 * Resolve ability ID from a model tool/function name.
+	 *
+	 * @param string $tool_name Tool/function name.
+	 */
+	private function resolve_ability_name_from_tool_name( string $tool_name ): string {
+		$normalized = strtolower( trim( $tool_name ) );
+		if ( '' === $normalized ) {
+			return '';
+		}
+
+		$registered = $this->get_registered_abilities();
+		if ( isset( $registered[ $normalized ] ) ) {
+			return $normalized;
+		}
+
+		$tool_alias_map = $this->build_tool_alias_map( array_keys( $registered ) );
+		return isset( $tool_alias_map[ $normalized ] ) ? (string) $tool_alias_map[ $normalized ] : '';
 	}
 
 	/**

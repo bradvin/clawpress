@@ -156,8 +156,16 @@ const Panel = () => {
 			return '';
 		}
 
-		const callName =
-			typeof rawCall.name === 'string' ? rawCall.name.trim() : '';
+		const callNameCandidates = [
+			rawCall.name,
+			rawCall.tool_name,
+			rawCall.ability_name,
+		];
+		const callName = callNameCandidates
+			.map( ( value ) =>
+				typeof value === 'string' ? value.trim() : ''
+			)
+			.find( ( value ) => value.length > 0 );
 		if ( ! callName ) {
 			return '';
 		}
