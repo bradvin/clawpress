@@ -165,6 +165,7 @@ Custom endpoints with permission callbacks and parameter validation.
 - Multi-user support. (each user has their own agents)
 - Channels for agent interaction.
 - Streaming responses.
+- Add ability to read DB, or generate a query to read from the DB. Might need an ability to get DB schema, which can then be used to generate a query. Need to consider destructive queries, or make all queries require confirmation just to be safe.
 
 ## Decision Log
 
