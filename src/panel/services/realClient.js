@@ -258,14 +258,26 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			return 'success';
 		};
 
-		const name =
-			typeof rawCall.name === 'string' ? rawCall.name.trim() : '';
+		const nameCandidates = [
+			rawCall.name,
+			rawCall.tool_name,
+			rawCall.ability_name,
+		];
+		const name = nameCandidates
+			.map( ( value ) =>
+				typeof value === 'string' ? value.trim() : ''
+			)
+			.find( ( value ) => value.length > 0 );
 		if ( ! name ) {
 			return null;
 		}
 
-		const ability =
-			typeof rawCall.ability === 'string' ? rawCall.ability.trim() : '';
+		let ability = '';
+		if ( typeof rawCall.ability === 'string' ) {
+			ability = rawCall.ability.trim();
+		} else if ( typeof rawCall.ability_name === 'string' ) {
+			ability = rawCall.ability_name.trim();
+		}
 		const args =
 			rawCall.args &&
 			typeof rawCall.args === 'object' &&
@@ -389,14 +401,10 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 					payload.message.trim()
 						? payload.message.trim()
 						: '';
-
-				const call = {
+				const call = normalizeToolCall( {
 					name: toolName,
-					ability:
-						typeof payload.ability_name === 'string' &&
-						payload.ability_name.trim()
-							? payload.ability_name.trim()
-							: null,
+					tool_name: payload.tool_name,
+					ability_name: payload.ability_name,
 					args: {},
 					status: normalizedStatus,
 					message: detailMessage || null,
@@ -409,8 +417,11 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 								Math.round( Number( payload.sequence ) )
 						  )
 						: index + 1,
-					requiresConfirmation: status === 'requires_confirmation',
-				};
+					requires_confirmation: status === 'requires_confirmation',
+				} );
+				if ( ! call ) {
+					return;
+				}
 
 				emitToolCallIfNew(
 					call,
@@ -470,13 +481,10 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 				normalizedStatus = status;
 			}
 
-			const call = {
+			const call = normalizeToolCall( {
 				name: toolName,
-				ability:
-					typeof payload.ability_name === 'string' &&
-					payload.ability_name.trim()
-						? payload.ability_name.trim()
-						: null,
+				tool_name: payload.tool_name,
+				ability_name: payload.ability_name,
 				args: {},
 				status: normalizedStatus,
 				message: detailMessage || null,
@@ -486,13 +494,50 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 				sequence: Number.isFinite( Number( payload.sequence ) )
 					? Math.max( 1, Math.round( Number( payload.sequence ) ) )
 					: index + 1,
-				requiresConfirmation: status === 'requires_confirmation',
-			};
+				requires_confirmation: status === 'requires_confirmation',
+			} );
+			if ( ! call ) {
+				return;
+			}
 
 			emitToolCallIfNew(
 				call,
 				index + 1,
 				toolEvents.length,
+				seenToolCallKeys
+			);
+		} );
+	};
+
+	const emitRuntimeInProgressSignals = ( runPayload, seenToolCallKeys ) => {
+		const runMeta = isObjectRecord( runPayload?.meta )
+			? runPayload.meta
+			: {};
+		let runtimeResult = null;
+		if ( isObjectRecord( runMeta.last_result ) ) {
+			runtimeResult = runMeta.last_result;
+		} else if ( isObjectRecord( runMeta.result ) ) {
+			runtimeResult = runMeta.result;
+		}
+		if ( ! runtimeResult ) {
+			return;
+		}
+
+		const contextUsage = normalizeContextUsage( runtimeResult.context );
+		if ( contextUsage ) {
+			onEvent( 'context_usage', { context: contextUsage } );
+		}
+
+		const toolCalls = Array.isArray( runtimeResult.tool_calls )
+			? runtimeResult.tool_calls
+					.map( ( rawCall ) => normalizeToolCall( rawCall ) )
+					.filter( Boolean )
+			: [];
+		toolCalls.forEach( ( call, index ) => {
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolCalls.length,
 				seenToolCallKeys
 			);
 		} );
@@ -681,6 +726,7 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 			}
 
 			const runPayload = await getRunStatus( runId, signal );
+			emitRuntimeInProgressSignals( runPayload, seenToolCallKeys );
 			const status = normalizeRunStatus( runPayload?.status );
 			if ( TERMINAL_RUN_STATUSES.has( status ) ) {
 				emitRunTerminalOutcome(
