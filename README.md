@@ -45,6 +45,7 @@ Current MVP features implemented in this plugin:
 - Offline mode which still allows slash commands to be used.
 - Setup Wizard built into chat to guide users through plugin setup process.
 - Admin settings page to set which provider, model, and other settings to use.
+- Admin abilities settings page to enable which abilities can be used by the agent.
 - Registers WP Abilities to and loads them as tools into the AI client.
 - Creates an action log database table to track actions taken by the AI assistant.
 - Context & system prompt built up using chat history, tools (abilities), agent files & memory.
@@ -144,7 +145,6 @@ Custom endpoints with permission callbacks and parameter validation.
 
 ### Approved
 
-- Add a separate settings page to enable clawpress abilities. Only enabled abilities are passed to the LLM as tools. Create a modern card layout where all abilities are listed from the built in registry. By default, only clawpress abilities are enabled in a fresh install.
 - Add more agent abilities for reading general WordPress content (posts, pages, etc.)
 - Add abilities to read memory files (long and short term).
 - Add abilities for bulk file_reads and bulk memory_reads.
