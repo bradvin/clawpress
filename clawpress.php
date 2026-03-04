@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ClawPress
  * Description: AI assistant tools for WordPress admin workflows.
- * Version: 0.0.2
+ * Version: 0.0.3
  * Requires PHP: 8.1
  * Requires at least: 6.9
  * License: GPLv2 or later
@@ -19,7 +19,7 @@ namespace ClawPress;
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CLAWPRESS_VERSION', '0.0.2' );
+define( 'CLAWPRESS_VERSION', '0.0.3' );
 define( 'CLAWPRESS_FILE', __FILE__ );
 define( 'CLAWPRESS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CLAWPRESS_URL', plugin_dir_url( __FILE__ ) );
