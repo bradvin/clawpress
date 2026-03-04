@@ -170,6 +170,64 @@ final class AbilitiesHelperTest extends TestCase {
 		);
 	}
 
+	public function test_tool_declarations_include_enabled_external_registered_ability(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'vendor/custom-tool',
+			]
+		);
+
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+		$names        = array_map(
+			static fn( FunctionDeclaration $item ): string => $item->getName(),
+			$declarations
+		);
+
+		$this->assertSame( [ 'vendor__custom_tool' ], $names );
+	}
+
+	public function test_execute_tool_call_accepts_external_registered_ability_alias(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'vendor/custom-tool',
+			]
+		);
+
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'vendor__custom_tool',
+			[],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( 'vendor/custom-tool', $result['ability'] );
+	}
+
 	public function test_destructive_tool_requires_confirmation_before_execution(): void {
 		$result = Abilities_Helper::get_instance()->execute_tool_call(
 			'memory_long_term_delete',
