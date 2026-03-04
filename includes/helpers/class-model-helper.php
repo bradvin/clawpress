@@ -9,6 +9,12 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use Throwable;
+use WordPress\AiClient\AiClient;
+use WordPress\AiClient\Providers\Contracts\ModelMetadataDirectoryInterface;
+use WordPress\AiClient\Providers\Contracts\ProviderAvailabilityInterface;
+use WordPress\AiClient\Providers\Models\DTO\ModelMetadata;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -16,11 +22,11 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Model_Helper {
 	/**
-	 * Hardcoded model options grouped by provider.
+	 * Curated model catalog grouped by provider.
 	 *
-	 * @var array<string,array<int,array{id:string,label:string}>>
+	 * @var array<string,array<int,array{id:string,label:string,context:string,cost:string}>>
 	 */
-	private const MODEL_OPTIONS = [
+	private const MODEL_CATALOG = [
 		'openai'    => [
 			[
 				'id'      => 'gpt-5.2-codex',
@@ -121,11 +127,28 @@ final class Model_Helper {
 	 */
 	public function get_options_for_provider( string $provider ): array {
 		$provider = clawpress_sanitize_provider( $provider );
-		if ( '' === $provider || ! isset( self::MODEL_OPTIONS[ $provider ] ) ) {
+		if ( '' === $provider ) {
 			return [];
 		}
 
-		return self::MODEL_OPTIONS[ $provider ];
+		$provider_registered = $this->is_registry_provider( $provider );
+		if ( $provider_registered ) {
+			return $this->get_registry_options_for_provider( $provider );
+		}
+
+		if ( ! isset( self::MODEL_CATALOG[ $provider ] ) ) {
+			return [];
+		}
+
+		return array_map(
+			static function ( array $option ): array {
+				return [
+					'id'    => (string) $option['id'],
+					'label' => (string) $option['label'],
+				];
+			},
+			self::MODEL_CATALOG[ $provider ]
+		);
 	}
 
 	/**
@@ -134,7 +157,53 @@ final class Model_Helper {
 	 * @return array<string,array<int,array{id:string,label:string}>>
 	 */
 	public function get_all_options(): array {
-		return self::MODEL_OPTIONS;
+		$options = [];
+
+		foreach ( $this->get_supported_provider_ids() as $provider ) {
+			$options[ $provider ] = $this->get_options_for_provider( $provider );
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Get discovered model options from registered providers only.
+	 *
+	 * @return array<string,array<int,array{id:string,label:string}>>
+	 */
+	public function get_all_discovered_options(): array {
+		$options = [];
+
+		try {
+			$provider_ids = AiClient::defaultRegistry()->getRegisteredProviderIds();
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return $options;
+		}
+
+		if ( ! is_array( $provider_ids ) ) {
+			return $options;
+		}
+
+		foreach ( $provider_ids as $provider_id ) {
+			$provider = clawpress_sanitize_provider( $provider_id );
+			if ( '' === $provider ) {
+				continue;
+			}
+
+			$options[ $provider ] = $this->get_registry_options_for_provider( $provider );
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Get curated model catalog metadata.
+	 *
+	 * @return array<string,array<int,array{id:string,label:string,context:string,cost:string}>>
+	 */
+	public function get_model_catalog(): array {
+		return self::MODEL_CATALOG;
 	}
 
 	/**
@@ -149,5 +218,106 @@ final class Model_Helper {
 		}
 
 		return $options[0]['id'];
+	}
+
+	/**
+	 * Resolve text-generation models registered for a provider via the AI client registry.
+	 *
+	 * @param string $provider Provider ID.
+	 * @return array<int,array{id:string,label:string}>
+	 */
+	private function get_registry_options_for_provider( string $provider ): array {
+		try {
+			$registry = AiClient::defaultRegistry();
+			if ( ! $registry->hasProvider( $provider ) ) {
+				return [];
+			}
+
+			$provider_class_name = $registry->getProviderClassName( $provider );
+			if ( ! is_string( $provider_class_name ) || '' === trim( $provider_class_name ) || ! class_exists( $provider_class_name ) ) {
+				return [];
+			}
+
+			$provider_availability = $provider_class_name::availability();
+			if ( $provider_availability instanceof ProviderAvailabilityInterface && ! $provider_availability->isConfigured() ) {
+				return [];
+			}
+
+			$model_metadata_directory = $provider_class_name::modelMetadataDirectory();
+			if ( ! $model_metadata_directory instanceof ModelMetadataDirectoryInterface ) {
+				return [];
+			}
+
+			$models = $model_metadata_directory->listModelMetadata();
+			if ( ! is_array( $models ) ) {
+				return [];
+			}
+
+			$options = [];
+			foreach ( $models as $model ) {
+				if ( ! $model instanceof ModelMetadata ) {
+					continue;
+				}
+
+				$model_id = trim( (string) $model->getId() );
+				if ( '' === $model_id ) {
+					continue;
+				}
+
+				$model_label = trim( (string) $model->getName() );
+				if ( '' === $model_label ) {
+					$model_label = $model_id;
+				}
+
+				$options[ $model_id ] = [
+					'id'    => $model_id,
+					'label' => $model_label,
+				];
+			}
+
+			return array_values( $options );
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return [];
+		}
+	}
+
+	/**
+	 * Check whether a provider is registered in the AI client registry.
+	 *
+	 * @param string $provider Provider ID.
+	 */
+	private function is_registry_provider( string $provider ): bool {
+		try {
+			return AiClient::defaultRegistry()->hasProvider( $provider );
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+	}
+
+	/**
+	 * Get all known provider IDs (registry + local fallback list).
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_supported_provider_ids(): array {
+		$providers = array_keys( self::MODEL_CATALOG );
+
+		try {
+			$registry_provider_ids = AiClient::defaultRegistry()->getRegisteredProviderIds();
+			if ( is_array( $registry_provider_ids ) ) {
+				foreach ( $registry_provider_ids as $provider_id ) {
+					$normalized_provider = clawpress_sanitize_provider( $provider_id );
+					if ( '' !== $normalized_provider ) {
+						$providers[] = $normalized_provider;
+					}
+				}
+			}
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+		}
+
+		return array_values( array_unique( $providers ) );
 	}
 }

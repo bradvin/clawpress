@@ -6,6 +6,21 @@
 	margin-top: 16px;
 }
 
+.clawpress-settings__model-control {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.clawpress-settings__model-control-select {
+	flex: 1;
+	min-width: 0;
+}
+
+.clawpress-settings__model-control-select .components-base-control {
+	margin-bottom: 0;
+}
+
 .clawpress-abilities__header {
 	display: flex;
 	align-items: baseline;
