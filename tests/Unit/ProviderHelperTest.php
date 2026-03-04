@@ -20,7 +20,10 @@ final class ProviderHelperTest extends TestCase {
 		$this->assertFalse( $provider_helper->should_use_max_output_tokens( 'openai', 'gpt-4o' ) );
 		$this->assertTrue( $provider_helper->should_use_max_completion_tokens( 'openai', 'gpt-5.2' ) );
 		$this->assertTrue( $provider_helper->should_use_temperature( 'openai', 'gpt-5.2' ) );
+		$this->assertTrue( $provider_helper->should_use_temperature( 'openai', 'gpt-5.3-codex' ) );
 		$this->assertFalse( $provider_helper->should_use_temperature( 'openai', 'gpt-5.3-chat-latest' ) );
+		$this->assertTrue( $provider_helper->should_use_temperature( 'openai', 'gpt-5.2-2025-12-11' ) );
+		$this->assertFalse( $provider_helper->should_use_temperature( 'openai', 'gpt-4o' ) );
 		$this->assertTrue( $provider_helper->should_use_top_p( 'openai', 'gpt-5.2' ) );
 		$this->assertFalse( $provider_helper->should_use_top_p( 'openai', 'gpt-5.3-chat-latest' ) );
 		$this->assertTrue( $provider_helper->should_use_frequency_penalty( 'openai', 'gpt-5.2' ) );

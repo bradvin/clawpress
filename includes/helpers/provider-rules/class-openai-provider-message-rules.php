@@ -16,11 +16,22 @@ defined( 'ABSPATH' ) || exit;
  */
 final class OpenAI_Provider_Message_Rules implements Provider_Message_Rules {
 	/**
-	 * Models that reject temperature and top_p sampling fields.
+	 * Models that support temperature sampling.
 	 *
 	 * @var array<int,string>
 	 */
-	private const NO_SAMPLING_MODELS = [
+	private const TEMPERATURE_SUPPORTED_MODELS = [
+		'gpt-5.3-codex',
+		'gpt-5.2',
+		'gpt-5.2-2025-12-11',
+	];
+
+	/**
+	 * Models that reject top_p sampling fields.
+	 *
+	 * @var array<int,string>
+	 */
+	private const TOP_P_UNSUPPORTED_MODELS = [
 		'gpt-5.3-chat-latest',
 	];
 
@@ -36,7 +47,7 @@ final class OpenAI_Provider_Message_Rules implements Provider_Message_Rules {
 	 */
 	public function should_use_temperature( string $model ): bool {
 		$normalized_model = strtolower( trim( $model ) );
-		return ! in_array( $normalized_model, self::NO_SAMPLING_MODELS, true );
+		return in_array( $normalized_model, self::TEMPERATURE_SUPPORTED_MODELS, true );
 	}
 
 	/**
@@ -59,7 +70,7 @@ final class OpenAI_Provider_Message_Rules implements Provider_Message_Rules {
 	 */
 	public function should_use_top_p( string $model ): bool {
 		$normalized_model = strtolower( trim( $model ) );
-		return ! in_array( $normalized_model, self::NO_SAMPLING_MODELS, true );
+		return ! in_array( $normalized_model, self::TOP_P_UNSUPPORTED_MODELS, true );
 	}
 
 	/**
