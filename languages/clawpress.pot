@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-03-04T20:46:18+00:00\n"
+"POT-Creation-Date: 2026-03-04T21:15:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -698,7 +698,7 @@ msgid "Connection test failed: empty provider response."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:395
-#: includes/commands/handlers/class-test-command-handler.php:205
+#: includes/commands/handlers/class-test-command-handler.php:207
 #: includes/helpers/class-agent-loop-helper.php:268
 #: includes/helpers/class-chat-helper.php:537
 #: includes/helpers/class-chat-helper.php:590
@@ -707,7 +707,7 @@ msgstr ""
 
 #. translators: %s: provider error message
 #: includes/commands/handlers/class-setup-command-handler.php:401
-#: includes/commands/handlers/class-test-command-handler.php:211
+#: includes/commands/handlers/class-test-command-handler.php:213
 #, php-format
 msgid "Connection test failed: %s"
 msgstr ""
@@ -775,12 +775,12 @@ msgid "Agent files created."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:671
-#: src/js/admin/components/views/SettingsView.js:539
+#: src/js/admin/components/views/SettingsView.js:847
 msgid "Provider"
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:672
-#: src/js/admin/components/views/SettingsView.js:556
+#: src/js/admin/components/views/SettingsView.js:864
 msgid "Model"
 msgstr ""
 
@@ -985,7 +985,7 @@ msgid "Show plugin, provider, memory, and permissions status."
 msgstr ""
 
 #: includes/commands/handlers/class-status-command-handler.php:82
-#: includes/commands/handlers/class-test-command-handler.php:96
+#: includes/commands/handlers/class-test-command-handler.php:97
 msgid "Invalid usage. No arguments expected."
 msgstr ""
 
@@ -1023,14 +1023,14 @@ msgstr ""
 
 #. translators: %s: provider ID or slug
 #: includes/commands/handlers/class-status-command-handler.php:106
-#: includes/commands/handlers/class-test-command-handler.php:181
+#: includes/commands/handlers/class-test-command-handler.php:182
 #, php-format
 msgid "- Provider: %s"
 msgstr ""
 
 #. translators: %s: model identifier
 #: includes/commands/handlers/class-status-command-handler.php:111
-#: includes/commands/handlers/class-test-command-handler.php:186
+#: includes/commands/handlers/class-test-command-handler.php:187
 #, php-format
 msgid "- Model: %s"
 msgstr ""
@@ -1053,36 +1053,48 @@ msgstr ""
 msgid "- Setup completed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:64
+#: includes/commands/handlers/class-test-command-handler.php:65
 msgid "Test the saved provider and model connection."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:114
+#: includes/commands/handlers/class-test-command-handler.php:115
 msgid "No provider is saved. Set one with `/settings provider <provider>`."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:125
+#: includes/commands/handlers/class-test-command-handler.php:126
 msgid "No model is saved. Set one with `/settings model <model>`."
 msgstr ""
 
 #. translators: %s: provider slug
-#: includes/commands/handlers/class-test-command-handler.php:138
+#: includes/commands/handlers/class-test-command-handler.php:139
 #, php-format
 msgid "Saved provider `%s` is not configured with valid credentials."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:165
+#: includes/commands/handlers/class-test-command-handler.php:166
 msgid "Connection test failed: empty response from provider."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:178
+#: includes/commands/handlers/class-test-command-handler.php:179
 msgid "Connection test succeeded."
 msgstr ""
 
 #. translators: %s: short provider reply
-#: includes/commands/handlers/class-test-command-handler.php:191
+#: includes/commands/handlers/class-test-command-handler.php:192
 #, php-format
 msgid "- Reply: %s"
+msgstr ""
+
+#: includes/commands/handlers/class-test-command-handler.php:342
+msgid "- Tool calls: Supported"
+msgstr ""
+
+#: includes/commands/handlers/class-test-command-handler.php:346
+msgid "- Tool calls: Not supported"
+msgstr ""
+
+#: includes/commands/handlers/class-test-command-handler.php:349
+msgid "- Tool calls: Unknown (model metadata unavailable)"
 msgstr ""
 
 #: includes/commands/handlers/class-tools-command-handler.php:60
@@ -1303,22 +1315,22 @@ msgid "Message is required."
 msgstr ""
 
 #: includes/rest/class-settings-controller.php:147
-#: src/js/admin/components/views/SettingsView.js:63
+#: src/js/admin/components/views/SettingsView.js:104
 msgid "OpenAI"
 msgstr ""
 
 #: includes/rest/class-settings-controller.php:151
-#: src/js/admin/components/views/SettingsView.js:67
+#: src/js/admin/components/views/SettingsView.js:108
 msgid "Anthropic"
 msgstr ""
 
 #: includes/rest/class-settings-controller.php:155
-#: src/js/admin/components/views/SettingsView.js:71
+#: src/js/admin/components/views/SettingsView.js:112
 msgid "Google"
 msgstr ""
 
 #: src/js/admin/components/App.js:24
-#: src/js/admin/components/views/SettingsView.js:690
+#: src/js/admin/components/views/SettingsView.js:999
 msgid "Settings"
 msgstr ""
 
@@ -1370,7 +1382,7 @@ msgid "Reset to Defaults"
 msgstr ""
 
 #: src/js/admin/components/views/AbilitiesView.js:274
-#: src/js/admin/components/views/SettingsView.js:763
+#: src/js/admin/components/views/SettingsView.js:1069
 msgid "Saving…"
 msgstr ""
 
@@ -1404,138 +1416,150 @@ msgstr ""
 msgid "Showing ClawPress Agent Files."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:337
+#: src/js/admin/components/views/SettingsView.js:493
 msgid "Select a provider first."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:347
-msgid "No models were discovered for this provider. Configure it in Connectors, then refresh this page."
+#: src/js/admin/components/views/SettingsView.js:504
+msgid "Loading models for this provider…"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:354
+#: src/js/admin/components/views/SettingsView.js:507
+msgid "No models were discovered for this provider. Configure it in Connectors, then refresh the model list."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:514
 msgid "Select a model to view context and cost details."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:369
+#: src/js/admin/components/views/SettingsView.js:534
 msgid "Context and cost are not available for this model in the curated catalog."
 msgstr ""
 
 #. translators: 1: model context window, 2: model cost information
-#: src/js/admin/components/views/SettingsView.js:377
+#: src/js/admin/components/views/SettingsView.js:542
 #, js-format
 msgid "Context window: %1$s | Cost: %2$s"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:378
-#: src/js/admin/components/views/SettingsView.js:379
+#: src/js/admin/components/views/SettingsView.js:543
+#: src/js/admin/components/views/SettingsView.js:544
 msgid "Unknown"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:439
+#: src/js/admin/components/views/SettingsView.js:602
 msgid "Unable to load settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:505
+#: src/js/admin/components/views/SettingsView.js:668
 msgid "Settings saved."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:508
+#: src/js/admin/components/views/SettingsView.js:671
 msgid "Unable to save settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:526
+#: src/js/admin/components/views/SettingsView.js:717
+msgid "Unable to refresh models for the selected provider."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:795
 msgid "Select a model"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:540
+#: src/js/admin/components/views/SettingsView.js:833
+msgid "Refresh models"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:848
 msgid "Choose which AI service ClawPress should use."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:547
+#: src/js/admin/components/views/SettingsView.js:855
 msgid "Select a provider"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:569
+#: src/js/admin/components/views/SettingsView.js:878
 msgid "Temperature"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:570
+#: src/js/admin/components/views/SettingsView.js:879
 msgid "Lower values make replies more focused and consistent. Higher values make replies more creative and varied."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:578
+#: src/js/admin/components/views/SettingsView.js:887
 msgid "Top P"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:579
+#: src/js/admin/components/views/SettingsView.js:888
 msgid "Lower values keep replies more predictable. Higher values allow more variety in wording and ideas."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:587
+#: src/js/admin/components/views/SettingsView.js:896
 msgid "Max Output Tokens"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:588
+#: src/js/admin/components/views/SettingsView.js:897
 msgid "Sets the maximum reply length. Higher values allow longer answers; lower values keep answers shorter."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:596
+#: src/js/admin/components/views/SettingsView.js:905
 msgid "Frequency Penalty"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:597
+#: src/js/admin/components/views/SettingsView.js:906
 msgid "Higher values reduce repeated words and phrases. Lower values allow more repetition."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:605
+#: src/js/admin/components/views/SettingsView.js:914
 msgid "Presence Penalty"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:606
+#: src/js/admin/components/views/SettingsView.js:915
 msgid "Higher values encourage fresh ideas. Lower values keep replies closer to what has already been said."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:614
+#: src/js/admin/components/views/SettingsView.js:923
 msgid "Request Timeout (seconds)"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:615
+#: src/js/admin/components/views/SettingsView.js:924
 msgid "How long ClawPress waits for a reply before stopping the request."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:623
+#: src/js/admin/components/views/SettingsView.js:932
 msgid "Agent User ID"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:624
+#: src/js/admin/components/views/SettingsView.js:933
 msgid "Use 0 if this is not configured yet."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:632
+#: src/js/admin/components/views/SettingsView.js:941
 msgid "Enable Memory"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:633
+#: src/js/admin/components/views/SettingsView.js:942
 msgid "When enabled, ClawPress can remember useful details from earlier chats."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:642
+#: src/js/admin/components/views/SettingsView.js:951
 msgid "Setup Completed"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:643
+#: src/js/admin/components/views/SettingsView.js:952
 msgid "Turn this on after you finish the initial setup."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:665
+#: src/js/admin/components/views/SettingsView.js:974
 msgid "LLM Reply Settings"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:666
+#: src/js/admin/components/views/SettingsView.js:975
 msgid "Not all settings are supported by every provider or model. Unsupported settings are skipped automatically."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:764
+#: src/js/admin/components/views/SettingsView.js:1070
 msgid "Save Settings"
 msgstr ""
 

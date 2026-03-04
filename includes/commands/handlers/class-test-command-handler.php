@@ -18,6 +18,7 @@ use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
+use WordPress\AiClient\Providers\Models\Enums\OptionEnum;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -191,6 +192,7 @@ final class Test_Command_Handler implements Command_Handler {
 							__( '- Reply: %s', 'clawpress' ),
 							sanitize_text_field( $reply )
 						),
+						$this->get_tool_call_support_line( $configured_provider, $saved_model ),
 					]
 				),
 				$this->get_command(),
@@ -325,6 +327,84 @@ final class Test_Command_Handler implements Command_Handler {
 
 		return false !== strpos( $error_message, 'no models found' )
 			&& false !== strpos( $error_message, $provider_token );
+	}
+
+	/**
+	 * Build output line describing tool-call support for the selected model.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	private function get_tool_call_support_line( string $provider, string $model ): string {
+		$supports_tool_calls = $this->detect_tool_call_support( $provider, $model );
+
+		if ( true === $supports_tool_calls ) {
+			return __( '- Tool calls: Supported', 'clawpress' );
+		}
+
+		if ( false === $supports_tool_calls ) {
+			return __( '- Tool calls: Not supported', 'clawpress' );
+		}
+
+		return __( '- Tool calls: Unknown (model metadata unavailable)', 'clawpress' );
+	}
+
+	/**
+	 * Detect whether a provider model supports function/tool calls.
+	 *
+	 * Returns null when metadata cannot be resolved safely.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	private function detect_tool_call_support( string $provider, string $model ): ?bool {
+		if ( '' === $provider || '' === $model ) {
+			return null;
+		}
+
+		try {
+			$selected_model = AiClient::defaultRegistry()->getProviderModel(
+				$provider,
+				$model,
+				ModelConfig::fromArray( [] )
+			);
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return null;
+		}
+
+		if ( ! is_object( $selected_model ) || ! method_exists( $selected_model, 'metadata' ) ) {
+			return null;
+		}
+
+		$metadata = $selected_model->metadata();
+		if ( ! is_object( $metadata ) || ! method_exists( $metadata, 'getSupportedOptions' ) ) {
+			return null;
+		}
+
+		$supported_options = $metadata->getSupportedOptions();
+		if ( ! is_array( $supported_options ) ) {
+			return null;
+		}
+
+		foreach ( $supported_options as $supported_option ) {
+			if ( ! is_object( $supported_option ) || ! method_exists( $supported_option, 'getName' ) ) {
+				continue;
+			}
+
+			$option_name = $supported_option->getName();
+			if ( ! $option_name instanceof OptionEnum || ! $option_name->isFunctionDeclarations() ) {
+				continue;
+			}
+
+			if ( method_exists( $supported_option, 'isSupportedValue' ) ) {
+				return (bool) $supported_option->isSupportedValue( true );
+			}
+
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
