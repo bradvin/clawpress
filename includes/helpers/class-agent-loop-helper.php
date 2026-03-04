@@ -457,22 +457,15 @@ final class Agent_Loop_Helper {
 				];
 			}
 
-			$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
-			if ( '' !== $system_prompt ) {
-				$builder = $builder->usingSystemInstruction( $system_prompt );
-			}
-
-			if ( '' !== $model ) {
-				$builder = $builder->usingModelPreference( [ $provider, $model ] );
-			}
-
-			$builder = $builder->usingRequestOptions( $this->build_request_options( $request_timeout ) );
-			$builder = $this->apply_generation_settings_to_prompt_builder( $builder, $generation_settings, $provider, $model );
-			if ( [] !== $tool_declarations ) {
-				$builder = $builder->usingFunctionDeclarations( ...$tool_declarations );
-			}
-
-			$result                = $builder->generateResult();
+			$result                = $this->generate_result_with_explicit_model_fallback(
+				$conversation,
+				$provider,
+				$model,
+				$system_prompt,
+				$request_timeout,
+				$generation_settings,
+				$tool_declarations
+			);
 			$assistant_message     = $result->toMessage();
 			$conversation[]        = $assistant_message;
 			$latest_assistant_text = $this->extract_text_from_message( $assistant_message );
@@ -1332,6 +1325,131 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
+	 * Generate a result and retry once with explicit model binding when provider metadata matching fails.
+	 *
+	 * @param array<int,Message>      $conversation Conversation messages.
+	 * @param string                  $provider Provider identifier.
+	 * @param string                  $model Model identifier.
+	 * @param string                  $system_prompt System prompt.
+	 * @param int                     $request_timeout Request timeout in seconds.
+	 * @param array<string,mixed>     $generation_settings Generation settings.
+	 * @param array<int,FunctionDeclaration> $tool_declarations Tool declarations.
+	 */
+	private function generate_result_with_explicit_model_fallback(
+		array $conversation,
+		string $provider,
+		string $model,
+		string $system_prompt,
+		int $request_timeout,
+		array $generation_settings,
+		array $tool_declarations
+	): GenerativeAiResult {
+		$builder = $this->build_prompt_builder_for_round(
+			$conversation,
+			$provider,
+			$model,
+			$system_prompt,
+			$request_timeout,
+			$generation_settings,
+			$tool_declarations,
+			false
+		);
+
+		try {
+			return $builder->generateResult();
+		} catch ( Throwable $throwable ) {
+			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+				throw $throwable;
+			}
+
+			$fallback_builder = $this->build_prompt_builder_for_round(
+				$conversation,
+				$provider,
+				$model,
+				$system_prompt,
+				$request_timeout,
+				$generation_settings,
+				$tool_declarations,
+				true
+			);
+
+			return $fallback_builder->generateResult();
+		}
+	}
+
+	/**
+	 * Build a configured prompt builder for the current round.
+	 *
+	 * @param array<int,Message>      $conversation Conversation messages.
+	 * @param string                  $provider Provider identifier.
+	 * @param string                  $model Model identifier.
+	 * @param string                  $system_prompt System prompt.
+	 * @param int                     $request_timeout Request timeout in seconds.
+	 * @param array<string,mixed>     $generation_settings Generation settings.
+	 * @param array<int,FunctionDeclaration> $tool_declarations Tool declarations.
+	 * @param bool                    $use_explicit_model Whether to bind the selected model explicitly.
+	 */
+	private function build_prompt_builder_for_round(
+		array $conversation,
+		string $provider,
+		string $model,
+		string $system_prompt,
+		int $request_timeout,
+		array $generation_settings,
+		array $tool_declarations,
+		bool $use_explicit_model
+	): PromptBuilder {
+		$builder = AiClient::prompt( $conversation )->usingProvider( $provider );
+		if ( '' !== $system_prompt ) {
+			$builder = $builder->usingSystemInstruction( $system_prompt );
+		}
+
+		if ( '' !== $model ) {
+			if ( $use_explicit_model ) {
+				$selected_model = AiClient::defaultRegistry()->getProviderModel(
+					$provider,
+					$model,
+					ModelConfig::fromArray( [] )
+				);
+				$builder        = $builder->usingModel( $selected_model );
+			} else {
+				$builder = $builder->usingModelPreference( [ $provider, $model ] );
+			}
+		}
+
+		$builder = $builder->usingRequestOptions( $this->build_request_options( $request_timeout ) );
+		$builder = $this->apply_generation_settings_to_prompt_builder( $builder, $generation_settings, $provider, $model );
+		if ( [] !== $tool_declarations ) {
+			$builder = $builder->usingFunctionDeclarations( ...$tool_declarations );
+		}
+
+		return $builder;
+	}
+
+	/**
+	 * Determine whether generation should retry with explicit model binding.
+	 *
+	 * @param Throwable $throwable Generation failure.
+	 * @param string    $provider Provider identifier.
+	 * @param string    $model Model identifier.
+	 */
+	private function should_retry_with_explicit_model( Throwable $throwable, string $provider, string $model ): bool {
+		if ( '' === $provider || '' === $model ) {
+			return false;
+		}
+
+		$error_message = strtolower( trim( sanitize_text_field( $throwable->getMessage() ) ) );
+		if ( '' === $error_message ) {
+			return false;
+		}
+
+		$provider_token = strtolower( sprintf( 'provider "%s"', $provider ) );
+
+		return false !== strpos( $error_message, 'no models found' )
+			&& false !== strpos( $error_message, $provider_token );
+	}
+
+	/**
 	 * Normalize generation settings payload.
 	 *
 	 * @param array<string,mixed> $generation_settings Raw generation settings.
@@ -1357,16 +1475,36 @@ final class Agent_Loop_Helper {
 	 */
 	private function apply_generation_settings_to_prompt_builder( PromptBuilder $builder, array $generation_settings, string $provider, string $model ): PromptBuilder {
 		$option_setters = [
-			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingTemperature( (float) $generation_settings['temperature'] ),
-			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingTopP( (float) $generation_settings['top_p'] ),
+			fn ( PromptBuilder $current ): PromptBuilder => $this->apply_temperature_to_prompt_builder(
+				$current,
+				(float) $generation_settings['temperature'],
+				$provider,
+				$model
+			),
+			fn ( PromptBuilder $current ): PromptBuilder => $this->apply_top_p_to_prompt_builder(
+				$current,
+				(float) $generation_settings['top_p'],
+				$provider,
+				$model
+			),
 			fn ( PromptBuilder $current ): PromptBuilder => $this->apply_max_output_tokens_to_prompt_builder(
 				$current,
 				(int) $generation_settings['max_output_tokens'],
 				$provider,
 				$model
 			),
-			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
-			static fn ( PromptBuilder $current ): PromptBuilder => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
+			fn ( PromptBuilder $current ): PromptBuilder => $this->apply_frequency_penalty_to_prompt_builder(
+				$current,
+				(float) $generation_settings['frequency_penalty'],
+				$provider,
+				$model
+			),
+			fn ( PromptBuilder $current ): PromptBuilder => $this->apply_presence_penalty_to_prompt_builder(
+				$current,
+				(float) $generation_settings['presence_penalty'],
+				$provider,
+				$model
+			),
 		];
 
 		foreach ( $option_setters as $setter ) {
@@ -1403,6 +1541,70 @@ final class Agent_Loop_Helper {
 		}
 
 		return $builder->usingMaxTokens( $max_output_tokens );
+	}
+
+	/**
+	 * Apply temperature when supported by the provider/model pair.
+	 *
+	 * @param PromptBuilder $builder Prompt builder.
+	 * @param float         $temperature Temperature value.
+	 * @param string        $provider Provider identifier.
+	 * @param string        $model Model identifier.
+	 */
+	private function apply_temperature_to_prompt_builder( PromptBuilder $builder, float $temperature, string $provider, string $model ): PromptBuilder {
+		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingTemperature( $temperature );
+	}
+
+	/**
+	 * Apply top-p sampling when supported by the provider/model pair.
+	 *
+	 * @param PromptBuilder $builder Prompt builder.
+	 * @param float         $top_p Top-p value.
+	 * @param string        $provider Provider identifier.
+	 * @param string        $model Model identifier.
+	 */
+	private function apply_top_p_to_prompt_builder( PromptBuilder $builder, float $top_p, string $provider, string $model ): PromptBuilder {
+		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingTopP( $top_p );
+	}
+
+	/**
+	 * Apply frequency penalty when supported by the provider/model pair.
+	 *
+	 * @param PromptBuilder $builder Prompt builder.
+	 * @param float         $frequency_penalty Frequency penalty value.
+	 * @param string        $provider Provider identifier.
+	 * @param string        $model Model identifier.
+	 */
+	private function apply_frequency_penalty_to_prompt_builder( PromptBuilder $builder, float $frequency_penalty, string $provider, string $model ): PromptBuilder {
+		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingFrequencyPenalty( $frequency_penalty );
+	}
+
+	/**
+	 * Apply presence penalty when supported by the provider/model pair.
+	 *
+	 * @param PromptBuilder $builder Prompt builder.
+	 * @param float         $presence_penalty Presence penalty value.
+	 * @param string        $provider Provider identifier.
+	 * @param string        $model Model identifier.
+	 */
+	private function apply_presence_penalty_to_prompt_builder( PromptBuilder $builder, float $presence_penalty, string $provider, string $model ): PromptBuilder {
+		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingPresencePenalty( $presence_penalty );
 	}
 
 	/**
