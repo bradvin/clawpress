@@ -38,7 +38,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	/**
 	 * Provider setup admin path.
 	 */
-	private const PROVIDER_SETUP_PATH = '/wp-admin/options-general.php?page=wp-ai-client';
+	private const PROVIDER_SETUP_PATH = '/wp-admin/options-general.php?page=connectors-wp-admin';
 
 	/**
 	 * ClawPress settings admin path.
@@ -719,11 +719,11 @@ final class Setup_Command_Handler implements Command_Handler {
 			case 'provider':
 				$providers = $this->provider_helper->get_configured_provider_ids();
 				if ( [] === $providers ) {
-					$data['message'] = __( 'No configured providers found. Open provider settings, add credentials, then refresh.', 'clawpress' );
+					$data['message'] = __( 'No configured providers found. Open Connectors, configure a provider, then refresh.', 'clawpress' );
 					$data['actions'] = [
 						[
 							'id'    => 'open-provider-settings',
-							'label' => __( 'Open Provider Settings', 'clawpress' ),
+							'label' => __( 'Open Connectors', 'clawpress' ),
 							'type'  => 'open_url',
 							'url'   => self::PROVIDER_SETUP_PATH,
 						],
@@ -749,7 +749,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				}
 				$data['actions'][] = [
 					'id'    => 'provider-settings',
-					'label' => __( 'Provider Settings', 'clawpress' ),
+					'label' => __( 'Open Connectors', 'clawpress' ),
 					'type'  => 'open_url',
 					'url'   => self::PROVIDER_SETUP_PATH,
 				];

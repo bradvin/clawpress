@@ -27,18 +27,15 @@ define( 'CLAWPRESS_URL', plugin_dir_url( __FILE__ ) );
 require_once CLAWPRESS_DIR . 'includes/functions.php';
 
 /*
- * Prefer Core's AI client classes when available to avoid class collisions with vendored copies.
- * We use Composer's loader in that case so we can remove AI namespace mappings from this plugin.
+ * WP AI Client 0.4+ provides a custom autoloader that conditionally avoids loading
+ * SDK classes from this plugin on WordPress 7.0+.
  */
-$core_ai_client_available = false;
-if ( class_exists( '\WordPress\AiClient\AiClient' ) ) {
-	try {
-		$core_ai_client_file      = ( new \ReflectionClass( '\WordPress\AiClient\AiClient' ) )->getFileName();
-		$core_ai_client_available = is_string( $core_ai_client_file ) && str_contains( $core_ai_client_file, '/wp-includes/php-ai-client/' );
-	} catch ( \ReflectionException $e ) {
-		$core_ai_client_available = false;
-	}
+if ( file_exists( CLAWPRESS_DIR . 'vendor/wordpress/wp-ai-client/autoload.php' ) ) {
+	require_once CLAWPRESS_DIR . 'vendor/wordpress/wp-ai-client/autoload.php';
 }
+
+$core_ai_client_available = function_exists( 'wp_get_wp_version' )
+	&& version_compare( wp_get_wp_version(), '7.0-alpha', '>=' );
 
 $composer_loader = null;
 if ( $core_ai_client_available ) {
