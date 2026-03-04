@@ -48,9 +48,42 @@ final class Plugin {
 		new Agent_Runner();
 
 		// Initialize AI client bridge when available. Core AI integrations can work without it.
-		if ( class_exists( '\WordPress\AI_Client\AI_Client' ) ) {
+		if ( $this->can_initialize_ai_client_bridge() ) {
 			add_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] );
 		}
+	}
+
+	/**
+	 * Determine whether the AI client bridge can be safely initialized.
+	 *
+	 * @return bool
+	 */
+	private function can_initialize_ai_client_bridge(): bool {
+		if ( ! class_exists( '\WordPress\AI_Client\AI_Client' ) ) {
+			return false;
+		}
+
+		$prompt_capability_callback = [ '\WordPress\AI_Client\Capabilities\Capabilities_Manager', 'grant_prompt_ai_to_administrators' ];
+		$list_capability_callback   = [ '\WordPress\AI_Client\Capabilities\Capabilities_Manager', 'grant_list_ai_providers_models_to_administrators' ];
+
+		if ( ! is_callable( $prompt_capability_callback ) || ! is_callable( $list_capability_callback ) ) {
+			return false;
+		}
+
+		/*
+		 * WordPress 7+ provides native AI client infrastructure, so the bridge can initialize
+		 * without relying on plugin-shipped SDK wiring methods.
+		 */
+		if ( function_exists( 'wp_has_ai_client' ) && wp_has_ai_client() ) {
+			return true;
+		}
+
+		if ( ! class_exists( '\WordPress\AiClient\AiClient' ) ) {
+			return false;
+		}
+
+		return method_exists( '\WordPress\AiClient\AiClient', 'setEventDispatcher' )
+			&& method_exists( '\WordPress\AiClient\AiClient', 'setCache' );
 	}
 	/**
 	 * Get singleton instance.

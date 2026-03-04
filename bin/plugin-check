@@ -9,6 +9,9 @@ cd "$REPO_ROOT"
 DIST_SLUG="clawpress-dist-check"
 EXPECTED_SLUG="clawpress"
 DIST_ZIP_PATH="/var/www/html/wp-content/plugins/clawpress/dist/clawpress.zip"
+PLUGIN_CHECK_VERSION="${PLUGIN_CHECK_VERSION:-1.8.0}"
+PLUGIN_CHECK_ENGINE_ZIP_URL="https://downloads.wordpress.org/plugin/plugin-check.${PLUGIN_CHECK_VERSION}.zip"
+PLUGIN_CHECK_BOOTSTRAP_PATH="/var/www/html/wp-content/plugins/clawpress/bin/plugin-check-bootstrap.php"
 
 echo "Building plugin zip for dist plugin check..."
 npm run plugin-zip
@@ -16,11 +19,11 @@ npm run plugin-zip
 echo "Starting wp-env for dist plugin check..."
 npx wp-env start
 
-echo "Installing/updating Plugin Check plugin..."
-npx wp-env run tests-cli wp plugin install plugin-check --activate --force
-
 echo "Installing dist zip into temporary plugin slug..."
 npx wp-env run tests-cli -- bash -lc "set -euo pipefail; rm -rf /tmp/plugin-check-dist /var/www/html/wp-content/plugins/${DIST_SLUG}; mkdir -p /tmp/plugin-check-dist; unzip -q ${DIST_ZIP_PATH} -d /tmp/plugin-check-dist; DIST_SOURCE=\$(find /tmp/plugin-check-dist -mindepth 1 -maxdepth 1 -type d | head -n 1); if [[ -z \"\${DIST_SOURCE}\" ]]; then echo 'Unable to locate extracted plugin directory from dist zip.' >&2; exit 1; fi; cp -R \"\${DIST_SOURCE}\" /var/www/html/wp-content/plugins/${DIST_SLUG};"
 
-echo "Running Plugin Check against dist plugin contents..."
-npx wp-env run tests-cli wp plugin check "${DIST_SLUG}" --slug="${EXPECTED_SLUG}" --ignore-codes=trademarked_term
+echo "Ensuring site plugin-check plugin is not installed..."
+npx wp-env run tests-cli -- bash -lc "set -euo pipefail; if wp plugin is-installed plugin-check >/dev/null 2>&1; then wp plugin deactivate plugin-check --quiet || true; wp plugin delete plugin-check --quiet; fi"
+
+echo "Running standalone Plugin Check engine against dist plugin contents..."
+npx wp-env run tests-cli -- bash -lc "set -euo pipefail; ENGINE_ROOT=/tmp/plugin-check-engine; ENGINE_ZIP=/tmp/plugin-check-engine.zip; rm -rf \"\${ENGINE_ROOT}\" \"\${ENGINE_ZIP}\"; mkdir -p \"\${ENGINE_ROOT}\"; if command -v curl >/dev/null 2>&1; then curl -fsSL \"${PLUGIN_CHECK_ENGINE_ZIP_URL}\" -o \"\${ENGINE_ZIP}\"; else wget -q \"${PLUGIN_CHECK_ENGINE_ZIP_URL}\" -O \"\${ENGINE_ZIP}\"; fi; unzip -q \"\${ENGINE_ZIP}\" -d \"\${ENGINE_ROOT}\"; ENGINE_DIR=\"\${ENGINE_ROOT}/plugin-check\"; if [[ ! -f \"\${ENGINE_DIR}/vendor/autoload.php\" ]]; then echo 'Standalone plugin-check engine autoload.php missing after extraction.' >&2; exit 1; fi; if [[ ! -f \"${PLUGIN_CHECK_BOOTSTRAP_PATH}\" ]]; then echo 'Standalone plugin-check bootstrap file is missing in plugin repo.' >&2; exit 1; fi; WP_PLUGIN_CHECK_ENGINE_DIR=\"\${ENGINE_DIR}\" wp --path=/var/www/html --require=\"${PLUGIN_CHECK_BOOTSTRAP_PATH}\" plugin check \"${DIST_SLUG}\" --slug=\"${EXPECTED_SLUG}\" --ignore-codes=trademarked_term"
