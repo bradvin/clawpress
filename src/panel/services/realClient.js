@@ -1,321 +1,907 @@
 import { __, sprintf } from '@wordpress/i18n';
 
-const requestJson = async ({ url, method = 'GET', nonce, body, signal }) => {
-  const res = await fetch(url, {
-    method,
-    credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-WP-Nonce': nonce,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal,
-  });
+const RUN_POLL_INTERVAL_MS = 1000;
+const RUN_POLL_MAX_SECONDS = 180;
+const RUN_PROGRESS_MESSAGE_STEP_SECONDS = 8;
+const RUN_PROGRESS_MESSAGES = [
+	__( 'I am still working on this', 'clawpress' ),
+	__( 'Yes, still working on it.', 'clawpress' ),
+	__( 'Ok, this is taking long now. Still on it.', 'clawpress' ),
+	__(
+		'Plot twist: still working on it. My keyboard is sweating.',
+		'clawpress'
+	),
+	__(
+		'At this point even my coffee is worried, but I am still on it.',
+		'clawpress'
+	),
+];
+const TERMINAL_RUN_STATUSES = new Set( [
+	'done',
+	'success',
+	'error',
+	'timeout',
+	'requires_confirmation',
+	'failed',
+	'cancelled',
+	'canceled',
+] );
 
-  const text = await res.text();
-  let payload = {};
+const requestJson = async ( { url, method = 'GET', nonce, body, signal } ) => {
+	const res = await fetch( url, {
+		method,
+		credentials: 'same-origin',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-WP-Nonce': nonce,
+		},
+		body: body ? JSON.stringify( body ) : undefined,
+		signal,
+	} );
 
-  if (text) {
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = { message: text };
-    }
-  }
+	const text = await res.text();
+	let payload = {};
 
-  if (!res.ok) {
-    const message =
-      payload?.message ||
-      payload?.error ||
-      sprintf(
-        /* translators: %d: HTTP status code */
-        __('Request failed (%d)', 'clawpress'),
-        res.status
-      );
-    throw new Error(message);
-  }
+	if ( text ) {
+		try {
+			payload = JSON.parse( text );
+		} catch {
+			payload = { message: text };
+		}
+	}
 
-  return payload;
+	if ( ! res.ok ) {
+		const message =
+			payload?.message ||
+			payload?.error ||
+			sprintf(
+				/* translators: %d: HTTP status code */
+				__( 'Request failed (%d)', 'clawpress' ),
+				res.status
+			);
+		throw new Error( message );
+	}
+
+	return payload;
 };
 
-const createRealClient = ({ restBase, nonce, onEvent, onDone, onError }) => {
-  const sendMessage = (message, signal) =>
-    requestJson({
-      url: `${restBase}/chat/message`,
-      method: 'POST',
-      nonce,
-      body: { message },
-      signal,
-    });
+const isObjectRecord = ( value ) =>
+	Boolean( value ) && typeof value === 'object' && ! Array.isArray( value );
 
-  const getHistory = () =>
-    requestJson({
-      url: `${restBase}/chat/history`,
-      method: 'GET',
-      nonce,
-    });
+const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
+	const sendMessage = ( message, signal ) =>
+		requestJson( {
+			url: `${ restBase }/chat/message`,
+			method: 'POST',
+			nonce,
+			body: { message },
+			signal,
+		} );
 
-  const getStatus = () =>
-    requestJson({
-      url: `${restBase}/status`,
-      method: 'GET',
-      nonce,
-    });
+	const getRunStatus = ( runId, signal ) =>
+		requestJson( {
+			url: `${ restBase }/agent/runs/${ runId }`,
+			method: 'GET',
+			nonce,
+			signal,
+		} );
 
-  const getPanelState = () =>
-    requestJson({
-      url: `${restBase}/panel/state`,
-      method: 'GET',
-      nonce,
-    });
+	const getRunEvents = ( runId, after, signal ) =>
+		requestJson( {
+			url: `${ restBase }/agent/runs/${ runId }/events?after=${ after }&limit=100`,
+			method: 'GET',
+			nonce,
+			signal,
+		} );
 
-  const setPanelState = (state) =>
-    requestJson({
-      url: `${restBase}/panel/state`,
-      method: 'POST',
-      nonce,
-      body: state,
-    });
+	const getHistory = () =>
+		requestJson( {
+			url: `${ restBase }/chat/history`,
+			method: 'GET',
+			nonce,
+		} );
 
-  const normalizeCard = (rawCard) => {
-    if (!rawCard || typeof rawCard !== 'object') {
-      return null;
-    }
+	const getStatus = () =>
+		requestJson( {
+			url: `${ restBase }/status`,
+			method: 'GET',
+			nonce,
+		} );
 
-    const type = typeof rawCard.type === 'string' ? rawCard.type.trim() : '';
-    if (!type) {
-      return null;
-    }
+	const getPanelState = () =>
+		requestJson( {
+			url: `${ restBase }/panel/state`,
+			method: 'GET',
+			nonce,
+		} );
 
-    const data =
-      rawCard.data && typeof rawCard.data === 'object' && !Array.isArray(rawCard.data)
-        ? rawCard.data
-        : {};
+	const setPanelState = ( state ) =>
+		requestJson( {
+			url: `${ restBase }/panel/state`,
+			method: 'POST',
+			nonce,
+			body: state,
+		} );
 
-    return { type, data };
-  };
+	const waitForNextPoll = ( signal ) =>
+		new Promise( ( resolve, reject ) => {
+			const timerId = setTimeout( () => {
+				signal?.removeEventListener( 'abort', onAbort );
+				resolve();
+			}, RUN_POLL_INTERVAL_MS );
 
-  const normalizeContextUsage = (rawContext) => {
-    if (!rawContext || typeof rawContext !== 'object') {
-      return null;
-    }
+			const onAbort = () => {
+				clearTimeout( timerId );
+				signal?.removeEventListener( 'abort', onAbort );
+				const abortError = new Error( 'Aborted' );
+				abortError.name = 'AbortError';
+				reject( abortError );
+			};
 
-    const toPositiveNumber = (value) => {
-      const numeric = Number(value);
-      if (!Number.isFinite(numeric) || numeric < 0) {
-        return null;
-      }
-      return Math.round(numeric);
-    };
+			signal?.addEventListener( 'abort', onAbort, { once: true } );
+		} );
 
-    const toNullablePercent = (value) => {
-      if (value === null || value === undefined) {
-        return null;
-      }
-      const numeric = Number(value);
-      if (!Number.isFinite(numeric)) {
-        return null;
-      }
-      return Math.max(0, Math.min(100, Math.round(numeric)));
-    };
+	const getRunProgressMessage = ( elapsedSeconds ) => {
+		const normalizedElapsedSeconds = Number.isFinite(
+			Number( elapsedSeconds )
+		)
+			? Math.max( 0, Number( elapsedSeconds ) )
+			: 0;
+		const index = Math.min(
+			Math.floor(
+				normalizedElapsedSeconds / RUN_PROGRESS_MESSAGE_STEP_SECONDS
+			),
+			RUN_PROGRESS_MESSAGES.length - 1
+		);
+		return RUN_PROGRESS_MESSAGES[ index ] || RUN_PROGRESS_MESSAGES[ 0 ];
+	};
 
-    const promptTokens = toPositiveNumber(rawContext.prompt_tokens) ?? 0;
-    const completionTokens = toPositiveNumber(rawContext.completion_tokens) ?? 0;
-    const totalTokens = toPositiveNumber(rawContext.total_tokens) ?? 0;
-    const usedTokens =
-      toPositiveNumber(rawContext.used_tokens) ??
-      (promptTokens > 0 ? promptTokens : totalTokens);
-    const contextWindowTokens =
-      toPositiveNumber(rawContext.context_window_tokens) ?? null;
-    const percentUsed = toNullablePercent(rawContext.percent_used);
-    const percentLeft = toNullablePercent(rawContext.percent_left);
-    const windowIsEstimated =
-      typeof rawContext.window_is_estimated === 'boolean'
-        ? rawContext.window_is_estimated
-        : null;
+	const normalizeCard = ( rawCard ) => {
+		if ( ! rawCard || typeof rawCard !== 'object' ) {
+			return null;
+		}
 
-    if (
-      promptTokens === 0 &&
-      completionTokens === 0 &&
-      totalTokens === 0 &&
-      usedTokens === 0 &&
-      contextWindowTokens === null
-    ) {
-      return null;
-    }
+		const type =
+			typeof rawCard.type === 'string' ? rawCard.type.trim() : '';
+		if ( ! type ) {
+			return null;
+		}
 
-    return {
-      promptTokens,
-      completionTokens,
-      totalTokens,
-      usedTokens,
-      contextWindowTokens,
-      percentUsed,
-      percentLeft,
-      windowIsEstimated,
-    };
-  };
+		const data =
+			rawCard.data &&
+			typeof rawCard.data === 'object' &&
+			! Array.isArray( rawCard.data )
+				? rawCard.data
+				: {};
 
-  const normalizeToolCall = (rawCall) => {
-    if (!rawCall || typeof rawCall !== 'object') {
-      return null;
-    }
+		return { type, data };
+	};
 
-    const normalizeStatus = (value) => {
-      const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
-      if (
-        normalized === 'success' ||
-        normalized === 'error' ||
-        normalized === 'requires_confirmation'
-      ) {
-        return normalized;
-      }
-      return 'success';
-    };
+	const normalizeContextUsage = ( rawContext ) => {
+		if ( ! rawContext || typeof rawContext !== 'object' ) {
+			return null;
+		}
 
-    const name = typeof rawCall.name === 'string' ? rawCall.name.trim() : '';
-    if (!name) {
-      return null;
-    }
+		const toPositiveNumber = ( value ) => {
+			const numeric = Number( value );
+			if ( ! Number.isFinite( numeric ) || numeric < 0 ) {
+				return null;
+			}
+			return Math.round( numeric );
+		};
 
-    const ability = typeof rawCall.ability === 'string' ? rawCall.ability.trim() : '';
-    const args =
-      rawCall.args && typeof rawCall.args === 'object' && !Array.isArray(rawCall.args)
-        ? rawCall.args
-        : {};
-    const status = normalizeStatus(rawCall.status);
-    const message =
-      typeof rawCall.message === 'string' && rawCall.message.trim()
-        ? rawCall.message.trim()
-        : '';
-    const round = Number.isFinite(Number(rawCall.round))
-      ? Math.max(1, Math.round(Number(rawCall.round)))
-      : 1;
-    const sequence = Number.isFinite(Number(rawCall.sequence))
-      ? Math.max(1, Math.round(Number(rawCall.sequence)))
-      : 1;
-    const requiresConfirmation =
-      typeof rawCall.requires_confirmation === 'boolean'
-        ? rawCall.requires_confirmation
-        : status === 'requires_confirmation';
+		const toNullablePercent = ( value ) => {
+			if ( value === null || value === undefined ) {
+				return null;
+			}
+			const numeric = Number( value );
+			if ( ! Number.isFinite( numeric ) ) {
+				return null;
+			}
+			return Math.max( 0, Math.min( 100, Math.round( numeric ) ) );
+		};
 
-    return {
-      name,
-      ability: ability || null,
-      args,
-      status,
-      message: message || null,
-      round,
-      sequence,
-      requiresConfirmation,
-    };
-  };
+		const promptTokens = toPositiveNumber( rawContext.prompt_tokens ) ?? 0;
+		const completionTokens =
+			toPositiveNumber( rawContext.completion_tokens ) ?? 0;
+		const totalTokens = toPositiveNumber( rawContext.total_tokens ) ?? 0;
+		const usedTokens =
+			toPositiveNumber( rawContext.used_tokens ) ??
+			( promptTokens > 0 ? promptTokens : totalTokens );
+		const contextWindowTokens =
+			toPositiveNumber( rawContext.context_window_tokens ) ?? null;
 
-  // Keep a stream-compatible interface for the existing panel flow.
-  const stream = (prompt) => {
-    const controller = new AbortController();
+		if (
+			promptTokens === 0 &&
+			completionTokens === 0 &&
+			totalTokens === 0 &&
+			usedTokens === 0 &&
+			contextWindowTokens === null
+		) {
+			return null;
+		}
 
-    (async () => {
-      try {
-        const response = await sendMessage(prompt, controller.signal);
-        const clearHistory =
-          response?.meta?.command?.effects &&
-          response.meta.command.effects.clear_history === true;
+		const percentUsed = toNullablePercent( rawContext.percent_used );
+		const percentLeft = toNullablePercent( rawContext.percent_left );
+		const windowIsEstimated =
+			typeof rawContext.window_is_estimated === 'boolean'
+				? rawContext.window_is_estimated
+				: null;
 
-        if (clearHistory) {
-          onEvent('history_reset', {});
-        }
+		return {
+			promptTokens,
+			completionTokens,
+			totalTokens,
+			usedTokens,
+			contextWindowTokens,
+			percentUsed,
+			percentLeft,
+			windowIsEstimated,
+		};
+	};
 
-        if (Array.isArray(response?.meta?.suggestions)) {
-          onEvent('suggestions', { items: response.meta.suggestions });
-        }
+	const normalizeToolCall = ( rawCall ) => {
+		if ( ! rawCall || typeof rawCall !== 'object' ) {
+			return null;
+		}
 
-        const contextUsage = normalizeContextUsage(response?.meta?.context);
-        if (contextUsage) {
-          onEvent('context_usage', { context: contextUsage });
-        }
+		const normalizeStatus = ( value ) => {
+			const normalized =
+				typeof value === 'string' ? value.trim().toLowerCase() : '';
+			if (
+				normalized === 'success' ||
+				normalized === 'error' ||
+				normalized === 'requires_confirmation'
+			) {
+				return normalized;
+			}
+			return 'success';
+		};
 
-        const toolCalls = Array.isArray(response?.meta?.tool_calls)
-          ? response.meta.tool_calls
-              .map((rawCall) => normalizeToolCall(rawCall))
-              .filter(Boolean)
-          : [];
+		const nameCandidates = [
+			rawCall.name,
+			rawCall.tool_name,
+			rawCall.ability_name,
+		];
+		const name = nameCandidates
+			.map( ( value ) =>
+				typeof value === 'string' ? value.trim() : ''
+			)
+			.find( ( value ) => value.length > 0 );
+		if ( ! name ) {
+			return null;
+		}
 
-        toolCalls.forEach((call, index) => {
-          onEvent('tool_call', {
-            call,
-            index: index + 1,
-            total: toolCalls.length,
-          });
-        });
+		let ability = '';
+		if ( typeof rawCall.ability === 'string' ) {
+			ability = rawCall.ability.trim();
+		} else if ( typeof rawCall.ability_name === 'string' ) {
+			ability = rawCall.ability_name.trim();
+		}
+		const args =
+			rawCall.args &&
+			typeof rawCall.args === 'object' &&
+			! Array.isArray( rawCall.args )
+				? rawCall.args
+				: {};
+		const status = normalizeStatus( rawCall.status );
+		const message =
+			typeof rawCall.message === 'string' && rawCall.message.trim()
+				? rawCall.message.trim()
+				: '';
+		const round = Number.isFinite( Number( rawCall.round ) )
+			? Math.max( 1, Math.round( Number( rawCall.round ) ) )
+			: 1;
+		const sequence = Number.isFinite( Number( rawCall.sequence ) )
+			? Math.max( 1, Math.round( Number( rawCall.sequence ) ) )
+			: 1;
+		const requiresConfirmation =
+			typeof rawCall.requires_confirmation === 'boolean'
+				? rawCall.requires_confirmation
+				: status === 'requires_confirmation';
 
-        const responseError =
-          response?.meta?.error && typeof response.meta.error === 'object'
-            ? response.meta.error
-            : null;
-        const responseCard =
-          response?.meta?.card && typeof response.meta.card === 'object'
-            ? normalizeCard(response.meta.card)
-            : null;
+		return {
+			name,
+			ability: ability || null,
+			args,
+			status,
+			message: message || null,
+			round,
+			sequence,
+			requiresConfirmation,
+		};
+	};
 
-        if (responseError) {
-          const errorMessage =
-            typeof responseError.message === 'string' && responseError.message.trim()
-              ? responseError.message.trim()
-              : __('Chat request failed.', 'clawpress');
-          onEvent('error', {
-            error: errorMessage,
-            type:
-              typeof responseError.type === 'string' && responseError.type.trim()
-                ? responseError.type.trim()
-                : 'provider',
-            card: responseCard,
-          });
-          onDone?.({ aborted: false });
-          return;
-        }
+	const normalizeRunStatus = ( value ) =>
+		typeof value === 'string' ? value.trim().toLowerCase() : '';
 
-        const reply =
-          typeof response?.reply === 'string' ? response.reply.trim() : '';
+	const buildToolCallDedupKey = ( call ) => {
+		if ( ! call || typeof call !== 'object' ) {
+			return '';
+		}
 
-        const isCommandResponse = Boolean(response?.meta?.command?.name);
-        const card = normalizeCard(response?.meta?.card);
+		const name = typeof call.name === 'string' ? call.name.trim() : '';
+		if ( ! name ) {
+			return '';
+		}
 
-        if (card) {
-          onEvent('response_card', {
-            card,
-            text: reply,
-            role: isCommandResponse ? 'system' : 'assistant',
-          });
-        } else if (reply) {
-          onEvent('response_message', {
-            text: reply,
-            role: isCommandResponse ? 'system' : 'assistant',
-          });
-        }
+		const status =
+			typeof call.status === 'string'
+				? call.status.trim().toLowerCase()
+				: '';
+		const message =
+			typeof call.message === 'string' ? call.message.trim() : '';
+		const round = Number.isFinite( Number( call.round ) )
+			? Math.max( 1, Math.round( Number( call.round ) ) )
+			: 1;
+		const sequence = Number.isFinite( Number( call.sequence ) )
+			? Math.max( 1, Math.round( Number( call.sequence ) ) )
+			: 1;
 
-        onDone?.({ aborted: false });
-      } catch (err) {
-        if (err?.name === 'AbortError') {
-          onDone?.({ aborted: true });
-          return;
-        }
-        onError?.({
-          error: err?.message || __('Chat request failed.', 'clawpress'),
-          type: 'request',
-        });
-        onDone?.({ aborted: false });
-      }
-    })();
+		return `${ name }|${ status }|${ round }|${ sequence }|${ message }`;
+	};
 
-    return { stop: () => controller.abort() };
-  };
+	const emitToolCallIfNew = ( call, index, total, seenToolCallKeys ) => {
+		const dedupKey = buildToolCallDedupKey( call );
+		if ( dedupKey && seenToolCallKeys instanceof Set ) {
+			if ( seenToolCallKeys.has( dedupKey ) ) {
+				return;
+			}
+			seenToolCallKeys.add( dedupKey );
+		}
 
-  const runTool = async () => {
-    throw new Error(__('Tool execution is not available in chat mode.', 'clawpress'));
-  };
+		onEvent( 'tool_call', {
+			call,
+			index,
+			total,
+		} );
+	};
 
-  return { stream, runTool, getHistory, getStatus, getPanelState, setPanelState };
+	const emitToolCallEvents = ( events, seenToolCallKeys ) => {
+		if ( ! Array.isArray( events ) || events.length === 0 ) {
+			return;
+		}
+
+		const canonicalToolEvents = events.filter(
+			( event ) =>
+				isObjectRecord( event ) &&
+				typeof event.event_type === 'string' &&
+				event.event_type === 'agent.tool_call'
+		);
+		if ( canonicalToolEvents.length > 0 ) {
+			canonicalToolEvents.forEach( ( event, index ) => {
+				const payload = isObjectRecord( event.payload )
+					? event.payload
+					: {};
+				const status = normalizeRunStatus( payload.status );
+
+				let toolName = 'tool_call';
+				if (
+					typeof payload.tool_name === 'string' &&
+					payload.tool_name.trim()
+				) {
+					toolName = payload.tool_name.trim();
+				} else if (
+					typeof payload.ability_name === 'string' &&
+					payload.ability_name.trim()
+				) {
+					toolName = payload.ability_name.trim();
+				}
+
+				let normalizedStatus = 'success';
+				if (
+					status === 'error' ||
+					status === 'requires_confirmation'
+				) {
+					normalizedStatus = status;
+				}
+
+				const detailMessage =
+					typeof payload.message === 'string' &&
+					payload.message.trim()
+						? payload.message.trim()
+						: '';
+				const call = normalizeToolCall( {
+					name: toolName,
+					tool_name: payload.tool_name,
+					ability_name: payload.ability_name,
+					args: {},
+					status: normalizedStatus,
+					message: detailMessage || null,
+					round: Number.isFinite( Number( payload.round ) )
+						? Math.max( 1, Math.round( Number( payload.round ) ) )
+						: 1,
+					sequence: Number.isFinite( Number( payload.sequence ) )
+						? Math.max(
+								1,
+								Math.round( Number( payload.sequence ) )
+						  )
+						: index + 1,
+					requires_confirmation: status === 'requires_confirmation',
+				} );
+				if ( ! call ) {
+					return;
+				}
+
+				emitToolCallIfNew(
+					call,
+					index + 1,
+					canonicalToolEvents.length,
+					seenToolCallKeys
+				);
+			} );
+			return;
+		}
+
+		// Fallback for older backends that only emit `tool_call` events.
+		const toolEvents = events.filter(
+			( event ) =>
+				isObjectRecord( event ) &&
+				typeof event.event_type === 'string' &&
+				event.event_type === 'tool_call'
+		);
+		if ( toolEvents.length === 0 ) {
+			return;
+		}
+
+		toolEvents.forEach( ( event, index ) => {
+			const payload = isObjectRecord( event.payload )
+				? event.payload
+				: {};
+			const status = normalizeRunStatus( payload.status );
+			const result = isObjectRecord( payload.result )
+				? payload.result
+				: {};
+			const error = isObjectRecord( payload.error ) ? payload.error : {};
+			let detailMessage = '';
+			if ( typeof error.message === 'string' && error.message.trim() ) {
+				detailMessage = error.message.trim();
+			} else if (
+				typeof result.message === 'string' &&
+				result.message.trim()
+			) {
+				detailMessage = result.message.trim();
+			}
+
+			let toolName = 'tool_call';
+			if (
+				typeof payload.tool_name === 'string' &&
+				payload.tool_name.trim()
+			) {
+				toolName = payload.tool_name.trim();
+			} else if (
+				typeof payload.ability_name === 'string' &&
+				payload.ability_name.trim()
+			) {
+				toolName = payload.ability_name.trim();
+			}
+
+			let normalizedStatus = 'success';
+			if ( status === 'error' || status === 'requires_confirmation' ) {
+				normalizedStatus = status;
+			}
+
+			const call = normalizeToolCall( {
+				name: toolName,
+				tool_name: payload.tool_name,
+				ability_name: payload.ability_name,
+				args: {},
+				status: normalizedStatus,
+				message: detailMessage || null,
+				round: Number.isFinite( Number( payload.round ) )
+					? Math.max( 1, Math.round( Number( payload.round ) ) )
+					: 1,
+				sequence: Number.isFinite( Number( payload.sequence ) )
+					? Math.max( 1, Math.round( Number( payload.sequence ) ) )
+					: index + 1,
+				requires_confirmation: status === 'requires_confirmation',
+			} );
+			if ( ! call ) {
+				return;
+			}
+
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolEvents.length,
+				seenToolCallKeys
+			);
+		} );
+	};
+
+	const emitRuntimeInProgressSignals = ( runPayload, seenToolCallKeys ) => {
+		const runMeta = isObjectRecord( runPayload?.meta )
+			? runPayload.meta
+			: {};
+		let runtimeResult = null;
+		if ( isObjectRecord( runMeta.last_result ) ) {
+			runtimeResult = runMeta.last_result;
+		} else if ( isObjectRecord( runMeta.result ) ) {
+			runtimeResult = runMeta.result;
+		}
+		if ( ! runtimeResult ) {
+			return;
+		}
+
+		const contextUsage = normalizeContextUsage( runtimeResult.context );
+		if ( contextUsage ) {
+			onEvent( 'context_usage', { context: contextUsage } );
+		}
+
+		const toolCalls = Array.isArray( runtimeResult.tool_calls )
+			? runtimeResult.tool_calls
+					.map( ( rawCall ) => normalizeToolCall( rawCall ) )
+					.filter( Boolean )
+			: [];
+		toolCalls.forEach( ( call, index ) => {
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolCalls.length,
+				seenToolCallKeys
+			);
+		} );
+	};
+
+	const emitRuntimeResult = (
+		runtimeResult,
+		initialReply,
+		seenToolCallKeys
+	) => {
+		if ( ! isObjectRecord( runtimeResult ) ) {
+			return false;
+		}
+
+		const contextUsage = normalizeContextUsage( runtimeResult.context );
+		if ( contextUsage ) {
+			onEvent( 'context_usage', { context: contextUsage } );
+		}
+
+		const toolCalls = Array.isArray( runtimeResult.tool_calls )
+			? runtimeResult.tool_calls
+					.map( ( rawCall ) => normalizeToolCall( rawCall ) )
+					.filter( Boolean )
+			: [];
+		toolCalls.forEach( ( call, index ) => {
+			emitToolCallIfNew(
+				call,
+				index + 1,
+				toolCalls.length,
+				seenToolCallKeys
+			);
+		} );
+
+		if ( isObjectRecord( runtimeResult.error ) ) {
+			const runtimeError = runtimeResult.error;
+			const errorMessage =
+				typeof runtimeError.message === 'string' &&
+				runtimeError.message.trim()
+					? runtimeError.message.trim()
+					: __( 'Run failed.', 'clawpress' );
+			onEvent( 'error', {
+				error: errorMessage,
+				type:
+					typeof runtimeError.type === 'string' &&
+					runtimeError.type.trim()
+						? runtimeError.type.trim()
+						: 'provider',
+				card: normalizeCard( runtimeResult.card ),
+			} );
+			return true;
+		}
+
+		const reply =
+			typeof runtimeResult.assistant_text === 'string'
+				? runtimeResult.assistant_text.trim()
+				: '';
+		const card = normalizeCard( runtimeResult.card );
+		if ( card ) {
+			onEvent( 'response_card', {
+				card,
+				text: reply,
+				role: 'assistant',
+			} );
+			return true;
+		}
+
+		if ( reply && reply !== initialReply ) {
+			onEvent( 'response_message', {
+				text: reply,
+				role: 'assistant',
+			} );
+			return true;
+		}
+
+		return false;
+	};
+
+	const emitRunTerminalOutcome = (
+		runPayload,
+		initialReply,
+		seenToolCallKeys
+	) => {
+		const runMeta = isObjectRecord( runPayload?.meta )
+			? runPayload.meta
+			: {};
+		let runtimeResult = null;
+		if ( isObjectRecord( runMeta.result ) ) {
+			runtimeResult = runMeta.result;
+		} else if ( isObjectRecord( runMeta.last_result ) ) {
+			runtimeResult = runMeta.last_result;
+		}
+
+		if (
+			emitRuntimeResult( runtimeResult, initialReply, seenToolCallKeys )
+		) {
+			return;
+		}
+
+		const runStatus = normalizeRunStatus( runPayload?.status );
+
+		if ( runStatus === 'requires_confirmation' ) {
+			onEvent( 'response_message', {
+				text: __(
+					'Action requires confirmation before continuing.',
+					'clawpress'
+				),
+				role: 'assistant',
+			} );
+			return;
+		}
+
+		if ( runStatus === 'done' || runStatus === 'success' ) {
+			onEvent( 'response_message', {
+				text: __(
+					'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
+					'clawpress'
+				),
+				role: 'assistant',
+			} );
+			return;
+		}
+
+		const errorMessage =
+			typeof runPayload?.error_message === 'string' &&
+			runPayload.error_message.trim()
+				? runPayload.error_message.trim()
+				: __( 'Run ended with an error.', 'clawpress' );
+
+		onEvent( 'error', {
+			error: errorMessage,
+			type: runStatus === 'timeout' ? 'timeout' : 'provider',
+		} );
+	};
+
+	const pollRunUntilTerminal = async ( {
+		runId,
+		initialReply,
+		signal,
+		initialEventsCursor = 0,
+		seenToolCallKeys = null,
+	} ) => {
+		let afterEventId = Number.isFinite( Number( initialEventsCursor ) )
+			? Math.max( 0, Math.round( Number( initialEventsCursor ) ) )
+			: 0;
+		const startedAt = Date.now();
+		let lastProgressMessage = '';
+
+		while ( true ) {
+			if ( signal?.aborted ) {
+				const abortError = new Error( 'Aborted' );
+				abortError.name = 'AbortError';
+				throw abortError;
+			}
+
+			const elapsedSeconds = ( Date.now() - startedAt ) / 1000;
+			if ( elapsedSeconds >= RUN_POLL_MAX_SECONDS ) {
+				onEvent( 'error', {
+					error: __(
+						'Run polling timed out before a terminal status was received.',
+						'clawpress'
+					),
+					type: 'timeout',
+				} );
+				return;
+			}
+
+			try {
+				const eventPayload = await getRunEvents(
+					runId,
+					afterEventId,
+					signal
+				);
+				const events = Array.isArray( eventPayload?.events )
+					? eventPayload.events
+					: [];
+				emitToolCallEvents( events, seenToolCallKeys );
+
+				const nextCursor = Number( eventPayload?.next_cursor );
+				if ( Number.isFinite( nextCursor ) && nextCursor > 0 ) {
+					afterEventId = Math.max( afterEventId, nextCursor );
+				}
+			} catch ( err ) {
+				if ( err?.name === 'AbortError' ) {
+					throw err;
+				}
+			}
+
+			const runPayload = await getRunStatus( runId, signal );
+			emitRuntimeInProgressSignals( runPayload, seenToolCallKeys );
+			const status = normalizeRunStatus( runPayload?.status );
+			if ( TERMINAL_RUN_STATUSES.has( status ) ) {
+				emitRunTerminalOutcome(
+					runPayload,
+					initialReply,
+					seenToolCallKeys
+				);
+				return;
+			}
+
+			const progressMessage = getRunProgressMessage( elapsedSeconds );
+			if ( progressMessage && progressMessage !== lastProgressMessage ) {
+				onEvent( 'run_progress', { text: progressMessage } );
+				lastProgressMessage = progressMessage;
+			}
+
+			await waitForNextPoll( signal );
+		}
+	};
+
+	// Keep a stream-compatible interface for the existing panel flow.
+	const stream = ( prompt ) => {
+		const controller = new AbortController();
+		const seenToolCallKeys = new Set();
+
+		( async () => {
+			try {
+				const response = await sendMessage( prompt, controller.signal );
+				const clearHistory =
+					response?.meta?.command?.effects &&
+					response.meta.command.effects.clear_history === true;
+
+				if ( clearHistory ) {
+					onEvent( 'history_reset', {} );
+				}
+
+				if ( Array.isArray( response?.meta?.suggestions ) ) {
+					onEvent( 'suggestions', {
+						items: response.meta.suggestions,
+					} );
+				}
+
+				const contextUsage = normalizeContextUsage(
+					response?.meta?.context
+				);
+				if ( contextUsage ) {
+					onEvent( 'context_usage', { context: contextUsage } );
+				}
+
+				const toolCalls = Array.isArray( response?.meta?.tool_calls )
+					? response.meta.tool_calls
+							.map( ( rawCall ) => normalizeToolCall( rawCall ) )
+							.filter( Boolean )
+					: [];
+
+				toolCalls.forEach( ( call, index ) => {
+					emitToolCallIfNew(
+						call,
+						index + 1,
+						toolCalls.length,
+						seenToolCallKeys
+					);
+				} );
+
+				const responseError =
+					response?.meta?.error &&
+					typeof response.meta.error === 'object'
+						? response.meta.error
+						: null;
+				const responseCard =
+					response?.meta?.card &&
+					typeof response.meta.card === 'object'
+						? normalizeCard( response.meta.card )
+						: null;
+
+				if ( responseError ) {
+					const errorMessage =
+						typeof responseError.message === 'string' &&
+						responseError.message.trim()
+							? responseError.message.trim()
+							: __( 'Chat request failed.', 'clawpress' );
+					onEvent( 'error', {
+						error: errorMessage,
+						type:
+							typeof responseError.type === 'string' &&
+							responseError.type.trim()
+								? responseError.type.trim()
+								: 'provider',
+						card: responseCard,
+					} );
+					onDone?.( { aborted: false } );
+					return;
+				}
+
+				const reply =
+					typeof response?.reply === 'string'
+						? response.reply.trim()
+						: '';
+
+				const isCommandResponse = Boolean(
+					response?.meta?.command?.name
+				);
+				const card = normalizeCard( response?.meta?.card );
+
+				if ( card ) {
+					onEvent( 'response_card', {
+						card,
+						text: reply,
+						role: isCommandResponse ? 'system' : 'assistant',
+					} );
+				} else if ( reply ) {
+					onEvent( 'response_message', {
+						text: reply,
+						role: isCommandResponse ? 'system' : 'assistant',
+					} );
+				}
+
+				const runStatus = normalizeRunStatus( response?.meta?.status );
+				const runId = Number( response?.meta?.run_id );
+				const initialEventsCursor = Number(
+					response?.meta?.events_cursor
+				);
+				if ( runStatus === 'in_progress' ) {
+					if ( Number.isFinite( runId ) && runId > 0 ) {
+						await pollRunUntilTerminal( {
+							runId,
+							initialReply: reply,
+							signal: controller.signal,
+							initialEventsCursor,
+							seenToolCallKeys,
+						} );
+					} else {
+						onEvent( 'error', {
+							error: __(
+								'Run entered progress mode without a valid run ID.',
+								'clawpress'
+							),
+							type: 'request',
+						} );
+					}
+				}
+
+				onDone?.( { aborted: false } );
+			} catch ( err ) {
+				if ( err?.name === 'AbortError' ) {
+					onDone?.( { aborted: true } );
+					return;
+				}
+				onError?.( {
+					error:
+						err?.message ||
+						__( 'Chat request failed.', 'clawpress' ),
+					type: 'request',
+				} );
+				onDone?.( { aborted: false } );
+			}
+		} )();
+
+		return { stop: () => controller.abort() };
+	};
+
+	const runTool = async () => {
+		throw new Error(
+			__( 'Tool execution is not available in chat mode.', 'clawpress' )
+		);
+	};
+
+	return {
+		stream,
+		runTool,
+		getHistory,
+		getStatus,
+		getPanelState,
+		setPanelState,
+	};
 };
 
 export default createRealClient;

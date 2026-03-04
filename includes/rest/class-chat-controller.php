@@ -176,29 +176,33 @@ final class Chat_Controller implements Route_Controller {
 				'message' => $message,
 				'reply'   => $reply,
 				'meta'    => [
-					'mode'        => isset( $reply_payload['mode'] ) ? (string) $reply_payload['mode'] : 'offline',
-					'provider'    => isset( $reply_payload['provider'] ) && '' !== (string) $reply_payload['provider']
+					'mode'          => isset( $reply_payload['mode'] ) ? (string) $reply_payload['mode'] : 'offline',
+					'provider'      => isset( $reply_payload['provider'] ) && '' !== (string) $reply_payload['provider']
 						? (string) $reply_payload['provider']
 						: null,
-					'model'       => isset( $reply_payload['model'] ) && '' !== (string) $reply_payload['model']
+					'model'         => isset( $reply_payload['model'] ) && '' !== (string) $reply_payload['model']
 						? (string) $reply_payload['model']
 						: null,
-					'suggestions' => isset( $reply_payload['suggestions'] ) && is_array( $reply_payload['suggestions'] )
+					'suggestions'   => isset( $reply_payload['suggestions'] ) && is_array( $reply_payload['suggestions'] )
 						? array_values( $reply_payload['suggestions'] )
 						: null,
-					'card'        => isset( $reply_payload['card'] ) && is_array( $reply_payload['card'] )
+					'card'          => isset( $reply_payload['card'] ) && is_array( $reply_payload['card'] )
 						? $reply_payload['card']
 						: null,
-					'command'     => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
+					'command'       => isset( $reply_payload['command'] ) && is_array( $reply_payload['command'] )
 						? $reply_payload['command']
 						: null,
-					'error'       => isset( $reply_payload['error'] ) && is_array( $reply_payload['error'] )
+					'error'         => isset( $reply_payload['error'] ) && is_array( $reply_payload['error'] )
 						? $reply_payload['error']
 						: null,
-					'context'     => isset( $reply_payload['context'] ) && is_array( $reply_payload['context'] )
+					'context'       => isset( $reply_payload['context'] ) && is_array( $reply_payload['context'] )
 						? $reply_payload['context']
 						: null,
-					'tool_calls'  => $tool_calls_meta,
+					'tool_calls'    => $tool_calls_meta,
+					'run_id'        => isset( $reply_payload['run_id'] ) ? (int) $reply_payload['run_id'] : null,
+					'session_id'    => isset( $reply_payload['session_id'] ) ? (int) $reply_payload['session_id'] : null,
+					'events_cursor' => isset( $reply_payload['events_cursor'] ) ? (int) $reply_payload['events_cursor'] : null,
+					'status'        => isset( $reply_payload['status'] ) ? (string) $reply_payload['status'] : null,
 				],
 			],
 			200

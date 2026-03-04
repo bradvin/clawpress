@@ -110,19 +110,20 @@ final class Tools_Command_Handler implements Command_Handler {
 			: __( 'disabled (provider/model not configured)', 'clawpress' );
 
 		$lines         = [
-			__( 'Available tools/actions:', 'clawpress' ),
-			__( '- offline_commands: enabled', 'clawpress' ),
-			sprintf(
-				/* translators: %s: online chat status */
-				__( '- online_chat: %s', 'clawpress' ),
-				$online_chat_status
-			),
+			__( 'Available tools/abilities:', 'clawpress' ),
 		];
 		$tool_rows     = $this->abilities_helper->get_tool_status_list();
 		$enabled_count = 0;
 
 		foreach ( $tool_rows as $row ) {
-			if ( empty( $row['registered'] ) ) {
+			if ( empty( $row['registered'] ) || empty( $row['enabled'] ) ) {
+				continue;
+			}
+
+			$display_name = isset( $row['tool_name'] ) && '' !== trim( (string) $row['tool_name'] )
+				? (string) $row['tool_name']
+				: (string) ( $row['ability_name'] ?? '' );
+			if ( '' === $display_name ) {
 				continue;
 			}
 
@@ -130,13 +131,13 @@ final class Tools_Command_Handler implements Command_Handler {
 			$lines[] = sprintf(
 				/* translators: 1: tool name, 2: safety class */
 				__( '- %1$s: enabled (%2$s)', 'clawpress' ),
-				(string) $row['tool_name'],
+				$display_name,
 				(string) $row['safety_class']
 			);
 		}
 
 		if ( 0 === $enabled_count ) {
-			$lines[] = __( '- tool_execution: unavailable (no registered abilities)', 'clawpress' );
+			$lines[] = __( '- tool_execution: unavailable (no enabled abilities)', 'clawpress' );
 		}
 
 		return Command_Response::success(

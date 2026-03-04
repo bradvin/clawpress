@@ -4,58 +4,14 @@ import {
 	CardBody,
 	CardHeader,
 	Notice,
+	SelectControl,
 	Spinner,
 } from '@wordpress/components';
 import { DataForm } from '@wordpress/dataviews/wp';
-import { useEffect, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
-
-const getAdminConfig = () => {
-	if ( typeof window === 'undefined' ) {
-		return { restBase: '/wp-json/clawpress/v1', nonce: '' };
-	}
-
-	return {
-		restBase: window.CLAWPRESS_ADMIN?.restBase || '/wp-json/clawpress/v1',
-		nonce: window.CLAWPRESS_ADMIN?.nonce || '',
-	};
-};
-
-const requestJson = async ( path, { method = 'GET', body } = {} ) => {
-	const { restBase, nonce } = getAdminConfig();
-	const url = `${ restBase }/${ path.replace( /^\//, '' ) }`;
-
-	const response = await fetch( url, {
-		method,
-		credentials: 'same-origin',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-WP-Nonce': nonce,
-		},
-		body: body ? JSON.stringify( body ) : undefined,
-	} );
-
-	const text = await response.text();
-	let payload = {};
-
-	if ( text ) {
-		try {
-			payload = JSON.parse( text );
-		} catch {
-			payload = { message: text };
-		}
-	}
-
-	if ( ! response.ok ) {
-		throw new Error(
-			payload?.message ||
-				payload?.error ||
-				__( 'Request failed.', 'clawpress' )
-		);
-	}
-
-	return payload;
-};
+import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
+import { __, sprintf } from '@wordpress/i18n';
+import { update } from '@wordpress/icons';
+import { requestJson } from '../../utils/requestJson';
 
 const DEFAULT_SETTINGS = {
 	provider: '',
@@ -69,6 +25,45 @@ const DEFAULT_SETTINGS = {
 	agent_user_id: 0,
 	memory_enabled: false,
 	setup_completed: false,
+};
+
+const PROVIDER_MODEL_CACHE_KEY = 'clawpress_wp_ai_provider_models_v1';
+
+const normalizeProviderId = ( provider ) =>
+	typeof provider === 'string' ? provider.trim().toLowerCase() : '';
+
+const normalizeModelKey = ( value ) =>
+	typeof value === 'string'
+		? value
+				.trim()
+				.toLowerCase()
+				.replace( /[^a-z0-9]/g, '' )
+		: '';
+
+const normalizeDiscoveredProviderModelOptions = ( options ) => {
+	if ( ! Array.isArray( options ) ) {
+		return [];
+	}
+
+	return options
+		.map( ( option ) => {
+			const id = typeof option?.id === 'string' ? option.id.trim() : '';
+			let label = '';
+			if ( typeof option?.label === 'string' ) {
+				label = option.label.trim();
+			} else if ( typeof option?.name === 'string' ) {
+				label = option.name.trim();
+			}
+			if ( ! id ) {
+				return null;
+			}
+
+			return {
+				id,
+				label: label || id,
+			};
+		} )
+		.filter( Boolean );
 };
 
 const normalizeSettings = ( settings = {} ) => ( {
@@ -103,12 +98,472 @@ const normalizeSettings = ( settings = {} ) => ( {
 	setup_completed: Boolean( settings.setup_completed ),
 } );
 
+const getDefaultProviderOptions = () => [
+	{
+		value: 'openai',
+		label: __( 'OpenAI', 'clawpress' ),
+	},
+	{
+		value: 'anthropic',
+		label: __( 'Anthropic', 'clawpress' ),
+	},
+	{
+		value: 'google',
+		label: __( 'Google', 'clawpress' ),
+	},
+];
+
+const requestWpAiJson = async ( path ) => {
+	const restBase =
+		typeof window !== 'undefined' &&
+		typeof window.CLAWPRESS_ADMIN?.restBase === 'string'
+			? window.CLAWPRESS_ADMIN.restBase
+			: '/wp-json/clawpress/v1';
+	const nonce =
+		typeof window !== 'undefined' &&
+		typeof window.CLAWPRESS_ADMIN?.nonce === 'string'
+			? window.CLAWPRESS_ADMIN.nonce
+			: '';
+	const wpAiBase = restBase.replace( /\/clawpress\/v1\/?$/, '/wp-ai/v1' );
+	const url = `${ wpAiBase }/${ path.replace( /^\//, '' ) }`;
+
+	const response = await fetch( url, {
+		method: 'GET',
+		credentials: 'same-origin',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-WP-Nonce': nonce,
+		},
+	} );
+
+	const text = await response.text();
+	let payload = [];
+
+	if ( text ) {
+		try {
+			payload = JSON.parse( text );
+		} catch {
+			payload = [];
+		}
+	}
+
+	if ( ! response.ok ) {
+		throw new Error( 'wp_ai_request_failed' );
+	}
+
+	return payload;
+};
+
+const loadWpAiProviders = async () => {
+	let providers = [];
+
+	try {
+		providers = await requestWpAiJson( 'providers' );
+	} catch {
+		return null;
+	}
+
+	if ( ! Array.isArray( providers ) || providers.length === 0 ) {
+		return null;
+	}
+
+	const providerOptions = providers
+		.map( ( provider ) => {
+			const providerId = normalizeProviderId( provider?.id );
+			const providerLabel =
+				typeof provider?.name === 'string'
+					? provider.name.trim()
+					: providerId;
+
+			if ( ! providerId ) {
+				return null;
+			}
+
+			return {
+				value: providerId,
+				label: providerLabel || providerId,
+			};
+		} )
+		.filter( Boolean );
+
+	return providerOptions.length > 0 ? providerOptions : null;
+};
+
+const loadWpAiProviderModels = async ( providerId ) => {
+	const normalizedProviderId = normalizeProviderId( providerId );
+
+	if ( ! normalizedProviderId ) {
+		return [];
+	}
+
+	const providerModels = await requestWpAiJson(
+		`providers/${ encodeURIComponent( normalizedProviderId ) }/models`
+	);
+
+	if ( ! Array.isArray( providerModels ) ) {
+		return [];
+	}
+
+	return normalizeDiscoveredProviderModelOptions( providerModels );
+};
+
+const readProviderModelCache = () => {
+	if ( typeof window === 'undefined' || ! window.localStorage ) {
+		return {};
+	}
+
+	try {
+		const rawValue = window.localStorage.getItem(
+			PROVIDER_MODEL_CACHE_KEY
+		);
+		if ( ! rawValue ) {
+			return {};
+		}
+
+		const parsedValue = JSON.parse( rawValue );
+		return parsedValue &&
+			typeof parsedValue === 'object' &&
+			! Array.isArray( parsedValue )
+			? parsedValue
+			: {};
+	} catch {
+		return {};
+	}
+};
+
+const writeProviderModelCache = ( cache ) => {
+	if ( typeof window === 'undefined' || ! window.localStorage ) {
+		return;
+	}
+
+	try {
+		window.localStorage.setItem(
+			PROVIDER_MODEL_CACHE_KEY,
+			JSON.stringify( cache )
+		);
+	} catch {
+		// Ignore storage write failures.
+	}
+};
+
+const getCachedProviderModelOptions = ( providerId ) => {
+	const normalizedProviderId = normalizeProviderId( providerId );
+	if ( ! normalizedProviderId ) {
+		return {
+			hasValue: false,
+			options: [],
+		};
+	}
+
+	const cache = readProviderModelCache();
+	const cachedEntry = cache[ normalizedProviderId ];
+
+	if ( Array.isArray( cachedEntry ) ) {
+		return {
+			hasValue: true,
+			options: normalizeDiscoveredProviderModelOptions( cachedEntry ),
+		};
+	}
+
+	if (
+		! cachedEntry ||
+		typeof cachedEntry !== 'object' ||
+		! Array.isArray( cachedEntry.models )
+	) {
+		return {
+			hasValue: false,
+			options: [],
+		};
+	}
+
+	return {
+		hasValue: true,
+		options: normalizeDiscoveredProviderModelOptions( cachedEntry.models ),
+	};
+};
+
+const setCachedProviderModelOptions = ( providerId, options ) => {
+	const normalizedProviderId = normalizeProviderId( providerId );
+	if ( ! normalizedProviderId ) {
+		return;
+	}
+
+	const cache = readProviderModelCache();
+	cache[ normalizedProviderId ] = {
+		cached_at: Date.now(),
+		models: normalizeDiscoveredProviderModelOptions( options ),
+	};
+	writeProviderModelCache( cache );
+};
+
+const clearCachedProviderModelOptions = ( providerId ) => {
+	const normalizedProviderId = normalizeProviderId( providerId );
+	if ( ! normalizedProviderId ) {
+		return;
+	}
+
+	const cache = readProviderModelCache();
+	delete cache[ normalizedProviderId ];
+	writeProviderModelCache( cache );
+};
+
+const normalizeProviderOptions = ( providers ) => {
+	if ( ! Array.isArray( providers ) ) {
+		return getDefaultProviderOptions();
+	}
+
+	const options = providers
+		.map( ( provider ) => {
+			const value = normalizeProviderId( provider?.value );
+			const label =
+				typeof provider?.label === 'string'
+					? provider.label.trim()
+					: '';
+
+			if ( ! value || ! label ) {
+				return null;
+			}
+
+			return { value, label };
+		} )
+		.filter( Boolean );
+
+	return options.length > 0 ? options : getDefaultProviderOptions();
+};
+
+const normalizeModelOptions = ( models ) => {
+	if ( ! models || typeof models !== 'object' || Array.isArray( models ) ) {
+		return {};
+	}
+
+	return Object.entries( models ).reduce(
+		( accumulator, [ provider, options ] ) => {
+			const providerKey = normalizeProviderId( provider );
+			if ( ! providerKey || ! Array.isArray( options ) ) {
+				return accumulator;
+			}
+
+			accumulator[ providerKey ] =
+				normalizeDiscoveredProviderModelOptions( options );
+
+			return accumulator;
+		},
+		{}
+	);
+};
+
+const normalizeModelCatalog = ( modelCatalog ) => {
+	if (
+		! modelCatalog ||
+		typeof modelCatalog !== 'object' ||
+		Array.isArray( modelCatalog )
+	) {
+		return {};
+	}
+
+	return Object.entries( modelCatalog ).reduce(
+		( accumulator, [ provider, entries ] ) => {
+			const providerKey = normalizeProviderId( provider );
+			if ( ! providerKey || ! Array.isArray( entries ) ) {
+				return accumulator;
+			}
+
+			const normalizedEntries = entries
+				.map( ( entry ) => {
+					const id =
+						typeof entry?.id === 'string' ? entry.id.trim() : '';
+					const label =
+						typeof entry?.label === 'string'
+							? entry.label.trim()
+							: '';
+					const context =
+						typeof entry?.context === 'string'
+							? entry.context.trim()
+							: '';
+					const cost =
+						typeof entry?.cost === 'string'
+							? entry.cost.trim()
+							: '';
+					if ( ! id ) {
+						return null;
+					}
+
+					return {
+						id,
+						label: label || id,
+						context,
+						cost,
+					};
+				} )
+				.filter( Boolean );
+
+			if ( normalizedEntries.length > 0 ) {
+				accumulator[ providerKey ] = normalizedEntries;
+			}
+
+			return accumulator;
+		},
+		{}
+	);
+};
+
+const getLongestModelMatch = ( entries, modelKey, keySelector ) =>
+	entries
+		.filter( ( entry ) => {
+			const entryKey = normalizeModelKey( keySelector( entry ) );
+			return (
+				entryKey &&
+				modelKey &&
+				( modelKey.startsWith( entryKey ) ||
+					entryKey.startsWith( modelKey ) )
+			);
+		} )
+		.sort(
+			( a, b ) =>
+				normalizeModelKey( keySelector( b ) ).length -
+				normalizeModelKey( keySelector( a ) ).length
+		)[ 0 ] || null;
+
+const findCatalogModelEntry = (
+	catalogEntries,
+	modelId,
+	selectedOptionLabel = ''
+) => {
+	if ( ! Array.isArray( catalogEntries ) || catalogEntries.length === 0 ) {
+		return null;
+	}
+
+	const normalizedModelId = typeof modelId === 'string' ? modelId.trim() : '';
+	const exactIdMatch =
+		catalogEntries.find( ( entry ) => entry.id === normalizedModelId ) ||
+		null;
+	if ( exactIdMatch ) {
+		return exactIdMatch;
+	}
+
+	const normalizedModelKey = normalizeModelKey( normalizedModelId );
+	const normalizedIdMatch =
+		catalogEntries.find(
+			( entry ) => normalizeModelKey( entry.id ) === normalizedModelKey
+		) || null;
+	if ( normalizedIdMatch ) {
+		return normalizedIdMatch;
+	}
+
+	const prefixedIdMatch = getLongestModelMatch(
+		catalogEntries,
+		normalizedModelKey,
+		( entry ) => entry.id
+	);
+	if ( prefixedIdMatch ) {
+		return prefixedIdMatch;
+	}
+
+	const normalizedLabelKey = normalizeModelKey( selectedOptionLabel );
+	if ( ! normalizedLabelKey ) {
+		return null;
+	}
+
+	const exactLabelMatch =
+		catalogEntries.find(
+			( entry ) => normalizeModelKey( entry.label ) === normalizedLabelKey
+		) || null;
+	if ( exactLabelMatch ) {
+		return exactLabelMatch;
+	}
+
+	return getLongestModelMatch(
+		catalogEntries,
+		normalizedLabelKey,
+		( entry ) => entry.label
+	);
+};
+
+const buildModelDescription = (
+	provider,
+	model,
+	discoveredModelOptionsByProvider,
+	modelCatalogByProvider,
+	isProviderModelLoading = false
+) => {
+	const providerId = normalizeProviderId( provider );
+	const modelId = typeof model === 'string' ? model.trim() : '';
+
+	if ( ! providerId ) {
+		return __( 'Select a provider first.', 'clawpress' );
+	}
+
+	const discoveredOptions = Array.isArray(
+		discoveredModelOptionsByProvider?.[ providerId ]
+	)
+		? discoveredModelOptionsByProvider[ providerId ]
+		: [];
+
+	if ( discoveredOptions.length === 0 ) {
+		if ( isProviderModelLoading ) {
+			return __( 'Loading models for this provider…', 'clawpress' );
+		}
+
+		return __(
+			'No models were discovered for this provider. Configure it in Connectors, then refresh the model list.',
+			'clawpress'
+		);
+	}
+
+	if ( ! modelId ) {
+		return __(
+			'Select a model to view context and cost details.',
+			'clawpress'
+		);
+	}
+
+	const catalogEntries = Array.isArray(
+		modelCatalogByProvider?.[ providerId ]
+	)
+		? modelCatalogByProvider[ providerId ]
+		: [];
+	const selectedOption =
+		discoveredOptions.find( ( option ) => option.id === modelId ) || null;
+	const selectedEntry = findCatalogModelEntry(
+		catalogEntries,
+		modelId,
+		selectedOption?.label || ''
+	);
+
+	if ( ! selectedEntry ) {
+		return __(
+			'Context and cost are not available for this model in the curated catalog.',
+			'clawpress'
+		);
+	}
+
+	return sprintf(
+		/* translators: 1: model context window, 2: model cost information */
+		__( 'Context window: %1$s | Cost: %2$s', 'clawpress' ),
+		selectedEntry.context || __( 'Unknown', 'clawpress' ),
+		selectedEntry.cost || __( 'Unknown', 'clawpress' )
+	);
+};
+
 export default function SettingsView() {
 	const [ loading, setLoading ] = useState( true );
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
 	const [ success, setSuccess ] = useState( '' );
 	const [ settings, setSettings ] = useState( DEFAULT_SETTINGS );
+	const [ providerOptions, setProviderOptions ] = useState(
+		getDefaultProviderOptions()
+	);
+	const [
+		discoveredModelOptionsByProvider,
+		setDiscoveredModelOptionsByProvider,
+	] = useState( {} );
+	const [ modelCatalogByProvider, setModelCatalogByProvider ] = useState(
+		{}
+	);
+	const [ modelsLoadingByProvider, setModelsLoadingByProvider ] = useState(
+		{}
+	);
 
 	useEffect( () => {
 		let mounted = true;
@@ -123,6 +578,22 @@ export default function SettingsView() {
 				}
 
 				setSettings( normalizeSettings( data?.settings || {} ) );
+				setProviderOptions(
+					normalizeProviderOptions( data?.providers || [] )
+				);
+				setDiscoveredModelOptionsByProvider(
+					normalizeModelOptions( data?.models || {} )
+				);
+				setModelCatalogByProvider(
+					normalizeModelCatalog( data?.model_catalog || {} )
+				);
+
+				const wpAiProviders = await loadWpAiProviders();
+				if ( ! mounted || ! wpAiProviders ) {
+					return;
+				}
+
+				setProviderOptions( normalizeProviderOptions( wpAiProviders ) );
 			} catch ( e ) {
 				if ( ! mounted ) {
 					return;
@@ -204,6 +675,171 @@ export default function SettingsView() {
 		}
 	};
 
+	const loadProviderModels = useCallback(
+		async ( providerId, { forceRefresh = false } = {} ) => {
+			const normalizedProviderId = normalizeProviderId( providerId );
+			if ( ! normalizedProviderId ) {
+				return [];
+			}
+
+			if ( ! forceRefresh ) {
+				const cached =
+					getCachedProviderModelOptions( normalizedProviderId );
+				if ( cached.hasValue ) {
+					setDiscoveredModelOptionsByProvider( ( current ) => ( {
+						...current,
+						[ normalizedProviderId ]: cached.options,
+					} ) );
+					return cached.options;
+				}
+			}
+
+			setModelsLoadingByProvider( ( current ) => ( {
+				...current,
+				[ normalizedProviderId ]: true,
+			} ) );
+
+			try {
+				const refreshedOptions =
+					await loadWpAiProviderModels( normalizedProviderId );
+				setDiscoveredModelOptionsByProvider( ( current ) => ( {
+					...current,
+					[ normalizedProviderId ]: refreshedOptions,
+				} ) );
+				setCachedProviderModelOptions(
+					normalizedProviderId,
+					refreshedOptions
+				);
+
+				return refreshedOptions;
+			} catch {
+				setError(
+					__(
+						'Unable to refresh models for the selected provider.',
+						'clawpress'
+					)
+				);
+				return [];
+			} finally {
+				setModelsLoadingByProvider( ( current ) => ( {
+					...current,
+					[ normalizedProviderId ]: false,
+				} ) );
+			}
+		},
+		[]
+	);
+
+	const selectedProviderId = normalizeProviderId( settings.provider );
+	const isSelectedProviderLoading = Boolean(
+		modelsLoadingByProvider?.[ selectedProviderId ]
+	);
+	const providerModelOptions = useMemo( () => {
+		if (
+			! Array.isArray(
+				discoveredModelOptionsByProvider?.[ selectedProviderId ]
+			)
+		) {
+			return [];
+		}
+
+		return discoveredModelOptionsByProvider[ selectedProviderId ];
+	}, [ selectedProviderId, discoveredModelOptionsByProvider ] );
+
+	useEffect( () => {
+		if ( ! selectedProviderId ) {
+			return;
+		}
+
+		loadProviderModels( selectedProviderId );
+	}, [ selectedProviderId, loadProviderModels ] );
+
+	useEffect( () => {
+		if (
+			! selectedProviderId ||
+			! settings.model ||
+			isSelectedProviderLoading
+		) {
+			return;
+		}
+
+		const hasSelectedModel = providerModelOptions.some(
+			( option ) => option.id === settings.model
+		);
+		if ( hasSelectedModel ) {
+			return;
+		}
+
+		setSettings( ( current ) =>
+			current.model ? { ...current, model: '' } : current
+		);
+	}, [
+		selectedProviderId,
+		settings.model,
+		isSelectedProviderLoading,
+		providerModelOptions,
+	] );
+
+	const refreshSelectedProviderModels = async () => {
+		if ( ! selectedProviderId ) {
+			return;
+		}
+
+		setError( '' );
+		clearCachedProviderModelOptions( selectedProviderId );
+		await loadProviderModels( selectedProviderId, { forceRefresh: true } );
+	};
+	const modelSelectElements = useMemo(
+		() => [
+			{
+				label: __( 'Select a model', 'clawpress' ),
+				value: '',
+			},
+			...providerModelOptions.map( ( option ) => ( {
+				label: option.label,
+				value: option.id,
+			} ) ),
+		],
+		[ providerModelOptions ]
+	);
+	const ModelSelectEdit = ( { data, field, onChange } ) => {
+		const value =
+			typeof data?.[ field?.id ] === 'string' ? data[ field.id ] : '';
+		const elements = Array.isArray( field?.elements ) ? field.elements : [];
+		const hasProvider = Boolean( normalizeProviderId( data?.provider ) );
+
+		return (
+			<div className="clawpress-settings__model-control">
+				<div className="clawpress-settings__model-control-select">
+					<SelectControl
+						value={ value }
+						options={ elements }
+						disabled={ ! hasProvider || isSelectedProviderLoading }
+						onChange={ ( nextValue ) => {
+							const nextEdits =
+								typeof field?.setValue === 'function'
+									? field.setValue( {
+											item: data,
+											value: nextValue,
+									  } )
+									: { [ field.id ]: nextValue };
+							onChange( nextEdits );
+						} }
+					/>
+				</div>
+				<Button
+					className="clawpress-settings__model-refresh-button"
+					icon={ update }
+					label={ __( 'Refresh models', 'clawpress' ) }
+					showTooltip
+					disabled={ ! hasProvider || isSelectedProviderLoading }
+					isBusy={ isSelectedProviderLoading }
+					onClick={ refreshSelectedProviderModels }
+				/>
+			</div>
+		);
+	};
+
 	const fields = [
 		{
 			id: 'provider',
@@ -219,29 +855,22 @@ export default function SettingsView() {
 					label: __( 'Select a provider', 'clawpress' ),
 					value: '',
 				},
-				{
-					label: __( 'OpenAI', 'clawpress' ),
-					value: 'openai',
-				},
-				{
-					label: __( 'Anthropic', 'clawpress' ),
-					value: 'anthropic',
-				},
-				{
-					label: __( 'Google', 'clawpress' ),
-					value: 'google',
-				},
+				...providerOptions,
 			],
 		},
 		{
 			id: 'model',
 			type: 'text',
 			label: __( 'Model', 'clawpress' ),
-			description: __(
-				'Enter the model name you want to use for replies.',
-				'clawpress'
+			Edit: ModelSelectEdit,
+			description: buildModelDescription(
+				settings.provider,
+				settings.model,
+				discoveredModelOptionsByProvider,
+				modelCatalogByProvider,
+				isSelectedProviderLoading
 			),
-			placeholder: 'gpt-4.1-mini',
+			elements: modelSelectElements,
 		},
 		{
 			id: 'temperature',
@@ -343,6 +972,10 @@ export default function SettingsView() {
 			{
 				id: 'generation_settings',
 				label: __( 'LLM Reply Settings', 'clawpress' ),
+				description: __(
+					'Not all settings are supported by every provider or model. Unsupported settings are skipped automatically.',
+					'clawpress'
+				),
 				layout: {
 					type: 'card',
 					isOpened: true,
@@ -385,10 +1018,44 @@ export default function SettingsView() {
 								fields={ fields }
 								form={ form }
 								onChange={ ( edits ) =>
-									setSettings( ( current ) => ( {
-										...current,
-										...edits,
-									} ) )
+									setSettings( ( current ) => {
+										const next = {
+											...current,
+											...edits,
+										};
+
+										if (
+											Object.prototype.hasOwnProperty.call(
+												edits,
+												'provider'
+											)
+										) {
+											const nextProviderId =
+												normalizeProviderId(
+													next.provider
+												);
+											const nextOptions = Array.isArray(
+												discoveredModelOptionsByProvider?.[
+													nextProviderId
+												]
+											)
+												? discoveredModelOptionsByProvider[
+														nextProviderId
+												  ]
+												: [];
+											const hasSelectedModel =
+												nextOptions.some(
+													( option ) =>
+														option.id === next.model
+												);
+
+											if ( ! hasSelectedModel ) {
+												next.model = '';
+											}
+										}
+
+										return next;
+									} )
 								}
 							/>
 							<Button

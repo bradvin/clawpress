@@ -24,12 +24,7 @@ export default function PagesView() {
 
 	return (
 		<div className="clawpress-dataviews">
-			<p>
-				{ __(
-					'Showing ClawPress Agent Files.',
-					'clawpress'
-				) }
-			</p>
+			<p>{ __( 'Showing ClawPress Agent Files.', 'clawpress' ) }</p>
 			<DataViews
 				data={ records }
 				fields={ fields }

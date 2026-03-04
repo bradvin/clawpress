@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\RestAPI\Controllers;
 
+use ClawPress\Helpers\Model_Helper;
 use ClawPress\Helpers\Settings_Helper;
 
 defined( 'ABSPATH' ) || exit;
@@ -25,10 +26,18 @@ final class Settings_Controller implements Route_Controller {
 	private Settings_Helper $settings_helper;
 
 	/**
+	 * Model helper.
+	 *
+	 * @var Model_Helper
+	 */
+	private Model_Helper $model_helper;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		$this->settings_helper = Settings_Helper::get_instance();
+		$this->model_helper    = Model_Helper::get_instance();
 	}
 
 	/**
@@ -117,10 +126,35 @@ final class Settings_Controller implements Route_Controller {
 
 		return new \WP_REST_Response(
 			[
-				'settings' => $settings,
+				'settings'      => $settings,
+				'providers'     => $this->get_provider_options(),
+				'models'        => $this->model_helper->get_all_discovered_options(),
+				'model_catalog' => $this->model_helper->get_model_catalog(),
 			],
 			200
 		);
+	}
+
+	/**
+	 * Get provider options for settings UI.
+	 *
+	 * @return array<int,array{value:string,label:string}>
+	 */
+	private function get_provider_options(): array {
+		return [
+			[
+				'value' => 'openai',
+				'label' => __( 'OpenAI', 'clawpress' ),
+			],
+			[
+				'value' => 'anthropic',
+				'label' => __( 'Anthropic', 'clawpress' ),
+			],
+			[
+				'value' => 'google',
+				'label' => __( 'Google', 'clawpress' ),
+			],
+		];
 	}
 
 	/**

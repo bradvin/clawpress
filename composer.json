@@ -5,7 +5,7 @@
 	"license": "GPL-2.0-or-later",
 	"require": {
 		"php": ">=8.1",
-		"wordpress/wp-ai-client": "^0.2.0",
+		"wordpress/wp-ai-client": "^0.4",
 		"woocommerce/action-scheduler": "^3.9",
 		"automattic/jetpack-autoloader": "^3.0"
 	},

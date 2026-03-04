@@ -38,7 +38,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	/**
 	 * Provider setup admin path.
 	 */
-	private const PROVIDER_SETUP_PATH = '/wp-admin/options-general.php?page=wp-ai-client';
+	private const PROVIDER_SETUP_PATH = '/wp-admin/options-general.php?page=connectors-wp-admin';
 
 	/**
 	 * ClawPress settings admin path.
@@ -374,13 +374,15 @@ final class Setup_Command_Handler implements Command_Handler {
 			$request_options = new RequestOptions();
 			$request_options->setTimeout( (float) $request_timeout );
 
-			$builder = AiClient::prompt( 'Reply with exactly: OK' )
-				->usingProvider( $provider )
-				->usingModelPreference( [ $provider, $model ] )
-				->usingRequestOptions( $request_options );
-			$builder = $this->apply_generation_settings( $builder, $generation_settings, $provider, $model );
-
-			$reply = trim( $builder->generateText() );
+			$reply = trim(
+				$this->generate_text_with_explicit_model_fallback(
+					'Reply with exactly: OK',
+					$provider,
+					$model,
+					$request_options,
+					$generation_settings
+				)
+			);
 
 			if ( '' === $reply ) {
 				return $this->build_error_response(
@@ -719,11 +721,11 @@ final class Setup_Command_Handler implements Command_Handler {
 			case 'provider':
 				$providers = $this->provider_helper->get_configured_provider_ids();
 				if ( [] === $providers ) {
-					$data['message'] = __( 'No configured providers found. Open provider settings, add credentials, then refresh.', 'clawpress' );
+					$data['message'] = __( 'No configured providers found. Open Connectors, configure a provider, then refresh.', 'clawpress' );
 					$data['actions'] = [
 						[
 							'id'    => 'open-provider-settings',
-							'label' => __( 'Open Provider Settings', 'clawpress' ),
+							'label' => __( 'Open Connectors', 'clawpress' ),
 							'type'  => 'open_url',
 							'url'   => self::PROVIDER_SETUP_PATH,
 						],
@@ -741,7 +743,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				foreach ( $providers as $provider_id ) {
 					$data['actions'][] = [
 						'id'     => sprintf( 'provider-%s', $provider_id ),
-						/* translators: %s: provider display label */
+						/* translators: %s: option label */
 						'label'  => sprintf( __( 'Use %s', 'clawpress' ), $this->get_provider_label( $provider_id ) ),
 						'type'   => 'send_prompt',
 						'prompt' => sprintf( '/setup provider %s', $provider_id ),
@@ -749,7 +751,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				}
 				$data['actions'][] = [
 					'id'    => 'provider-settings',
-					'label' => __( 'Provider Settings', 'clawpress' ),
+					'label' => __( 'Open Connectors', 'clawpress' ),
 					'type'  => 'open_url',
 					'url'   => self::PROVIDER_SETUP_PATH,
 				];
@@ -774,7 +776,7 @@ final class Setup_Command_Handler implements Command_Handler {
 				foreach ( $models as $model_id ) {
 					$data['actions'][] = [
 						'id'     => sprintf( 'model-%s', sanitize_key( $model_id ) ),
-						/* translators: %s: model identifier */
+						/* translators: %s: option label */
 						'label'  => sprintf( __( 'Use %s', 'clawpress' ), $model_id ),
 						'type'   => 'send_prompt',
 						'prompt' => sprintf( '/setup model %s', $model_id ),
@@ -1118,6 +1120,113 @@ final class Setup_Command_Handler implements Command_Handler {
 	}
 
 	/**
+	 * Generate text and retry once with explicit model binding when metadata matching fails.
+	 *
+	 * @param string              $prompt Prompt text.
+	 * @param string              $provider Provider identifier.
+	 * @param string              $model Model identifier.
+	 * @param RequestOptions      $request_options Request options.
+	 * @param array<string,mixed> $generation_settings Generation settings.
+	 */
+	private function generate_text_with_explicit_model_fallback(
+		string $prompt,
+		string $provider,
+		string $model,
+		RequestOptions $request_options,
+		array $generation_settings
+	): string {
+		$builder = $this->build_prompt_builder(
+			$prompt,
+			$provider,
+			$model,
+			$request_options,
+			$generation_settings,
+			false
+		);
+
+		try {
+			return $builder->generateText();
+		} catch ( Throwable $throwable ) {
+			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+				throw $throwable;
+			}
+
+			$fallback_builder = $this->build_prompt_builder(
+				$prompt,
+				$provider,
+				$model,
+				$request_options,
+				$generation_settings,
+				true
+			);
+
+			return $fallback_builder->generateText();
+		}
+	}
+
+	/**
+	 * Build prompt builder for setup connection checks.
+	 *
+	 * @param string              $prompt Prompt text.
+	 * @param string              $provider Provider identifier.
+	 * @param string              $model Model identifier.
+	 * @param RequestOptions      $request_options Request options.
+	 * @param array<string,mixed> $generation_settings Generation settings.
+	 * @param bool                $use_explicit_model Whether to bind model explicitly.
+	 * @return object
+	 */
+	private function build_prompt_builder(
+		string $prompt,
+		string $provider,
+		string $model,
+		RequestOptions $request_options,
+		array $generation_settings,
+		bool $use_explicit_model
+	): object {
+		$builder = AiClient::prompt( $prompt )
+			->usingProvider( $provider )
+			->usingRequestOptions( $request_options );
+
+		if ( '' !== $model ) {
+			if ( $use_explicit_model ) {
+				$selected_model = AiClient::defaultRegistry()->getProviderModel(
+					$provider,
+					$model,
+					ModelConfig::fromArray( [] )
+				);
+				$builder        = $builder->usingModel( $selected_model );
+			} else {
+				$builder = $builder->usingModelPreference( [ $provider, $model ] );
+			}
+		}
+
+		return $this->apply_generation_settings( $builder, $generation_settings, $provider, $model );
+	}
+
+	/**
+	 * Determine whether setup should retry with explicit model binding.
+	 *
+	 * @param Throwable $throwable Generation failure.
+	 * @param string    $provider Provider identifier.
+	 * @param string    $model Model identifier.
+	 */
+	private function should_retry_with_explicit_model( Throwable $throwable, string $provider, string $model ): bool {
+		if ( '' === $provider || '' === $model ) {
+			return false;
+		}
+
+		$error_message = strtolower( trim( sanitize_text_field( $throwable->getMessage() ) ) );
+		if ( '' === $error_message ) {
+			return false;
+		}
+
+		$provider_token = strtolower( sprintf( 'provider "%s"', $provider ) );
+
+		return false !== strpos( $error_message, 'no models found' )
+			&& false !== strpos( $error_message, $provider_token );
+	}
+
+	/**
 	 * Apply generation settings to prompt builder, ignoring unsupported options.
 	 *
 	 * @param object              $builder Prompt builder instance.
@@ -1128,11 +1237,11 @@ final class Setup_Command_Handler implements Command_Handler {
 	 */
 	private function apply_generation_settings( object $builder, array $generation_settings, string $provider, string $model ): object {
 		$setters = [
-			static fn ( object $current ): object => $current->usingTemperature( (float) $generation_settings['temperature'] ),
-			static fn ( object $current ): object => $current->usingTopP( (float) $generation_settings['top_p'] ),
+			fn ( object $current ): object => $this->apply_temperature( $current, (float) $generation_settings['temperature'], $provider, $model ),
+			fn ( object $current ): object => $this->apply_top_p( $current, (float) $generation_settings['top_p'], $provider, $model ),
 			fn ( object $current ): object => $this->apply_max_output_tokens( $current, (int) $generation_settings['max_output_tokens'], $provider, $model ),
-			static fn ( object $current ): object => $current->usingFrequencyPenalty( (float) $generation_settings['frequency_penalty'] ),
-			static fn ( object $current ): object => $current->usingPresencePenalty( (float) $generation_settings['presence_penalty'] ),
+			fn ( object $current ): object => $this->apply_frequency_penalty( $current, (float) $generation_settings['frequency_penalty'], $provider, $model ),
+			fn ( object $current ): object => $this->apply_presence_penalty( $current, (float) $generation_settings['presence_penalty'], $provider, $model ),
 		];
 
 		foreach ( $setters as $setter ) {
@@ -1150,8 +1259,8 @@ final class Setup_Command_Handler implements Command_Handler {
 	/**
 	 * Apply max output token setting to prompt builder.
 	 *
-	 * Uses `max_completion_tokens` for OpenAI model families that reject
-	 * legacy `max_tokens`.
+	 * Uses `max_output_tokens` for OpenAI model families that reject
+	 * legacy `max_tokens` in the Responses API.
 	 *
 	 * @param object $builder Prompt builder instance.
 	 * @param int    $max_output_tokens Max output tokens.
@@ -1160,11 +1269,11 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_max_output_tokens( object $builder, int $max_output_tokens, string $provider, string $model ): object {
-		if ( $this->provider_helper->should_use_max_completion_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
+		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
 			$model_config = ModelConfig::fromArray(
 				[
 					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_completion_tokens' => $max_output_tokens,
+						'max_output_tokens' => $max_output_tokens,
 					],
 				]
 			);
@@ -1173,6 +1282,74 @@ final class Setup_Command_Handler implements Command_Handler {
 		}
 
 		return $builder->usingMaxTokens( $max_output_tokens );
+	}
+
+	/**
+	 * Apply temperature when supported by provider/model.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param float  $temperature Temperature value.
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 * @return object
+	 */
+	private function apply_temperature( object $builder, float $temperature, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingTemperature( $temperature );
+	}
+
+	/**
+	 * Apply top-p sampling when supported by provider/model.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param float  $top_p Top-p value.
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 * @return object
+	 */
+	private function apply_top_p( object $builder, float $top_p, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingTopP( $top_p );
+	}
+
+	/**
+	 * Apply frequency penalty when supported by provider/model.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param float  $frequency_penalty Frequency penalty.
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 * @return object
+	 */
+	private function apply_frequency_penalty( object $builder, float $frequency_penalty, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingFrequencyPenalty( $frequency_penalty );
+	}
+
+	/**
+	 * Apply presence penalty when supported by provider/model.
+	 *
+	 * @param object $builder Prompt builder instance.
+	 * @param float  $presence_penalty Presence penalty.
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 * @return object
+	 */
+	private function apply_presence_penalty( object $builder, float $presence_penalty, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->usingPresencePenalty( $presence_penalty );
 	}
 
 	/**

@@ -6,6 +6,7 @@
 import { TabPanel } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useNavigation } from '../hooks/useNavigation';
+import AbilitiesView from './views/AbilitiesView';
 import PagesView from './views/PagesView';
 import SettingsView from './views/SettingsView';
 
@@ -23,6 +24,11 @@ export default function App() {
 			title: __( 'Settings', 'clawpress' ),
 			content: <SettingsView />,
 		},
+		{
+			name: VIEWS.ABILITIES,
+			title: __( 'Abilities', 'clawpress' ),
+			content: <AbilitiesView />,
+		},
 	];
 
 	return (
@@ -33,9 +39,7 @@ export default function App() {
 				onSelect={ handleTabSelect }
 			>
 				{ ( { content } ) => (
-					<div className="clawpress-tab-content">
-						{ content }
-					</div>
+					<div className="clawpress-tab-content">{ content }</div>
 				) }
 			</TabPanel>
 		</div>

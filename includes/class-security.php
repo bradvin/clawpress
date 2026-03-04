@@ -61,10 +61,20 @@ final class Security {
 	/**
 	 * Validate requesting-user access to ClawPress routes.
 	 *
+	 * @param int|null $requesting_user_id Optional requesting user ID.
 	 * @return true|\WP_Error
 	 */
-	public function assert_requesting_user_allowed() {
-		if ( function_exists( 'clawpress_check_permissions' ) && ! clawpress_check_permissions() ) {
+	public function assert_requesting_user_allowed( ?int $requesting_user_id = null ) {
+		$resolved_user_id = null === $requesting_user_id ? 0 : (int) $requesting_user_id;
+		$has_access       = true;
+
+		if ( $resolved_user_id > 0 && function_exists( 'clawpress_check_permissions_for_user' ) ) {
+			$has_access = clawpress_check_permissions_for_user( $resolved_user_id );
+		} elseif ( function_exists( 'clawpress_check_permissions' ) ) {
+			$has_access = clawpress_check_permissions();
+		}
+
+		if ( ! $has_access ) {
 			return new \WP_Error(
 				'clawpress_requesting_user_forbidden',
 				__( 'The requesting user is not allowed to use ClawPress.', 'clawpress' )

@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\AdminPage\Admin_Page;
+use ClawPress\PostTypes\Post_Types;
 use ClawPress\Tests\Support\TestCase;
 use ClawPress\Tests\Support\WordPress_Stubs;
 
@@ -26,11 +27,17 @@ final class AdminPageTest extends TestCase {
 	}
 
 	public function test_register_admin_page_registers_menu_item(): void {
-		$admin_page = new Admin_Page();
-		$admin_page->register_admin_page();
+		new Admin_Page();
+
+		do_action( 'admin_menu' );
 
 		$this->assertCount( 1, WordPress_Stubs::$menu_pages );
 		$this->assertSame( 'clawpress', WordPress_Stubs::$menu_pages[0]['menu_slug'] );
+		$this->assertCount( 1, WordPress_Stubs::$removed_submenu_pages );
+		$this->assertCount( 3, WordPress_Stubs::$submenu_pages );
+		$this->assertSame( 'clawpress', WordPress_Stubs::$submenu_pages[0]['menu_slug'] );
+		$this->assertSame( 'edit.php?post_type=' . Post_Types::AGENT_FILE_POST_TYPE, WordPress_Stubs::$submenu_pages[1]['menu_slug'] );
+		$this->assertSame( 'edit.php?post_type=' . Post_Types::AGENT_MEMORY_POST_TYPE, WordPress_Stubs::$submenu_pages[2]['menu_slug'] );
 	}
 
 	public function test_render_admin_page_outputs_mount_node(): void {
@@ -43,16 +50,18 @@ final class AdminPageTest extends TestCase {
 	}
 
 	public function test_enqueue_admin_assets_bails_for_unrelated_screen(): void {
-		$admin_page = new Admin_Page();
-		$admin_page->enqueue_admin_assets( 'dashboard_page' );
+		new Admin_Page();
+
+		do_action( 'admin_enqueue_scripts', 'dashboard_page' );
 
 		$this->assertCount( 0, WordPress_Stubs::$enqueued_scripts );
 		$this->assertCount( 0, WordPress_Stubs::$enqueued_styles );
 	}
 
 	public function test_enqueue_admin_assets_enqueues_script_and_style(): void {
-		$admin_page = new Admin_Page();
-		$admin_page->enqueue_admin_assets( 'toplevel_page_clawpress' );
+		new Admin_Page();
+
+		do_action( 'admin_enqueue_scripts', 'toplevel_page_clawpress' );
 
 		$this->assertCount( 1, WordPress_Stubs::$enqueued_scripts );
 		$this->assertCount( 1, WordPress_Stubs::$enqueued_styles );

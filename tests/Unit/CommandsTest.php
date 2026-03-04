@@ -9,8 +9,10 @@ declare( strict_types=1 );
 
 namespace ClawPress\Tests\Unit;
 
+use ClawPress\Abilities\Abilities;
 use ClawPress\Commands\Command_Request;
 use ClawPress\Commands\Commands;
+use ClawPress\Helpers\Abilities_Helper;
 use ClawPress\Tests\Support\TestCase;
 use ClawPress\Tests\Support\WordPress_Stubs;
 
@@ -96,6 +98,57 @@ final class CommandsTest extends TestCase {
 		$this->assertContains( '/test', $suggestions );
 		$this->assertContains( '/tools list', $suggestions );
 		$this->assertNotContains( '/reset', $suggestions );
+	}
+
+	public function test_tools_command_lists_only_registered_enabled_tools(): void {
+		( new Abilities() );
+		do_action( 'wp_abilities_api_categories_init' );
+		do_action( 'wp_abilities_api_init' );
+		WordPress_Stubs::$options[ Abilities_Helper::ENABLED_ABILITIES_OPTION ] = [
+			'clawpress/file-read',
+		];
+
+		$commands = new Commands();
+		$payload  = $commands->maybe_dispatch( '/tools list' );
+
+		$this->assertIsArray( $payload );
+		$this->assertSame( '/tools', $payload['command']['name'] );
+		$this->assertStringContainsString( '- file_read: enabled (read)', $payload['reply'] );
+		$this->assertStringNotContainsString( '- file_write: enabled (write)', $payload['reply'] );
+	}
+
+	public function test_tools_command_lists_enabled_non_clawpress_ability_names(): void {
+		( new Abilities() );
+		do_action( 'wp_abilities_api_categories_init' );
+		do_action( 'wp_abilities_api_init' );
+
+		wp_register_ability(
+			'vendor/custom-ability',
+			[
+				'label'               => 'Custom Ability',
+				'description'         => 'External ability.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+				'meta'                => [
+					'annotations' => [
+						'readonly'    => true,
+						'destructive' => false,
+						'idempotent'  => true,
+					],
+				],
+			]
+		);
+		WordPress_Stubs::$options[ Abilities_Helper::ENABLED_ABILITIES_OPTION ] = [
+			'vendor/custom-ability',
+		];
+
+		$commands = new Commands();
+		$payload  = $commands->maybe_dispatch( '/tools list' );
+
+		$this->assertIsArray( $payload );
+		$this->assertSame( '/tools', $payload['command']['name'] );
+		$this->assertStringContainsString( '- vendor/custom-ability: enabled (read)', $payload['reply'] );
 	}
 
 	public function test_reset_command_is_hidden_from_help_but_dispatchable(): void {

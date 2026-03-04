@@ -15,7 +15,7 @@ use ClawPress\Tests\Support\TestCase;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 
 /**
- * Minimal wpdb stub for abilities helper action-log writes.
+ * Minimal wpdb stub for abilities helper agent-event writes.
  */
 final class AbilitiesHelperTestWpdb {
 	/**
@@ -73,6 +73,161 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertContains( 'memory_long_term_delete', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
 	}
 
+	public function test_tool_declarations_respect_enabled_abilities_option(): void {
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'clawpress/file-read',
+				'clawpress/file-list',
+			]
+		);
+
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+		$names        = array_map(
+			static fn( FunctionDeclaration $item ): string => $item->getName(),
+			$declarations
+		);
+
+		$this->assertSame(
+			[
+				'file_read',
+				'file_list',
+			],
+			$names
+		);
+	}
+
+	public function test_disabled_ability_returns_disabled_error_before_execution(): void {
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'clawpress/file-read',
+			]
+		);
+
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_write',
+			[
+				'path'    => 'notes.md',
+				'content' => 'hello',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_ability_disabled', $result['error']['code'] );
+	}
+
+	public function test_ability_settings_state_includes_non_clawpress_registered_abilities(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+
+		$state         = Abilities_Helper::get_instance()->get_ability_settings_state();
+		$ability_names = array_column( $state['abilities'], 'ability_name' );
+		$custom_index  = array_search( 'vendor/custom-tool', $ability_names, true );
+
+		$this->assertNotFalse( $custom_index );
+		$this->assertFalse( ! $state['abilities'][ $custom_index ]['registered'] );
+	}
+
+	public function test_set_enabled_ability_ids_allows_non_clawpress_registered_abilities(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+
+		$result = Abilities_Helper::get_instance()->set_enabled_ability_ids(
+			[
+				'vendor/custom-tool',
+				'clawpress/file-read',
+				'vendor/unknown-tool',
+			]
+		);
+
+		$this->assertSame(
+			[
+				'vendor/custom-tool',
+				'clawpress/file-read',
+			],
+			$result
+		);
+	}
+
+	public function test_tool_declarations_include_enabled_external_registered_ability(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'vendor/custom-tool',
+			]
+		);
+
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+		$names        = array_map(
+			static fn( FunctionDeclaration $item ): string => $item->getName(),
+			$declarations
+		);
+
+		$this->assertSame( [ 'vendor__custom_tool' ], $names );
+	}
+
+	public function test_execute_tool_call_accepts_external_registered_ability_alias(): void {
+		wp_register_ability(
+			'vendor/custom-tool',
+			[
+				'label'               => 'Custom Tool',
+				'description'         => 'External tool.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'vendor/custom-tool',
+			]
+		);
+
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'vendor__custom_tool',
+			[],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+			]
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( 'vendor/custom-tool', $result['ability'] );
+	}
+
 	public function test_destructive_tool_requires_confirmation_before_execution(): void {
 		$result = Abilities_Helper::get_instance()->execute_tool_call(
 			'memory_long_term_delete',
@@ -101,9 +256,111 @@ final class AbilitiesHelperTest extends TestCase {
 
 		$this->assertTrue( $result['success'] );
 		$this->assertNotEmpty( $GLOBALS['wpdb']->insert_calls );
-		$this->assertSame( 12, $GLOBALS['wpdb']->insert_calls[0]['data']['requesting_user_id'] );
-		$this->assertSame( 9, $GLOBALS['wpdb']->insert_calls[0]['data']['execution_user_id'] );
+		$this->assertSame( 'wp_clawpress_agent_events', $GLOBALS['wpdb']->insert_calls[0]['table'] );
 		$this->assertSame( 'tool_call', $GLOBALS['wpdb']->insert_calls[0]['data']['event_type'] );
+		$payload = json_decode( (string) $GLOBALS['wpdb']->insert_calls[0]['data']['payload_json'], true );
+		$this->assertIsArray( $payload );
+		$this->assertSame( 12, $payload['requesting_user_id'] );
+		$this->assertSame( 9, $payload['execution_user_id'] );
+	}
+
+	public function test_destructive_tools_are_denied_for_heartbeat_trigger_policy(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'trigger_type'       => 'heartbeat',
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_destructive_tools_denied', $result['error']['code'] );
+		$this->assertSame( 'heartbeat', $result['policy']['trigger_type'] );
+		$this->assertSame( 'deny_destructive_tools', $result['policy']['decision'] );
+	}
+
+	public function test_runtime_policy_can_enforce_file_delete_gate_for_spawned_agent(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'             => 'spawned_agent',
+					'policy_profile'           => 'default',
+					'allow_tools'              => true,
+					'allow_destructive_tools'  => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'        => false,
+					'on_policy_violation'      => 'deny',
+				],
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_file_delete_denied', $result['error']['code'] );
+		$this->assertSame( 'spawned_agent', $result['policy']['trigger_type'] );
+	}
+
+	public function test_policy_violation_degrade_mode_returns_successful_degraded_result(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'                         => 'spawned_agent',
+					'policy_profile'                       => 'default',
+					'allow_tools'                          => true,
+					'allow_destructive_tools'              => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'                    => false,
+					'on_policy_violation'                  => 'degrade',
+				],
+			]
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( true, $result['degraded'] );
+		$this->assertArrayNotHasKey( 'error', $result );
+		$this->assertSame( 'degrade', $result['policy']['on_violation'] );
+		$this->assertSame( 'deny_file_delete', $result['policy']['decision'] );
+	}
+
+	public function test_policy_violation_fail_mode_returns_error_payload(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'file_delete',
+			[
+				'path' => 'notes.md',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'                         => 'spawned_agent',
+					'policy_profile'                       => 'default',
+					'allow_tools'                          => true,
+					'allow_destructive_tools'              => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'                    => false,
+					'on_policy_violation'                  => 'fail',
+				],
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_file_delete_denied_fail', $result['error']['code'] );
+		$this->assertSame( 'fail', $result['policy']['on_violation'] );
 	}
 
 	public function test_destructive_confirmation_token_must_be_allowlisted_by_execution_context(): void {

@@ -49,4 +49,5 @@ if ( ! defined( 'CLAWPRESS_URL' ) ) {
 
 require_once __DIR__ . '/Support/WordPressStubs.php';
 require_once __DIR__ . '/Support/TestCase.php';
+require_once __DIR__ . '/Support/AgentRuntimeWpdb.php';
 require_once $plugin_root . '/vendor/autoload.php';

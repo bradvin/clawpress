@@ -15,26 +15,18 @@ use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Central helper for ClawPress ability allowlisting and execution.
+ * Central helper for ClawPress ability settings and execution.
  */
 final class Abilities_Helper {
 	/**
-	 * Tool-name to ability-id mapping.
-	 *
-	 * @var array<string,string>
+	 * Enabled abilities option key.
 	 */
-	private const TOOL_TO_ABILITY = [
-		'file_read'                => 'clawpress/file-read',
-		'file_write'               => 'clawpress/file-write',
-		'file_delete'              => 'clawpress/file-delete',
-		'file_list'                => 'clawpress/file-list',
-		'memory_short_term_add'    => 'clawpress/memory-short-term-add',
-		'memory_short_term_update' => 'clawpress/memory-short-term-update',
-		'memory_short_term_delete' => 'clawpress/memory-short-term-delete',
-		'memory_long_term_add'     => 'clawpress/memory-long-term-add',
-		'memory_long_term_update'  => 'clawpress/memory-long-term-update',
-		'memory_long_term_delete'  => 'clawpress/memory-long-term-delete',
-	];
+	public const ENABLED_ABILITIES_OPTION = 'clawpress_enabled_abilities';
+
+	/**
+	 * ClawPress ability namespace.
+	 */
+	private const CLAWPRESS_ABILITY_NAMESPACE = 'clawpress';
 
 	/**
 	 * Singleton instance.
@@ -58,19 +50,27 @@ final class Abilities_Helper {
 	private Security $security;
 
 	/**
-	 * Action log helper.
+	 * Agent event helper.
 	 *
-	 * @var Action_Log_Helper
+	 * @var Agent_Event_Helper
 	 */
-	private Action_Log_Helper $action_log_helper;
+	private Agent_Event_Helper $agent_event_helper;
+
+	/**
+	 * Policy helper.
+	 *
+	 * @var Policy_Helper
+	 */
+	private Policy_Helper $policy_helper;
 
 	/**
 	 * Constructor.
 	 */
 	private function __construct() {
-		$this->settings_helper   = Settings_Helper::get_instance();
-		$this->security          = Security::get_instance();
-		$this->action_log_helper = Action_Log_Helper::get_instance();
+		$this->settings_helper    = Settings_Helper::get_instance();
+		$this->security           = Security::get_instance();
+		$this->agent_event_helper = Agent_Event_Helper::get_instance();
+		$this->policy_helper      = Policy_Helper::get_instance();
 	}
 
 	/**
@@ -85,36 +85,45 @@ final class Abilities_Helper {
 	}
 
 	/**
-	 * Get allowlisted tool names.
+	 * Get registered tool aliases.
 	 *
 	 * @return array<int,string>
 	 */
 	public function get_allowlisted_tool_names(): array {
-		return array_keys( self::TOOL_TO_ABILITY );
+		$ability_ids = $this->get_registered_ability_ids();
+		$tool_map    = $this->build_tool_alias_map( $ability_ids );
+		return array_keys( $tool_map );
 	}
 
 	/**
-	 * Get allowlisted ability IDs.
+	 * Get registered ability IDs.
 	 *
 	 * @return array<int,string>
 	 */
 	public function get_allowlisted_ability_ids(): array {
-		return array_values( self::TOOL_TO_ABILITY );
+		return $this->get_registered_ability_ids();
 	}
 
 	/**
-	 * Build model function declarations from registered allowlisted abilities.
+	 * Build model function declarations from enabled registered abilities.
 	 *
 	 * @return array<int,FunctionDeclaration>
 	 */
 	public function get_tool_declarations(): array {
-		if ( ! function_exists( 'wp_get_ability' ) ) {
+		$registered_abilities = $this->get_registered_abilities();
+		if ( [] === $registered_abilities ) {
 			return [];
 		}
 
+		$enabled_abilities = array_fill_keys( $this->get_enabled_ability_ids(), true );
+		$tool_alias_map    = $this->build_tool_alias_map( array_keys( $registered_abilities ) );
 		$declarations = [];
-		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
-			$ability = wp_get_ability( $ability_name );
+		foreach ( $tool_alias_map as $tool_name => $ability_name ) {
+			if ( ! isset( $enabled_abilities[ $ability_name ] ) ) {
+				continue;
+			}
+
+			$ability = $registered_abilities[ $ability_name ] ?? null;
 			if ( ! $ability instanceof \WP_Ability ) {
 				continue;
 			}
@@ -144,26 +153,138 @@ final class Abilities_Helper {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function get_tool_status_list(): array {
-		$rows = [];
+		$abilities = $this->get_ability_settings_state()['abilities'];
 
-		foreach ( self::TOOL_TO_ABILITY as $tool_name => $ability_name ) {
-			$ability = function_exists( 'wp_get_ability' )
-				? wp_get_ability( $ability_name )
-				: null;
+		return array_map(
+			static function ( array $ability ): array {
+				return [
+					'tool_name'    => $ability['tool_name'] ?? '',
+					'ability_name' => $ability['ability_name'] ?? '',
+					'registered'   => ! empty( $ability['registered'] ),
+					'enabled'      => ! empty( $ability['enabled'] ),
+					'safety_class' => isset( $ability['safety_class'] ) ? (string) $ability['safety_class'] : 'unknown',
+				];
+			},
+			$abilities
+		);
+	}
 
-			$safety_class = $ability instanceof \WP_Ability
-				? $this->infer_safety_class( $ability )
-				: 'unknown';
+	/**
+	 * Get ability settings state for UI/API usage.
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function get_ability_settings_state(): array {
+		$registered_abilities = $this->get_registered_abilities();
+		$registered_ids       = array_keys( $registered_abilities );
+		$tool_alias_map       = $this->build_tool_alias_map( $registered_ids );
+		$ability_alias_map    = [];
+		foreach ( $tool_alias_map as $tool_alias => $ability_name ) {
+			$ability_alias_map[ $ability_name ] = $tool_alias;
+		}
 
-			$rows[] = [
-				'tool_name'    => $tool_name,
+		$defaults       = $this->get_default_enabled_ability_ids();
+		$enabled        = $this->get_enabled_ability_ids();
+		$enabled_lookup = array_fill_keys( $enabled, true );
+		$abilities      = [];
+		$category_index = [];
+
+		foreach ( $registered_abilities as $ability_name => $ability ) {
+			$annotations = $this->get_ability_annotations( $ability );
+
+			$category_slug = $this->resolve_ability_category_slug( $ability );
+			$category      = $this->build_category_payload( $category_slug );
+
+			if ( ! isset( $category_index[ $category['slug'] ] ) ) {
+				$category_index[ $category['slug'] ] = $category;
+			}
+
+			$abilities[] = [
+				'tool_name'    => 0 === strpos( $ability_name, self::CLAWPRESS_ABILITY_NAMESPACE . '/' ) && isset( $ability_alias_map[ $ability_name ] )
+					? (string) $ability_alias_map[ $ability_name ]
+					: '',
 				'ability_name' => $ability_name,
-				'registered'   => $ability instanceof \WP_Ability,
-				'safety_class' => $safety_class,
+				'label'        => (string) $ability->get_label(),
+				'description'  => (string) $ability->get_description(),
+				'registered'   => true,
+				'enabled'      => isset( $enabled_lookup[ $ability_name ] ),
+				'safety_class' => $this->infer_safety_class( $ability ),
+				'annotations'  => $annotations,
+				'category'     => $category,
 			];
 		}
 
-		return $rows;
+		usort(
+			$abilities,
+			static fn( array $left, array $right ): int => strcmp(
+				strtolower( (string) ( $left['label'] ?? '' ) ),
+				strtolower( (string) ( $right['label'] ?? '' ) )
+			)
+		);
+
+		$categories = array_values( $category_index );
+		usort(
+			$categories,
+			static fn( array $left, array $right ): int => strcmp(
+				strtolower( (string) ( $left['label'] ?? '' ) ),
+				strtolower( (string) ( $right['label'] ?? '' ) )
+			)
+		);
+
+		return [
+			'abilities'          => $abilities,
+			'enabled_abilities'  => $enabled,
+			'default_abilities'  => $defaults,
+			'categories'         => $categories,
+		];
+	}
+
+	/**
+	 * Persist enabled abilities.
+	 *
+	 * @param array<int,mixed> $enabled_abilities Ability IDs.
+	 * @return array<int,string>
+	 */
+	public function set_enabled_ability_ids( array $enabled_abilities ): array {
+		$sanitized = $this->sanitize_enabled_ability_ids( $enabled_abilities );
+		update_option( self::ENABLED_ABILITIES_OPTION, $sanitized, false );
+		return $sanitized;
+	}
+
+	/**
+	 * Reset enabled abilities to defaults (all ClawPress abilities).
+	 *
+	 * @return array<int,string>
+	 */
+	public function reset_enabled_ability_ids_to_defaults(): array {
+		$defaults = $this->get_default_enabled_ability_ids();
+		update_option( self::ENABLED_ABILITIES_OPTION, $defaults, false );
+		return $defaults;
+	}
+
+	/**
+	 * Get enabled abilities; defaults to all ClawPress abilities when option is missing.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_enabled_ability_ids(): array {
+		$stored = get_option( self::ENABLED_ABILITIES_OPTION, null );
+		if ( null === $stored ) {
+			return $this->get_default_enabled_ability_ids();
+		}
+
+		if ( ! is_array( $stored ) ) {
+			return $this->get_default_enabled_ability_ids();
+		}
+
+		return $this->sanitize_enabled_ability_ids( $stored );
+	}
+
+	/**
+	 * Whether a specific allowlisted ability is enabled.
+	 */
+	public function is_ability_enabled( string $ability_name ): bool {
+		return in_array( $ability_name, $this->get_enabled_ability_ids(), true );
 	}
 
 	/**
@@ -176,7 +297,7 @@ final class Abilities_Helper {
 	 */
 	public function execute_tool_call( string $tool_name, $raw_args = null, array $execution_context = [] ): array {
 		$normalized_tool_name        = strtolower( trim( $tool_name ) );
-		$ability_name                = self::TOOL_TO_ABILITY[ $normalized_tool_name ] ?? '';
+		$ability_name                = $this->resolve_ability_name_from_tool_name( $normalized_tool_name );
 		$args                        = $this->normalize_tool_args( $raw_args );
 		$requesting_user_id          = isset( $execution_context['requesting_user_id'] )
 			? (int) $execution_context['requesting_user_id']
@@ -194,6 +315,24 @@ final class Abilities_Helper {
 		$allowed_confirmation_tokens = $this->normalize_allowed_confirmation_tokens(
 			$execution_context['allowed_confirmation_tokens'] ?? null
 		);
+		$event_context               = [
+			'session_id' => isset( $execution_context['session_id'] ) ? (int) $execution_context['session_id'] : 0,
+			'run_id'     => isset( $execution_context['run_id'] ) ? (int) $execution_context['run_id'] : 0,
+		];
+		$trigger_type                = isset( $execution_context['trigger_type'] )
+			? (string) $execution_context['trigger_type']
+			: 'chat';
+		$runtime_policy              = isset( $execution_context['runtime_policy'] ) && is_array( $execution_context['runtime_policy'] )
+			? $execution_context['runtime_policy']
+			: $this->policy_helper->resolve_runtime_policy(
+				$trigger_type,
+				isset( $execution_context['session_metadata'] ) && is_array( $execution_context['session_metadata'] )
+					? $execution_context['session_metadata']
+					: [],
+				isset( $execution_context['policy_overrides'] ) && is_array( $execution_context['policy_overrides'] )
+						? $execution_context['policy_overrides']
+						: []
+			);
 
 		$args_json = wp_json_encode( $args );
 		$args_hash = false !== $args_json ? hash( 'sha256', (string) $args_json ) : '';
@@ -202,12 +341,26 @@ final class Abilities_Helper {
 			$payload = [
 				'success' => false,
 				'error'   => [
-					'code'    => 'clawpress_tool_not_allowlisted',
-					'message' => __( 'The requested tool is not allowlisted.', 'clawpress' ),
+					'code'    => 'clawpress_tool_not_registered',
+					'message' => __( 'The requested tool is not registered.', 'clawpress' ),
 				],
 				'tool'    => $normalized_tool_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			return $payload;
+		}
+
+		if ( ! $this->is_ability_enabled( $ability_name ) ) {
+			$payload = [
+				'success' => false,
+				'error'   => [
+					'code'    => 'clawpress_ability_disabled',
+					'message' => __( 'The requested ability is disabled in settings.', 'clawpress' ),
+				],
+				'tool'    => $normalized_tool_name,
+				'ability' => $ability_name,
+			];
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -221,7 +374,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -236,11 +389,13 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
-		$access_check = $this->security->assert_requesting_user_allowed();
+		$access_check = $this->security->assert_requesting_user_allowed(
+			$requesting_user_id > 0 ? $requesting_user_id : null
+		);
 		if ( is_wp_error( $access_check ) ) {
 			$payload = [
 				'success' => false,
@@ -251,12 +406,83 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
-		$safety_class = $this->infer_safety_class( $ability );
-		if ( ! $skip_confirmation && $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
+		$safety_class   = $this->infer_safety_class( $ability );
+		$is_destructive = 'destructive' === $safety_class;
+
+		if ( ! $this->is_policy_enabled( $runtime_policy['allow_tools'] ?? true ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_tools_denied',
+				__( 'Tool execution is blocked by runtime policy.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_tools'
+			);
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$payload,
+				$event_context
+			);
+			return $payload;
+		}
+
+		if ( $is_destructive && ! $this->is_policy_enabled( $runtime_policy['allow_destructive_tools'] ?? true ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_destructive_tools_denied',
+				__( 'Destructive tools are not allowed for this runtime trigger.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_destructive_tools'
+			);
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$payload,
+				$event_context
+			);
+			return $payload;
+		}
+
+		if ( 'clawpress/file-delete' === $ability_name && ! $this->is_policy_enabled( $runtime_policy['allow_file_delete'] ?? true ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_file_delete_denied',
+				__( 'File delete is blocked by runtime policy.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_file_delete'
+			);
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$payload,
+				$event_context
+			);
+			return $payload;
+		}
+
+		if ( $is_destructive && ! $skip_confirmation && $this->is_policy_enabled( $runtime_policy['require_confirmation_for_destructive'] ?? true ) && $this->security->requires_confirmation_for_safety_class( $safety_class ) ) {
 			if ( 'batch' === $confirmation_scope ) {
 				$payload = [
 					'success'               => false,
@@ -269,7 +495,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
 				return $payload;
 			}
 
@@ -296,7 +522,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
 				return $payload;
 			}
 		}
@@ -319,7 +545,7 @@ final class Abilities_Helper {
 				'ability'      => $ability_name,
 				'safety_class' => $safety_class,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
 			return $payload;
 		}
 
@@ -331,7 +557,7 @@ final class Abilities_Helper {
 			'result'       => $result,
 		];
 
-		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $payload );
+		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $payload, $event_context );
 
 		return $payload;
 	}
@@ -470,7 +696,343 @@ final class Abilities_Helper {
 	}
 
 	/**
-	 * Write one tool-call action ledger row.
+	 * Resolve ability annotations from meta.
+	 *
+	 * @param \WP_Ability $ability Ability instance.
+	 * @return array<string,bool>
+	 */
+	private function get_ability_annotations( \WP_Ability $ability ): array {
+		$annotations = $ability->get_meta_item( 'annotations', [] );
+		if ( ! is_array( $annotations ) ) {
+			$annotations = [];
+		}
+
+		return [
+			'readonly'    => true === ( $annotations['readonly'] ?? false ),
+			'destructive' => true === ( $annotations['destructive'] ?? false ),
+			'idempotent'  => true === ( $annotations['idempotent'] ?? false ),
+		];
+	}
+
+	/**
+	 * Resolve ability category slug.
+	 *
+	 * @param \WP_Ability $ability Ability instance.
+	 */
+	private function resolve_ability_category_slug( \WP_Ability $ability ): string {
+		if ( method_exists( $ability, 'get_category' ) ) {
+			$category = (string) $ability->get_category();
+			if ( '' !== $category ) {
+				return $category;
+			}
+		}
+
+		if ( method_exists( $ability, 'get_category_slug' ) ) {
+			$category = (string) $ability->get_category_slug();
+			if ( '' !== $category ) {
+				return $category;
+			}
+		}
+
+		if ( method_exists( $ability, 'get_name' ) ) {
+			$ability_name = strtolower( trim( (string) $ability->get_name() ) );
+			if ( false !== strpos( $ability_name, '/' ) ) {
+				$parts = explode( '/', $ability_name, 2 );
+				if ( '' !== $parts[0] ) {
+					return $parts[0];
+				}
+			}
+		}
+
+		return self::CLAWPRESS_ABILITY_NAMESPACE;
+	}
+
+	/**
+	 * Build category payload for UI consumers.
+	 *
+	 * @param string $category_slug Category slug.
+	 * @return array<string,string>
+	 */
+	private function build_category_payload( string $category_slug ): array {
+		$slug = '' !== trim( $category_slug ) ? sanitize_key( $category_slug ) : 'uncategorized';
+		if ( '' === $slug ) {
+			$slug = 'uncategorized';
+		}
+
+		$label = ucwords( str_replace( [ '-', '_' ], ' ', $slug ) );
+
+		if ( function_exists( 'wp_get_ability_category' ) ) {
+			$category = wp_get_ability_category( $slug );
+			if ( is_object( $category ) ) {
+				if ( method_exists( $category, 'get_label' ) ) {
+					$resolved_label = trim( (string) $category->get_label() );
+					if ( '' !== $resolved_label ) {
+						$label = $resolved_label;
+					}
+				}
+			}
+		}
+
+		return [
+			'slug'  => $slug,
+			'label' => $label,
+		];
+	}
+
+	/**
+	 * Default enabled abilities (all ClawPress namespaced registered abilities).
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_default_enabled_ability_ids(): array {
+		$defaults = [];
+		foreach ( $this->get_registered_ability_ids() as $ability_id ) {
+			if ( 0 === strpos( $ability_id, self::CLAWPRESS_ABILITY_NAMESPACE . '/' ) ) {
+				$defaults[] = $ability_id;
+			}
+		}
+
+		return array_values( array_unique( $defaults ) );
+	}
+
+	/**
+	 * Sanitize enabled ability IDs.
+	 *
+	 * @param array<int,mixed> $enabled_abilities Raw ability IDs.
+	 * @return array<int,string>
+	 */
+	private function sanitize_enabled_ability_ids( array $enabled_abilities ): array {
+		$registered = array_fill_keys( $this->get_registered_ability_ids(), true );
+		$sanitized = [];
+
+		foreach ( $enabled_abilities as $ability_name ) {
+			$normalized = strtolower( trim( (string) $ability_name ) );
+			if ( '' === $normalized || ! isset( $registered[ $normalized ] ) ) {
+				continue;
+			}
+
+			$sanitized[] = $normalized;
+		}
+
+		return array_values( array_unique( $sanitized ) );
+	}
+
+	/**
+	 * Resolve registered ability IDs.
+	 *
+	 * @return array<int,string>
+	 */
+	private function get_registered_ability_ids(): array {
+		return array_keys( $this->get_registered_abilities() );
+	}
+
+	/**
+	 * Resolve registered abilities keyed by ability ID.
+	 *
+	 * @return array<string,\WP_Ability>
+	 */
+	private function get_registered_abilities(): array {
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			return [];
+		}
+
+		$registered = wp_get_abilities();
+		if ( ! is_array( $registered ) ) {
+			return [];
+		}
+
+		$abilities = [];
+		foreach ( $registered as $ability_id => $ability ) {
+			$normalized_id = strtolower( trim( (string) $ability_id ) );
+			if ( '' === $normalized_id || ! $ability instanceof \WP_Ability ) {
+				continue;
+			}
+
+			$abilities[ $normalized_id ] = $ability;
+		}
+
+		ksort( $abilities );
+		return $abilities;
+	}
+
+	/**
+	 * Build deterministic tool-alias map for ability IDs.
+	 *
+	 * @param array<int,string> $ability_ids Ability IDs.
+	 * @return array<string,string> Tool alias => ability ID.
+	 */
+	private function build_tool_alias_map( array $ability_ids ): array {
+		$aliases = [];
+		sort( $ability_ids );
+
+		foreach ( $ability_ids as $ability_id ) {
+			$normalized_id = strtolower( trim( (string) $ability_id ) );
+			if ( '' === $normalized_id ) {
+				continue;
+			}
+
+			$alias = $this->build_tool_alias_base( $normalized_id );
+			if ( isset( $aliases[ $alias ] ) && $aliases[ $alias ] !== $normalized_id ) {
+				$suffix       = '_' . substr( md5( $normalized_id ), 0, 8 );
+				$max_base_len = max( 1, 64 - strlen( $suffix ) );
+				$alias        = substr( $alias, 0, $max_base_len ) . $suffix;
+			}
+
+			$aliases[ $alias ] = $normalized_id;
+		}
+
+		return $aliases;
+	}
+
+	/**
+	 * Build one tool alias from an ability ID.
+	 *
+	 * @param string $ability_id Ability ID.
+	 */
+	private function build_tool_alias_base( string $ability_id ): string {
+		$namespace = '';
+		$name      = $ability_id;
+
+		if ( false !== strpos( $ability_id, '/' ) ) {
+			$parts     = explode( '/', $ability_id, 2 );
+			$namespace = $parts[0];
+			$name      = $parts[1];
+		}
+
+		$raw_alias = self::CLAWPRESS_ABILITY_NAMESPACE === $namespace || '' === $namespace
+			? $name
+			: $namespace . '__' . $name;
+
+		$alias = (string) preg_replace( '/[^a-z0-9_]+/', '_', strtolower( $raw_alias ) );
+		$alias = (string) preg_replace( '/_+/', '_', $alias );
+		$alias = trim( $alias, '_' );
+
+		if ( '' === $alias ) {
+			$alias = 'ability_' . substr( md5( $ability_id ), 0, 8 );
+		}
+
+		if ( preg_match( '/^[0-9]/', $alias ) ) {
+			$alias = 'ability_' . $alias;
+		}
+
+		return substr( $alias, 0, 64 );
+	}
+
+	/**
+	 * Resolve ability ID from a model tool/function name.
+	 *
+	 * @param string $tool_name Tool/function name.
+	 */
+	private function resolve_ability_name_from_tool_name( string $tool_name ): string {
+		$normalized = strtolower( trim( $tool_name ) );
+		if ( '' === $normalized ) {
+			return '';
+		}
+
+		$registered = $this->get_registered_abilities();
+		if ( isset( $registered[ $normalized ] ) ) {
+			return $normalized;
+		}
+
+		$tool_alias_map = $this->build_tool_alias_map( array_keys( $registered ) );
+		return isset( $tool_alias_map[ $normalized ] ) ? (string) $tool_alias_map[ $normalized ] : '';
+	}
+
+	/**
+	 * Check whether a policy field is enabled.
+	 *
+	 * @param mixed $value Raw value.
+	 */
+	private function is_policy_enabled( $value ): bool {
+		return function_exists( 'clawpress_sanitize_boolean' )
+			? clawpress_sanitize_boolean( $value )
+			: (bool) $value;
+	}
+
+	/**
+	 * Build a structured policy-violation payload.
+	 *
+	 * @param string              $code Error code.
+	 * @param string              $message Error message.
+	 * @param string              $tool_name Tool name.
+	 * @param string              $ability_name Ability ID.
+	 * @param string              $safety_class Safety class.
+	 * @param array<string,mixed> $runtime_policy Resolved runtime policy.
+	 * @param string              $decision Decision outcome.
+	 * @return array<string,mixed>
+	 */
+	private function build_policy_violation_payload(
+		string $code,
+		string $message,
+		string $tool_name,
+		string $ability_name,
+		string $safety_class,
+		array $runtime_policy,
+		string $decision
+	): array {
+		$on_violation = isset( $runtime_policy['on_policy_violation'] )
+			? strtolower( trim( (string) $runtime_policy['on_policy_violation'] ) )
+			: 'deny';
+		if ( ! in_array( $on_violation, [ 'deny', 'degrade', 'fail' ], true ) ) {
+			$on_violation = 'deny';
+		}
+
+		$policy = [
+			'trigger_type'   => isset( $runtime_policy['trigger_type'] ) ? (string) $runtime_policy['trigger_type'] : 'chat',
+			'policy_profile' => isset( $runtime_policy['policy_profile'] ) ? (string) $runtime_policy['policy_profile'] : 'default',
+			'on_violation'   => $on_violation,
+			'decision'       => $decision,
+		];
+
+		if ( 'degrade' === $on_violation ) {
+			return [
+				'success'      => true,
+				'degraded'     => true,
+				'tool'         => $tool_name,
+				'ability'      => $ability_name,
+				'safety_class' => $safety_class,
+				'result'       => [
+					'message'         => $message,
+					'policy_decision' => $decision,
+				],
+				'policy'       => $policy,
+			];
+		}
+
+		$error_code = 'fail' === $on_violation ? $code . '_fail' : $code;
+
+		return [
+			'success'      => false,
+			'error'        => [
+				'code'    => $error_code,
+				'message' => $message,
+			],
+			'tool'         => $tool_name,
+			'ability'      => $ability_name,
+			'safety_class' => $safety_class,
+			'policy'       => $policy,
+		];
+	}
+
+	/**
+	 * Determine action-log status for policy violations.
+	 *
+	 * @param array<string,mixed> $payload Policy violation payload.
+	 */
+	private function resolve_policy_violation_log_status( array $payload ): string {
+		if ( ! empty( $payload['success'] ) ) {
+			return 'success';
+		}
+
+		$on_violation = isset( $payload['policy']['on_violation'] )
+			? strtolower( trim( (string) $payload['policy']['on_violation'] ) )
+			: 'deny';
+
+		return 'fail' === $on_violation ? 'error' : 'warning';
+	}
+
+	/**
+	 * Emit one tool-call event row.
 	 *
 	 * @param string              $tool_name Tool name.
 	 * @param string              $ability_name Ability ID.
@@ -479,6 +1041,7 @@ final class Abilities_Helper {
 	 * @param string              $status Log status.
 	 * @param string              $args_hash Hash of arguments.
 	 * @param array<string,mixed> $payload Tool payload.
+	 * @param array<string,mixed> $event_context Optional run/session context.
 	 */
 	private function log_tool_call(
 		string $tool_name,
@@ -487,27 +1050,18 @@ final class Abilities_Helper {
 		int $execution_user_id,
 		string $status,
 		string $args_hash,
-		array $payload
+		array $payload,
+		array $event_context
 	): void {
-		$this->action_log_helper->log_event(
-			'tool/' . $tool_name,
-			[
-				'event_type'         => 'tool_call',
-				'status'             => $status,
-				'message'            => isset( $payload['error']['message'] )
-					? (string) $payload['error']['message']
-					: __( 'Tool execution completed.', 'clawpress' ),
-				'requesting_user_id' => $requesting_user_id > 0 ? $requesting_user_id : null,
-				'execution_user_id'  => $execution_user_id > 0 ? $execution_user_id : null,
-				'context'            => [
-					'tool_name'    => $tool_name,
-					'ability_name' => $ability_name,
-					'args_hash'    => $args_hash,
-					'success'      => ! empty( $payload['success'] ),
-					'result'       => isset( $payload['result'] ) ? $payload['result'] : null,
-					'error'        => isset( $payload['error'] ) ? $payload['error'] : null,
-				],
-			]
+		$this->agent_event_helper->emit_tool_call(
+			$tool_name,
+			$ability_name,
+			$requesting_user_id,
+			$execution_user_id,
+			$status,
+			$args_hash,
+			$payload,
+			$event_context
 		);
 	}
 }

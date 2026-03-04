@@ -53,6 +53,12 @@ final class WordPress_Stubs {
 	public static array $scheduled_actions = array();
 
 	/** @var array<int,array<string,mixed>> */
+	public static array $single_scheduled_actions = array();
+
+	/** @var array<int,array<string,mixed>> */
+	public static array $async_actions = array();
+
+	/** @var array<int,array<string,mixed>> */
 	public static array $triggered_actions = array();
 
 	/** @var array<string,mixed> */
@@ -70,6 +76,9 @@ final class WordPress_Stubs {
 	public static int $next_post_id = 1;
 
 	public static bool $can_manage_options = true;
+
+	/** @var array<int,array<string,bool>> */
+	public static array $user_capabilities = array();
 
 	public static bool $is_rtl = false;
 
@@ -98,6 +107,8 @@ final class WordPress_Stubs {
 		self::$abilities            = array();
 		self::$ability_categories   = array();
 		self::$scheduled_actions    = array();
+		self::$single_scheduled_actions = array();
+		self::$async_actions        = array();
 		self::$triggered_actions    = array();
 		self::$options              = array();
 		self::$user_meta            = array();
@@ -105,6 +116,7 @@ final class WordPress_Stubs {
 		self::$post_meta            = array();
 		self::$next_post_id         = 1;
 		self::$can_manage_options   = true;
+		self::$user_capabilities    = array();
 		self::$is_rtl               = false;
 		self::$has_scheduled_action = false;
 		self::$current_user_id      = 1;
@@ -218,6 +230,13 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'sanitize_key' ) ) {
+		function sanitize_key( string $key ): string {
+			$key = strtolower( trim( $key ) );
+			return (string) preg_replace( '/[^a-z0-9_\-]/', '', $key );
+		}
+	}
+
 	if ( ! function_exists( 'wp_json_encode' ) ) {
 		function wp_json_encode( $value, int $flags = 0, int $depth = 512 ) {
 			return json_encode( $value, $flags, $depth );
@@ -315,6 +334,11 @@ namespace {
 
 	if ( ! function_exists( 'current_user_can' ) ) {
 		function current_user_can( string $capability ): bool {
+			$current_user_id = WordPress_Stubs::$current_user_id;
+			if ( isset( WordPress_Stubs::$user_capabilities[ $current_user_id ][ $capability ] ) ) {
+				return true === WordPress_Stubs::$user_capabilities[ $current_user_id ][ $capability ];
+			}
+
 			if ( 'manage_options' === $capability ) {
 				return WordPress_Stubs::$can_manage_options;
 			}
@@ -325,7 +349,10 @@ namespace {
 
 	if ( ! function_exists( 'user_can' ) ) {
 		function user_can( int $user_id, string $capability ): bool {
-			unset( $user_id );
+			if ( isset( WordPress_Stubs::$user_capabilities[ $user_id ][ $capability ] ) ) {
+				return true === WordPress_Stubs::$user_capabilities[ $user_id ][ $capability ];
+			}
+
 			return current_user_can( $capability );
 		}
 	}
@@ -636,6 +663,31 @@ namespace {
 				'hook'      => $hook,
 				'args'      => $args,
 				'group'     => $group,
+			);
+			return 1;
+		}
+	}
+
+	if ( ! function_exists( 'as_schedule_single_action' ) ) {
+		function as_schedule_single_action( int $timestamp, string $hook, array $args = array(), string $group = '', bool $unique = false, int $priority = 10 ): int {
+			unset( $unique, $priority );
+			WordPress_Stubs::$single_scheduled_actions[] = array(
+				'timestamp' => $timestamp,
+				'hook'      => $hook,
+				'args'      => $args,
+				'group'     => $group,
+			);
+			return 1;
+		}
+	}
+
+	if ( ! function_exists( 'as_enqueue_async_action' ) ) {
+		function as_enqueue_async_action( string $hook, array $args = array(), string $group = '', bool $unique = false, int $priority = 10 ): int {
+			unset( $unique, $priority );
+			WordPress_Stubs::$async_actions[] = array(
+				'hook'  => $hook,
+				'args'  => $args,
+				'group' => $group,
 			);
 			return 1;
 		}

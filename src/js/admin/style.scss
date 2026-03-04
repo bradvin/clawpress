@@ -5,3 +5,145 @@
 .clawpress-settings__save-button {
 	margin-top: 16px;
 }
+
+.clawpress-settings__model-control {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.clawpress-settings__model-control-select {
+	flex: 1;
+	min-width: 0;
+}
+
+.clawpress-settings__model-control-select .components-base-control {
+	margin-bottom: 0;
+}
+
+.clawpress-abilities__header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.clawpress-abilities__header h3 {
+	margin: 0;
+	font-size: 24px;
+	line-height: 1.2;
+}
+
+.clawpress-abilities__header p {
+	margin: 0;
+	color: #50575e;
+}
+
+.clawpress-abilities__toolbar {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.clawpress-abilities__toolbar .components-base-control {
+	min-width: 220px;
+	margin-bottom: 0;
+}
+
+.clawpress-abilities__actions {
+	display: flex;
+	gap: 8px;
+}
+
+.clawpress-abilities__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 12px;
+}
+
+.clawpress-abilities__item {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	border: 1px solid #dcdcde;
+	border-radius: 10px;
+	background: linear-gradient(180deg, #fff 0%, #f6f7f7 100%);
+}
+
+.clawpress-abilities__item-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.clawpress-abilities__item h4 {
+	margin: 0;
+}
+
+.clawpress-abilities__item .components-base-control {
+	margin-bottom: 0;
+}
+
+.clawpress-abilities__description {
+	margin: 0;
+	color: #1d2327;
+}
+
+.clawpress-abilities__annotations {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-height: 24px;
+}
+
+.clawpress-abilities__annotation {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 8px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.clawpress-abilities__annotation.is-readonly {
+	background: #d6f5e3;
+	color: #0f5132;
+}
+
+.clawpress-abilities__annotation.is-destructive {
+	background: #fbe6e8;
+	color: #8a2424;
+}
+
+.clawpress-abilities__meta {
+	margin: 0;
+	font-size: 12px;
+	color: #50575e;
+}
+
+.clawpress-abilities__warning {
+	margin: 0;
+	font-size: 12px;
+	color: #b32d2e;
+}
+
+.clawpress-abilities__empty {
+	margin: 0;
+	color: #50575e;
+}
+
+@media (max-width: 782px) {
+	.clawpress-abilities__toolbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.clawpress-abilities__actions {
+		justify-content: flex-start;
+	}
+}

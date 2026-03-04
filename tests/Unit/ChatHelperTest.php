@@ -11,7 +11,9 @@ namespace ClawPress\Tests\Unit;
 
 use ClawPress\Helpers\Chat_Helper;
 use ClawPress\Helpers\Memory_Helper;
+use ClawPress\Tests\Support\Agent_Runtime_Wpdb;
 use ClawPress\Tests\Support\TestCase;
+use ClawPress\Tests\Support\WordPress_Stubs;
 
 final class ChatHelperTest extends TestCase {
 	public function test_generate_ai_reply_injects_context_into_online_generator(): void {
@@ -308,4 +310,51 @@ final class ChatHelperTest extends TestCase {
 		$this->assertSame( 'requires_confirmation', $payload['tool_calls'][1]['status'] );
 		$this->assertSame( true, $payload['tool_calls'][1]['requires_confirmation'] );
 	}
-}
+
+	public function test_generate_ai_reply_returns_in_progress_with_run_metadata_when_slice_pauses(): void {
+		$GLOBALS['wpdb'] = new Agent_Runtime_Wpdb();
+		try {
+			$chat_helper = Chat_Helper::create_for_testing(
+				null,
+				static function (): array {
+					return [
+						'status'        => 'in_progress',
+						'next_action'   => 'continue_later',
+						'reply'         => 'Working on it...',
+						'resume_cursor' => [
+							'version' => 1,
+							'round'   => 2,
+						],
+						'events_cursor' => 55,
+						'tool_calls'    => [
+							[
+								'name'   => 'file_read',
+								'status' => 'success',
+							],
+						],
+					];
+				},
+				static fn( array $settings ): array => [
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				]
+			);
+
+			$payload = $chat_helper->generate_ai_reply( 'Long running request' );
+
+			$this->assertSame( 'in_progress', $payload['mode'] );
+			$this->assertSame( 'in_progress', $payload['status'] );
+			$this->assertGreaterThan( 0, (int) $payload['events_cursor'] );
+			$this->assertGreaterThan( 0, (int) $payload['run_id'] );
+				$this->assertGreaterThan( 0, (int) $payload['session_id'] );
+				$this->assertCount( 1, $GLOBALS['wpdb']->runs );
+				$this->assertCount( 1, WordPress_Stubs::$async_actions );
+				$this->assertNotEmpty( $GLOBALS['wpdb']->events );
+				$events = array_values( $GLOBALS['wpdb']->events );
+				$this->assertSame( (int) $payload['run_id'], (int) $events[0]['run_id'] );
+				$this->assertSame( (int) $payload['session_id'], (int) $events[0]['session_id'] );
+			} finally {
+				unset( $GLOBALS['wpdb'] );
+			}
+		}
+	}

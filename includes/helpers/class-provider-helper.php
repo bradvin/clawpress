@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use ClawPress\Helpers\ProviderRules\Provider_Message_Rules;
+use ClawPress\Helpers\ProviderRules\Provider_Message_Rules_Resolver;
 use Throwable;
 use WordPress\AiClient\AiClient;
 
@@ -44,9 +46,18 @@ final class Provider_Helper {
 	private array $provider_configuration_cache = [];
 
 	/**
+	 * Provider message rules resolver.
+	 *
+	 * @var Provider_Message_Rules_Resolver
+	 */
+	private Provider_Message_Rules_Resolver $provider_message_rules_resolver;
+
+	/**
 	 * Constructor.
 	 */
-	private function __construct() {}
+	private function __construct() {
+		$this->provider_message_rules_resolver = new Provider_Message_Rules_Resolver();
+	}
 
 	/**
 	 * Get singleton instance.
@@ -114,7 +125,7 @@ final class Provider_Helper {
 	public function get_configured_provider_ids(): array {
 		$configured = [];
 
-		foreach ( $this->get_supported_provider_ids() as $provider_id ) {
+		foreach ( $this->get_registered_provider_ids() as $provider_id ) {
 			if ( ! $this->has_provider_credentials( $provider_id ) && ! $this->is_provider_configured( $provider_id ) ) {
 				continue;
 			}
@@ -123,20 +134,6 @@ final class Provider_Helper {
 		}
 
 		return array_values( array_unique( $configured ) );
-	}
-
-	/**
-	 * Get supported provider IDs from known credentials and registry entries.
-	 *
-	 * @return array<int,string>
-	 */
-	private function get_supported_provider_ids(): array {
-		$provider_ids = array_merge(
-			array_keys( self::PROVIDER_CREDENTIALS ),
-			$this->get_registered_provider_ids()
-		);
-
-		return array_values( array_unique( $provider_ids ) );
 	}
 
 	/**
@@ -153,28 +150,91 @@ final class Provider_Helper {
 	}
 
 	/**
-	 * Whether a provider/model combination should use `max_completion_tokens`.
+	 * Resolve provider and model with fallback behavior.
+	 *
+	 * @param array<string,mixed> $settings Settings array.
+	 * @return array{provider:string,model:string}
+	 */
+	public function resolve_provider_and_model( array $settings ): array {
+		return [
+			'provider' => $this->resolve_provider_with_fallback( $settings ),
+			'model'    => $this->resolve_model( $settings ),
+		];
+	}
+
+	/**
+	 * Whether a provider/model combination should apply temperature sampling.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	public function should_use_temperature( string $provider, string $model ): bool {
+		return $this->resolve_provider_message_rules( $provider )->should_use_temperature( $model );
+	}
+
+	/**
+	 * Whether a provider/model combination should use `max_output_tokens`.
 	 *
 	 * Some OpenAI model families reject legacy `max_tokens` and require
-	 * `max_completion_tokens` instead.
+	 * `max_output_tokens` when using the Responses API.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	public function should_use_max_output_tokens( string $provider, string $model ): bool {
+		return $this->resolve_provider_message_rules( $provider )->should_use_max_output_tokens( $model );
+	}
+
+	/**
+	 * Backward-compatible alias for earlier naming.
 	 *
 	 * @param string $provider Provider identifier.
 	 * @param string $model Model identifier.
 	 */
 	public function should_use_max_completion_tokens( string $provider, string $model ): bool {
-		if ( 'openai' !== clawpress_sanitize_provider( $provider ) ) {
-			return false;
-		}
+		return $this->should_use_max_output_tokens( $provider, $model );
+	}
 
-		$normalized_model = strtolower( trim( $model ) );
-		if ( '' === $normalized_model ) {
-			return false;
-		}
+	/**
+	 * Whether a provider/model combination should apply top-p sampling.
+	 *
+	 * Anthropic rejects requests that send both temperature and top_p together,
+	 * so we skip top_p there and keep temperature as the single sampling control.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	public function should_use_top_p( string $provider, string $model ): bool {
+		return $this->resolve_provider_message_rules( $provider )->should_use_top_p( $model );
+	}
 
-		return str_starts_with( $normalized_model, 'o1' )
-			|| str_starts_with( $normalized_model, 'o3' )
-			|| str_starts_with( $normalized_model, 'o4' )
-			|| str_starts_with( $normalized_model, 'gpt-5' );
+	/**
+	 * Whether a provider/model combination supports frequency penalty settings.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	public function should_use_frequency_penalty( string $provider, string $model ): bool {
+		return $this->resolve_provider_message_rules( $provider )->should_use_frequency_penalty( $model );
+	}
+
+	/**
+	 * Whether a provider/model combination supports presence penalty settings.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $model Model identifier.
+	 */
+	public function should_use_presence_penalty( string $provider, string $model ): bool {
+		return $this->resolve_provider_message_rules( $provider )->should_use_presence_penalty( $model );
+	}
+
+	/**
+	 * Resolve provider message rules implementation for a provider.
+	 *
+	 * @param string $provider Provider identifier.
+	 */
+	private function resolve_provider_message_rules( string $provider ): Provider_Message_Rules {
+		return $this->provider_message_rules_resolver->resolve_for_provider( $provider );
 	}
 
 	/**
@@ -201,7 +261,7 @@ final class Provider_Helper {
 		try {
 			$provider_ids = AiClient::defaultRegistry()->getRegisteredProviderIds();
 			if ( ! is_array( $provider_ids ) ) {
-				return array_keys( self::PROVIDER_CREDENTIALS );
+				return [];
 			}
 
 			$normalized_provider_ids = [];
@@ -217,10 +277,10 @@ final class Provider_Helper {
 
 			return [] !== $normalized_provider_ids
 				? array_values( array_unique( $normalized_provider_ids ) )
-				: array_keys( self::PROVIDER_CREDENTIALS );
+				: [];
 		} catch ( Throwable $throwable ) {
 			unset( $throwable );
-			return array_keys( self::PROVIDER_CREDENTIALS );
+			return [];
 		}
 	}
 

@@ -1,8 +1,20 @@
-# ClawPress
+=== ClawPress ===
+Contributors: bradvin
+Tags: ai, assistant, admin
+Requires at least: 6.9
+Tested up to: 6.9
+Requires PHP: 8.1
+Stable tag: 0.0.2
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+AI assistant for WordPress admins.
+
+== Description ==
 
 ![ClawPress Logo](img/clawpress-logo-500x500.png)
 
-The AI for WordPress that actually does things
+ClawPress is the AI for WordPress that actually does things.
 
 [Preview in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
 
@@ -19,6 +31,7 @@ npm run build
 make test
 make lint
 make lint-changed
+npm run plugin:check
 ```
 
 ## Key Features
@@ -32,6 +45,7 @@ Current MVP features implemented in this plugin:
 - Offline mode which still allows slash commands to be used.
 - Setup Wizard built into chat to guide users through plugin setup process.
 - Admin settings page to set which provider, model, and other settings to use.
+- Admin abilities settings page to enable which abilities can be used by the agent.
 - Registers WP Abilities to and loads them as tools into the AI client.
 - Creates an action log database table to track actions taken by the AI assistant.
 - Context & system prompt built up using chat history, tools (abilities), agent files & memory.
@@ -102,6 +116,7 @@ Custom endpoints with permission callbacks and parameter validation.
 
 ### Development (npm)
 - `@wordpress/scripts` - Build tooling
+- `@wordpress/env` - Local disposable WordPress environment for plugin checks
 
 ### Development (Composer)
 - `wp-coding-standards/wpcs` - WordPress Coding Standards for PHP_CodeSniffer
@@ -128,25 +143,29 @@ Custom endpoints with permission callbacks and parameter validation.
 
 ## TODO
 
-- Fix context usage info / limit / tooltip.
-- Add current admin screen to context.
-- Persist tool calls to chat history
-- Define actual scope of agent user. (should the user only be used for heartbeat tasks?)
-- Agent skills!
+### Approved
+
+- Add more agent abilities for reading general WordPress content (posts, pages, etc.)
+- Add abilities to read memory files (long and short term).
+- Add abilities for bulk file_reads and bulk memory_reads.
+- Add ability to send emails to administrator using built-in WP mail functions.
 - Chat threads - have multiple conversation threads at once, per user.
-- Improve agent loop for multi-step messages
-- Add heartbeat wizard for setting up useful nightly site health email report.
-- Implement working heartbeat tasks.
-- Use WP_Filesystem to read/write files
-- Add abilities to read memory files (long and short term)
+- Implement a working heartbeat task. Start small and test how it works. Create a built in nightly healthcheck that checks site health and emails admin. Add wizard for setting up useful nightly site health email report.
+- Agent skills! Create abilities to read, create, update, execute a skill. Consider limitations and security.
+
+### Backlog
+
+- Add current site context, when doing direct chat messages. Consider an ability to pull this info, including all active plugins.
+- Improve context usage info / limit / tooltip. (right now its not useful and not accurate. Also need to decide on a suitable max context size - maybe 200K)
+- Define actual scope of agent user. (should the user only be used for heartbeat tasks?)
 - Fix boostrap agent file setup and writing (doesnt always run)
-- /reset command should clear everything (like uninstall + activation)
-- Add more agent abilities for general WordPress content (posts, pages, etc.)
+- /reset command should clear everything (like uninstall + activation). All history will be wiped and Welcome card should show. Even after page refreshes.
 - Consider how browser search and use will work within WordPress.
 - Mulit agent support. (can configure multiple agents)
 - Multi-user support. (each user has their own agents)
 - Channels for agent interaction.
 - Streaming responses.
+- Add ability to read DB, or generate a query to read from the DB. Might need an ability to get DB schema, which can then be used to generate a query. Need to consider destructive queries, or make all queries require confirmation just to be safe.
 
 ## Decision Log
 
