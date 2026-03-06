@@ -4,12 +4,11 @@ import {
 	CardBody,
 	CardHeader,
 	Notice,
-	SelectControl,
 	Spinner,
 } from '@wordpress/components';
 import { DataForm } from '@wordpress/dataviews/wp';
 import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import { update } from '@wordpress/icons';
 import { requestJson } from '../../utils/requestJson';
 
@@ -479,43 +478,28 @@ const findCatalogModelEntry = (
 	);
 };
 
-const buildModelDescription = (
+const getModelDescriptionState = (
 	provider,
 	model,
 	discoveredModelOptionsByProvider,
-	modelCatalogByProvider,
-	isProviderModelLoading = false
+	modelCatalogByProvider
 ) => {
-	const providerId = normalizeProviderId( provider );
 	const modelId = typeof model === 'string' ? model.trim() : '';
 
-	if ( ! providerId ) {
-		return __( 'Select a provider first.', 'clawpress' );
-	}
-
-	const discoveredOptions = Array.isArray(
-		discoveredModelOptionsByProvider?.[ providerId ]
-	)
-		? discoveredModelOptionsByProvider[ providerId ]
-		: [];
-
-	if ( discoveredOptions.length === 0 ) {
-		if ( isProviderModelLoading ) {
-			return __( 'Loading models for this provider…', 'clawpress' );
-		}
-
-		return __(
-			'No models were discovered for this provider. Configure it in Connectors, then refresh the model list.',
-			'clawpress'
-		);
-	}
-
 	if ( ! modelId ) {
-		return __(
-			'Select a model to view context and cost details.',
-			'clawpress'
-		);
+		return {
+			selectedEntry: null,
+			modelId,
+		};
 	}
+
+	const providerId = normalizeProviderId( provider );
+
+	const discoveredOptions =
+		providerId &&
+		Array.isArray( discoveredModelOptionsByProvider?.[ providerId ] )
+			? discoveredModelOptionsByProvider[ providerId ]
+			: [];
 
 	const catalogEntries = Array.isArray(
 		modelCatalogByProvider?.[ providerId ]
@@ -530,19 +514,10 @@ const buildModelDescription = (
 		selectedOption?.label || ''
 	);
 
-	if ( ! selectedEntry ) {
-		return __(
-			'Context and cost are not available for this model in the curated catalog.',
-			'clawpress'
-		);
-	}
-
-	return sprintf(
-		/* translators: 1: model context window, 2: model cost information */
-		__( 'Context window: %1$s | Cost: %2$s', 'clawpress' ),
-		selectedEntry.context || __( 'Unknown', 'clawpress' ),
-		selectedEntry.cost || __( 'Unknown', 'clawpress' )
-	);
+	return {
+		selectedEntry: selectedEntry || null,
+		modelId,
+	};
 };
 
 export default function SettingsView() {
@@ -745,6 +720,27 @@ export default function SettingsView() {
 
 		return discoveredModelOptionsByProvider[ selectedProviderId ];
 	}, [ selectedProviderId, discoveredModelOptionsByProvider ] );
+	const selectedModelOption = useMemo( () => {
+		const selectedModelId =
+			typeof settings.model === 'string' ? settings.model.trim() : '';
+
+		if ( ! selectedModelId ) {
+			return null;
+		}
+
+		if (
+			providerModelOptions.some(
+				( option ) => option.id === selectedModelId
+			)
+		) {
+			return null;
+		}
+
+		return {
+			id: selectedModelId,
+			label: selectedModelId,
+		};
+	}, [ providerModelOptions, settings.model ] );
 
 	useEffect( () => {
 		if ( ! selectedProviderId ) {
@@ -753,32 +749,6 @@ export default function SettingsView() {
 
 		loadProviderModels( selectedProviderId );
 	}, [ selectedProviderId, loadProviderModels ] );
-
-	useEffect( () => {
-		if (
-			! selectedProviderId ||
-			! settings.model ||
-			isSelectedProviderLoading
-		) {
-			return;
-		}
-
-		const hasSelectedModel = providerModelOptions.some(
-			( option ) => option.id === settings.model
-		);
-		if ( hasSelectedModel ) {
-			return;
-		}
-
-		setSettings( ( current ) =>
-			current.model ? { ...current, model: '' } : current
-		);
-	}, [
-		selectedProviderId,
-		settings.model,
-		isSelectedProviderLoading,
-		providerModelOptions,
-	] );
 
 	const refreshSelectedProviderModels = async () => {
 		if ( ! selectedProviderId ) {
@@ -795,50 +765,53 @@ export default function SettingsView() {
 				label: __( 'Select a model', 'clawpress' ),
 				value: '',
 			},
+			...( selectedModelOption
+				? [
+						{
+							label: selectedModelOption.label,
+							value: selectedModelOption.id,
+						},
+				  ]
+				: [] ),
 			...providerModelOptions.map( ( option ) => ( {
 				label: option.label,
 				value: option.id,
 			} ) ),
 		],
-		[ providerModelOptions ]
+		[ providerModelOptions, selectedModelOption ]
 	);
-	const ModelSelectEdit = ( { data, field, onChange } ) => {
-		const value =
-			typeof data?.[ field?.id ] === 'string' ? data[ field.id ] : '';
-		const elements = Array.isArray( field?.elements ) ? field.elements : [];
-		const hasProvider = Boolean( normalizeProviderId( data?.provider ) );
+	const modelDescriptionState = getModelDescriptionState(
+		settings.provider,
+		settings.model,
+		discoveredModelOptionsByProvider,
+		modelCatalogByProvider
+	);
+	let modelDescription = null;
 
-		return (
-			<div className="clawpress-settings__model-control">
-				<div className="clawpress-settings__model-control-select">
-					<SelectControl
-						value={ value }
-						options={ elements }
-						disabled={ ! hasProvider || isSelectedProviderLoading }
-						onChange={ ( nextValue ) => {
-							const nextEdits =
-								typeof field?.setValue === 'function'
-									? field.setValue( {
-											item: data,
-											value: nextValue,
-									  } )
-									: { [ field.id ]: nextValue };
-							onChange( nextEdits );
-						} }
-					/>
-				</div>
-				<Button
-					className="clawpress-settings__model-refresh-button"
-					icon={ update }
-					label={ __( 'Refresh models', 'clawpress' ) }
-					showTooltip
-					disabled={ ! hasProvider || isSelectedProviderLoading }
-					isBusy={ isSelectedProviderLoading }
-					onClick={ refreshSelectedProviderModels }
-				/>
-			</div>
+	if ( modelDescriptionState.modelId ) {
+		const modelContext = modelDescriptionState.selectedEntry?.context || '';
+		const modelCost = modelDescriptionState.selectedEntry?.cost || '';
+
+		modelDescription = (
+			<span className="clawpress-settings__model-meta">
+				<code>{ modelDescriptionState.modelId }</code>
+				{ modelContext ? (
+					<>
+						{ ' ' }
+						{ __( 'Context Size :', 'clawpress' ) }{ ' ' }
+						<code>{ modelContext }</code>
+					</>
+				) : null }
+				{ modelCost ? (
+					<>
+						{ ' ' }
+						{ __( 'Cost :', 'clawpress' ) }{ ' ' }
+						<code>{ modelCost }</code>
+					</>
+				) : null }
+			</span>
 		);
-	};
+	}
 
 	const fields = [
 		{
@@ -862,14 +835,8 @@ export default function SettingsView() {
 			id: 'model',
 			type: 'text',
 			label: __( 'Model', 'clawpress' ),
-			Edit: ModelSelectEdit,
-			description: buildModelDescription(
-				settings.provider,
-				settings.model,
-				discoveredModelOptionsByProvider,
-				modelCatalogByProvider,
-				isSelectedProviderLoading
-			),
+			description: modelDescription,
+			Edit: 'select',
 			elements: modelSelectElements,
 		},
 		{
@@ -1058,17 +1025,33 @@ export default function SettingsView() {
 									} )
 								}
 							/>
-							<Button
-								className="clawpress-settings__save-button"
-								variant="primary"
-								onClick={ saveSettings }
-								isBusy={ saving }
-								disabled={ saving }
-							>
-								{ saving
-									? __( 'Saving…', 'clawpress' )
-									: __( 'Save Settings', 'clawpress' ) }
-							</Button>
+							<div className="clawpress-settings__actions">
+								<Button
+									className="clawpress-settings__save-button"
+									variant="primary"
+									onClick={ saveSettings }
+									isBusy={ saving }
+									disabled={ saving }
+								>
+									{ saving
+										? __( 'Saving…', 'clawpress' )
+										: __( 'Save Settings', 'clawpress' ) }
+								</Button>
+								<Button
+									className="clawpress-settings__refresh-models-button"
+									variant="secondary"
+									icon={ update }
+									onClick={ refreshSelectedProviderModels }
+									isBusy={ isSelectedProviderLoading }
+									disabled={
+										! selectedProviderId ||
+										isSelectedProviderLoading ||
+										saving
+									}
+								>
+									{ __( 'Refresh Models', 'clawpress' ) }
+								</Button>
+							</div>
 						</div>
 					) }
 				</CardBody>
