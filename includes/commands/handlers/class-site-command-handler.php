@@ -76,9 +76,9 @@ final class Site_Command_Handler implements Command_Handler {
 			);
 		}
 
-		$site_name      = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'name' ) : __( 'WordPress Site', 'clawpress' );
-		$site_url       = function_exists( 'home_url' ) ? (string) home_url( '/' ) : '';
-		$wp_version     = function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'version' ) : __( 'unknown', 'clawpress' );
+		$site_name      = (string) get_bloginfo( 'name' );
+		$site_url       = (string) home_url( '/' );
+		$wp_version     = (string) get_bloginfo( 'version' );
 		$plugin_version = defined( 'CLAWPRESS_VERSION' ) ? (string) CLAWPRESS_VERSION : __( 'unknown', 'clawpress' );
 		$unknown_value  = __( 'unknown', 'clawpress' );
 

@@ -128,10 +128,6 @@ final class Agent_File_Helper {
 	 * Check whether all default template-backed agent files exist.
 	 */
 	public function has_default_agent_files_from_templates(): bool {
-		if ( ! function_exists( 'get_posts' ) ) {
-			return false;
-		}
-
 		$template_files = $this->get_template_files();
 		if ( [] === $template_files ) {
 			return false;
@@ -166,7 +162,7 @@ final class Agent_File_Helper {
 
 		$slug    = $this->build_slug_from_template_path( $normalized_path );
 		$post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
-		if ( $post_id > 0 && function_exists( 'get_post' ) ) {
+		if ( $post_id > 0 ) {
 			$post = get_post( $post_id );
 			if ( $post instanceof \WP_Post && is_string( $post->post_content ) ) {
 				return $post->post_content;
@@ -189,7 +185,7 @@ final class Agent_File_Helper {
 
 		$slug    = $this->build_slug_from_template_path( $normalized_path );
 		$post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
-		if ( $post_id <= 0 || ! function_exists( 'get_post' ) ) {
+		if ( $post_id <= 0 ) {
 			return null;
 		}
 
@@ -229,17 +225,10 @@ final class Agent_File_Helper {
 			];
 		}
 
-		if ( ! function_exists( 'wp_insert_post' ) || ! function_exists( 'is_wp_error' ) ) {
-			return [
-				'success' => false,
-				'error'   => 'wp_insert_post_unavailable',
-			];
-		}
-
 		$slug             = $this->build_slug_from_template_path( $normalized_path );
 		$existing_post_id = $this->find_existing_agent_file_post_id( $normalized_path, $slug );
 		$resolved_author  = null === $author_id || $author_id <= 0
-			? ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 )
+			? get_current_user_id()
 			: $author_id;
 
 		$post_payload = [
@@ -298,9 +287,7 @@ final class Agent_File_Helper {
 			];
 		}
 
-		$deleted = function_exists( 'wp_delete_post' )
-			? wp_delete_post( $existing_post_id, false )
-			: false;
+		$deleted = wp_delete_post( $existing_post_id, false );
 		if ( false === $deleted || null === $deleted ) {
 			return [
 				'success' => false,
@@ -322,10 +309,6 @@ final class Agent_File_Helper {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function list_files(): array {
-		if ( ! function_exists( 'get_posts' ) ) {
-			return [];
-		}
-
 		$posts = get_posts(
 			[
 				'post_type'      => Post_Types::AGENT_FILE_POST_TYPE,
@@ -435,10 +418,6 @@ final class Agent_File_Helper {
 	 * @param string $slug Post slug candidate.
 	 */
 	private function find_existing_agent_file_post_id( string $relative_path, string $slug ): int {
-		if ( ! function_exists( 'get_posts' ) ) {
-			return 0;
-		}
-
 		$normalized_path = $this->normalize_logical_path( $relative_path );
 		if ( '' === $normalized_path ) {
 			return 0;

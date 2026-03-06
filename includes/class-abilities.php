@@ -43,10 +43,6 @@ final class Abilities {
 	 * Register the ClawPress ability category.
 	 */
 	public function register_category(): void {
-		if ( ! function_exists( 'wp_register_ability_category' ) ) {
-			return;
-		}
-
 		wp_register_ability_category(
 			self::CATEGORY_SLUG,
 			[
@@ -60,10 +56,6 @@ final class Abilities {
 	 * Register all built-in abilities.
 	 */
 	public function register_abilities(): void {
-		if ( ! function_exists( 'wp_register_ability' ) ) {
-			return;
-		}
-
 		File_Read_Ability::register();
 		File_Write_Ability::register();
 		File_Delete_Ability::register();

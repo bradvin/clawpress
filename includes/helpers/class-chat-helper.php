@@ -137,7 +137,7 @@ final class Chat_Helper {
 
 		try {
 			$slice_budget_ms    = $this->resolve_chat_slice_budget_ms( $settings );
-			$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+			$requesting_user_id = get_current_user_id();
 			$execution_user_id  = $this->resolve_execution_user_id( $settings, $requesting_user_id );
 			$has_persistent_run = false;
 			$turn_request       = [

@@ -66,13 +66,7 @@ final class Security {
 	 */
 	public function assert_requesting_user_allowed( ?int $requesting_user_id = null ) {
 		$resolved_user_id = null === $requesting_user_id ? 0 : (int) $requesting_user_id;
-		$has_access       = true;
-
-		if ( $resolved_user_id > 0 && function_exists( 'clawpress_check_permissions_for_user' ) ) {
-			$has_access = clawpress_check_permissions_for_user( $resolved_user_id );
-		} elseif ( function_exists( 'clawpress_check_permissions' ) ) {
-			$has_access = clawpress_check_permissions();
-		}
+		$has_access       = clawpress_check_permissions_for_user( $resolved_user_id );
 
 		if ( ! $has_access ) {
 			return new \WP_Error(

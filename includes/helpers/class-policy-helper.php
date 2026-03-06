@@ -159,11 +159,6 @@ final class Policy_Helper {
 	 * @param string $value Raw key-like text.
 	 */
 	private function normalize_key( string $value ): string {
-		if ( function_exists( 'sanitize_key' ) ) {
-			return sanitize_key( $value );
-		}
-
-		$normalized = strtolower( trim( $value ) );
-		return (string) preg_replace( '/[^a-z0-9_\-]/', '', $normalized );
+		return sanitize_key( $value );
 	}
 }

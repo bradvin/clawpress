@@ -284,7 +284,7 @@ final class Context_Helper {
 
 		$tool_declarations  = $this->abilities_helper->get_tool_declarations();
 		$requesting_user_id = null === $user_id
-			? ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 )
+			? get_current_user_id()
 			: $user_id;
 		$execution_user_id  = $this->settings_helper->resolve_agent_user_id();
 		if ( $execution_user_id <= 0 ) {
@@ -538,11 +538,11 @@ final class Context_Helper {
 
 		$content = isset( $raw_skill['content'] ) ? trim( (string) $raw_skill['content'] ) : '';
 
-		$always = isset( $raw_skill['always'] ) && function_exists( 'clawpress_sanitize_boolean' )
+		$always = isset( $raw_skill['always'] )
 			? clawpress_sanitize_boolean( $raw_skill['always'] )
 			: ! empty( $raw_skill['always'] );
 
-		$available = isset( $raw_skill['available'] ) && function_exists( 'clawpress_sanitize_boolean' )
+		$available = isset( $raw_skill['available'] )
 			? clawpress_sanitize_boolean( $raw_skill['available'] )
 			: ! isset( $raw_skill['available'] ) || ! empty( $raw_skill['available'] );
 
@@ -622,9 +622,7 @@ final class Context_Helper {
 	 */
 	private function convert_prompt_message_to_model_message( array $message ): ?Message {
 		if ( is_array( $message['content'] ) ) {
-			$encoded_content = function_exists( 'wp_json_encode' )
-				? wp_json_encode( $message['content'] )
-				: false;
+			$encoded_content = wp_json_encode( $message['content'] );
 			$content         = trim( false === $encoded_content ? '' : (string) $encoded_content );
 		} else {
 			$content = trim( (string) $message['content'] );
@@ -670,7 +668,7 @@ final class Context_Helper {
 				continue;
 			}
 
-			$mime_type = function_exists( 'mime_content_type' ) ? mime_content_type( $path ) : '';
+			$mime_type = mime_content_type( $path );
 			if ( ! is_string( $mime_type ) || 0 !== strpos( $mime_type, 'image/' ) ) {
 				continue;
 			}

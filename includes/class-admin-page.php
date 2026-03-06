@@ -147,9 +147,7 @@ final class Admin_Page {
 			true
 		);
 
-		if ( function_exists( 'wp_set_script_translations' ) ) {
-			wp_set_script_translations( 'clawpress', 'clawpress', CLAWPRESS_DIR . 'languages' );
-		}
+		wp_set_script_translations( 'clawpress', 'clawpress', CLAWPRESS_DIR . 'languages' );
 
 		wp_localize_script(
 			'clawpress',

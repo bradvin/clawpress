@@ -189,7 +189,7 @@ final class Agent_Loop_Helper {
 		try {
 			$requesting_user_id = isset( $turn_request['requesting_user_id'] )
 				? (int) $turn_request['requesting_user_id']
-				: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
+				: get_current_user_id();
 
 			$context                        = $this->context_helper->build_model_context(
 				isset( $turn_request['message'] ) ? (string) $turn_request['message'] : '',
@@ -1199,9 +1199,7 @@ final class Agent_Loop_Helper {
 		);
 		$total_calls   = count( $calls );
 		$expires_at    = $expires_at > 0 ? $expires_at : time();
-		$expires_label = function_exists( 'wp_date' )
-			? wp_date( 'Y-m-d H:i:s', $expires_at )
-			: gmdate( 'Y-m-d H:i:s', $expires_at );
+		$expires_label = wp_date( 'Y-m-d H:i:s', $expires_at );
 
 		if ( 1 === $total_calls ) {
 			$message = sprintf(

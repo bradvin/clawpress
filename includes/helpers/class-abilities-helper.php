@@ -301,14 +301,14 @@ final class Abilities_Helper {
 		$args                        = $this->normalize_tool_args( $raw_args );
 		$requesting_user_id          = isset( $execution_context['requesting_user_id'] )
 			? (int) $execution_context['requesting_user_id']
-			: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
+			: get_current_user_id();
 		$execution_user_id           = isset( $execution_context['execution_user_id'] ) && (int) $execution_context['execution_user_id'] > 0
 			? (int) $execution_context['execution_user_id']
 			: $this->resolve_execution_user_id();
 		$confirmation_scope          = isset( $execution_context['confirmation_scope'] )
 			? strtolower( trim( (string) $execution_context['confirmation_scope'] ) )
 			: '';
-		$skip_confirmation           = isset( $execution_context['skip_confirmation'] ) && function_exists( 'clawpress_sanitize_boolean' )
+		$skip_confirmation           = isset( $execution_context['skip_confirmation'] )
 			? clawpress_sanitize_boolean( $execution_context['skip_confirmation'] )
 			: false;
 		$has_confirmation_allowlist  = array_key_exists( 'allowed_confirmation_tokens', $execution_context );
@@ -356,20 +356,6 @@ final class Abilities_Helper {
 				'error'   => [
 					'code'    => 'clawpress_ability_disabled',
 					'message' => __( 'The requested ability is disabled in settings.', 'clawpress' ),
-				],
-				'tool'    => $normalized_tool_name,
-				'ability' => $ability_name,
-			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
-			return $payload;
-		}
-
-		if ( ! function_exists( 'wp_get_ability' ) ) {
-			$payload = [
-				'success' => false,
-				'error'   => [
-					'code'    => 'clawpress_abilities_api_unavailable',
-					'message' => __( 'The WordPress Abilities API is unavailable.', 'clawpress' ),
 				],
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
@@ -500,7 +486,7 @@ final class Abilities_Helper {
 			}
 
 			$confirm_token    = $this->normalize_confirmation_token( $args['confirm_token'] ?? null );
-			$is_confirmed     = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
+			$is_confirmed     = isset( $args['confirm'] )
 				? clawpress_sanitize_boolean( $args['confirm'] )
 				: false;
 			$token_is_allowed = ! $has_confirmation_allowlist
@@ -647,7 +633,7 @@ final class Abilities_Helper {
 			return $agent_user_id;
 		}
 
-		return function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		return get_current_user_id();
 	}
 
 	/**
@@ -658,18 +644,16 @@ final class Abilities_Helper {
 	 * @return mixed
 	 */
 	private function run_as_execution_user( int $execution_user_id, callable $callback ) {
-		$original_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$original_user_id = get_current_user_id();
 
-		if ( $execution_user_id > 0 && function_exists( 'wp_set_current_user' ) ) {
+		if ( $execution_user_id > 0 ) {
 			wp_set_current_user( $execution_user_id );
 		}
 
 		try {
 			return $callback();
 		} finally {
-			if ( function_exists( 'wp_set_current_user' ) ) {
-				wp_set_current_user( $original_user_id );
-			}
+			wp_set_current_user( $original_user_id );
 		}
 	}
 
@@ -761,14 +745,12 @@ final class Abilities_Helper {
 
 		$label = ucwords( str_replace( [ '-', '_' ], ' ', $slug ) );
 
-		if ( function_exists( 'wp_get_ability_category' ) ) {
-			$category = wp_get_ability_category( $slug );
-			if ( is_object( $category ) ) {
-				if ( method_exists( $category, 'get_label' ) ) {
-					$resolved_label = trim( (string) $category->get_label() );
-					if ( '' !== $resolved_label ) {
-						$label = $resolved_label;
-					}
+		$category = wp_get_ability_category( $slug );
+		if ( is_object( $category ) ) {
+			if ( method_exists( $category, 'get_label' ) ) {
+				$resolved_label = trim( (string) $category->get_label() );
+				if ( '' !== $resolved_label ) {
+					$label = $resolved_label;
 				}
 			}
 		}
@@ -832,10 +814,6 @@ final class Abilities_Helper {
 	 * @return array<string,\WP_Ability>
 	 */
 	private function get_registered_abilities(): array {
-		if ( ! function_exists( 'wp_get_abilities' ) ) {
-			return [];
-		}
-
 		$registered = wp_get_abilities();
 		if ( ! is_array( $registered ) ) {
 			return [];
@@ -944,9 +922,7 @@ final class Abilities_Helper {
 	 * @param mixed $value Raw value.
 	 */
 	private function is_policy_enabled( $value ): bool {
-		return function_exists( 'clawpress_sanitize_boolean' )
-			? clawpress_sanitize_boolean( $value )
-			: (bool) $value;
+		return clawpress_sanitize_boolean( $value );
 	}
 
 	/**

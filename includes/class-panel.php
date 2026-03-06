@@ -31,7 +31,7 @@ final class Panel {
 	public function enqueue_assets( string $hook_suffix ): void {
 		unset( $hook_suffix );
 
-		if ( ! clawpress_check_permissions() ) {
+		if ( ! clawpress_check_permissions_for_user( get_current_user_id() ) ) {
 			return;
 		}
 
@@ -76,9 +76,7 @@ final class Panel {
 			true
 		);
 
-		if ( function_exists( 'wp_set_script_translations' ) ) {
-			wp_set_script_translations( 'clawpress-panel', 'clawpress', CLAWPRESS_DIR . 'languages' );
-		}
+		wp_set_script_translations( 'clawpress-panel', 'clawpress', CLAWPRESS_DIR . 'languages' );
 
 		wp_localize_script(
 			'clawpress-panel',
@@ -101,7 +99,7 @@ final class Panel {
 	 * @param \WP_Admin_Bar $wp_admin_bar Admin bar object.
 	 */
 	public function register_admin_bar_toggle( \WP_Admin_Bar $wp_admin_bar ): void {
-		if ( ! clawpress_check_permissions() ) {
+		if ( ! clawpress_check_permissions_for_user( get_current_user_id() ) ) {
 			return;
 		}
 

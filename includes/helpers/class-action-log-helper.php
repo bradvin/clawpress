@@ -83,7 +83,7 @@ final class Action_Log_Helper {
 			: [];
 
 		$requesting_user_id = isset( $args['requesting_user_id'] ) ? (int) $args['requesting_user_id'] : 0;
-		if ( $requesting_user_id <= 0 && function_exists( 'get_current_user_id' ) ) {
+		if ( $requesting_user_id <= 0 ) {
 			$requesting_user_id = (int) get_current_user_id();
 		}
 
