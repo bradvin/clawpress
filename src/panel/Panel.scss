@@ -44,8 +44,7 @@
   will-change: transform, opacity;
   transition:
     transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity   0.18s ease,
-    width     0.2s ease; /* for resize drag */
+    opacity   0.18s ease;
 }
 
 .clawpress-panel::after {
@@ -92,6 +91,11 @@ body.clawpress-panel-open .clawpress-panel {
 body.clawpress-panel-open #wpcontent {
   margin-right: var(--clawpress-panel-width, 400px);
   transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.clawpress-resizing .clawpress-panel,
+body.clawpress-resizing.clawpress-panel-open #wpcontent {
+  transition: none;
 }
 
 /* Mock controls (dev only) */

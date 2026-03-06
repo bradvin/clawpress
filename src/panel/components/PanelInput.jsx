@@ -191,7 +191,7 @@ const PanelInput = ( {
 						{ suggestions.map( ( command ) => (
 							<button
 								key={ command }
-								className="clawpress-suggestion button button-secondary"
+								className="clawpress-suggestion button button-secondary button-small"
 								onClick={ () => onSendSuggestion?.( command ) }
 								type="button"
 								disabled={ streaming }
