@@ -1,22 +1,21 @@
-=== ClawPress ===
-Contributors: bradvin
+# ClawPress
+
+## The AI Agent for WordPress that actually does things.
+
+![ClawPress Logo](img/clawpress-logo-500x500.png)
+
+[Preview in WordPress Playground](https://playground.wordpress.net/?wp=beta&blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
+
+```
+Contributors: bradvin, welbinator, foo-bender
 Tags: ai, assistant, admin
-Requires at least: 6.9
-Tested up to: 6.9
+Requires at least: 7.0
+Tested up to: 7.0
 Requires PHP: 8.1
 Stable tag: 0.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-
-AI assistant for WordPress admins.
-
-== Description ==
-
-![ClawPress Logo](img/clawpress-logo-500x500.png)
-
-ClawPress is the AI for WordPress that actually does things.
-
-[Preview in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
+```
 
 ## Quick Start
 
@@ -86,10 +85,10 @@ Current Agent Features:
 ## Technical Details
 
 - Uses modern WordPress patterns for admin pages and REST API.
-- Uses `@automattic/jetpack-autoloader` for autoloading. ([docs](https://github.com/Automattic/jetpack-autoloader))
-- Uses `@wordpress/wp-ai-client` for AI client. ([docs](https://github.com/WordPress/wp-ai-client))
+- Uses WordPress core AI client APIs on WordPress 7.0+. ([docs](https://github.com/WordPress/wp-ai-client))
 - Uses `@woocommerce/action-scheduler` for background processing. ([docs](https://github.com/woocommerce/action-scheduler))
-- Includes admin table/grid interface using `@wordpress/dataviews` with WordPress Data Layer.
+- Uses Composer autoloading for native ClawPress PHP classes.
+- Uses `@wordpress/dataviews` for admin `DataViews` tables and `DataForm` settings forms.
 - Uses `wp-scripts` for build tooling. ([docs](https://developer.wordpress.org/block-editor/packages/packages-scripts/))
 - Uses `phpunit` for unit testing.
 - Uses `wp-coding-standards` and `phpcodesniffer` for code quality.
@@ -111,7 +110,9 @@ Custom endpoints with permission callbacks and parameter validation.
 ## Dependencies
 
 ### Runtime
-- `@wordpress/dataviews` - Table/grid UI components
+- WordPress core AI client APIs (WordPress 7.0+)
+- `woocommerce/action-scheduler` - background task scheduling
+- `@wordpress/dataviews` - `DataViews` tables and `DataForm` form components
 - `@wordpress/icons` - Icon library
 
 ### Development (npm)
@@ -120,6 +121,7 @@ Custom endpoints with permission callbacks and parameter validation.
 
 ### Development (Composer)
 - `wp-coding-standards/wpcs` - WordPress Coding Standards for PHP_CodeSniffer
+- `phpunit/phpunit` - PHPUnit test runner
 
 ## Patterns Used
 
@@ -136,10 +138,21 @@ Custom endpoints with permission callbacks and parameter validation.
 ## Requirements
 
 - PHP 8.1+
-- WordPress 6.9+
+- WordPress 7.0+
 - Composer 2+
 - Node.js 20+
 - npm 10+
+
+## WordPress 7.0 Decision
+
+ClawPress now targets WordPress 7.0+ intentionally.
+
+This was a deliberate compatibility decision:
+
+- WordPress 7.0 provides the AI client APIs in core.
+- Bundling a separate runtime copy of `wordpress/wp-ai-client` caused conflicts with the core-provided classes.
+- ClawPress now relies on the core AI client at runtime instead of shipping its own runtime copy.
+- On sites running below WordPress 7.0, ClawPress does not bootstrap and shows an admin notice explaining the minimum required version.
 
 ## TODO
 
@@ -181,4 +194,6 @@ Custom endpoints with permission callbacks and parameter validation.
 10. Background scheduling model: Action Scheduler (not WP-Cron).
 11. Cards are used to display complex UI in chat panel.
 12. Commands can be used offline.
-13. Cards can have actions, which run commands, or send messages.# Test pre-push hook
+13. Cards can have actions, which run commands, or send messages.
+14. Runtime AI integration depends on WordPress 7.0+ core AI APIs instead of bundling `wordpress/wp-ai-client`.
+15. On unsupported WordPress versions, ClawPress shows an admin notice and does not bootstrap.

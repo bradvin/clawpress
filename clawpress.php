@@ -4,7 +4,7 @@
  * Description: AI assistant tools for WordPress admin workflows.
  * Version: 0.0.3
  * Requires PHP: 8.1
- * Requires at least: 6.9
+ * Requires at least: 7.0
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: clawpress
@@ -26,42 +26,18 @@ define( 'CLAWPRESS_URL', plugin_dir_url( __FILE__ ) );
 
 require_once CLAWPRESS_DIR . 'includes/functions.php';
 
-/*
- * WP AI Client 0.4+ provides a custom autoloader that conditionally avoids loading
- * SDK classes from this plugin on WordPress 7.0+.
- */
-if ( file_exists( CLAWPRESS_DIR . 'vendor/wordpress/wp-ai-client/autoload.php' ) ) {
-	require_once CLAWPRESS_DIR . 'vendor/wordpress/wp-ai-client/autoload.php';
-}
-
-$core_ai_client_available = function_exists( 'wp_get_wp_version' )
-	&& version_compare( wp_get_wp_version(), '7.0-alpha', '>=' );
-
-$composer_loader = null;
-if ( $core_ai_client_available ) {
-	if ( file_exists( CLAWPRESS_DIR . 'vendor/autoload.php' ) ) {
-		$composer_loader = require CLAWPRESS_DIR . 'vendor/autoload.php';
-	} elseif ( file_exists( CLAWPRESS_DIR . 'vendor/autoload_packages.php' ) ) {
-		require_once CLAWPRESS_DIR . 'vendor/autoload_packages.php';
-	}
-} else {
-	// Jetpack autoloader for Composer packages (preferred over default Composer loader).
-	if ( file_exists( CLAWPRESS_DIR . 'vendor/autoload_packages.php' ) ) {
-		require_once CLAWPRESS_DIR . 'vendor/autoload_packages.php';
-	} elseif ( file_exists( CLAWPRESS_DIR . 'vendor/autoload.php' ) ) {
-		// Fallback for environments where autoload_packages.php is unavailable.
-		$composer_loader = require CLAWPRESS_DIR . 'vendor/autoload.php';
-	}
-}
-
-if ( $core_ai_client_available && is_object( $composer_loader ) && method_exists( $composer_loader, 'setPsr4' ) ) {
-	$composer_loader->setPsr4( 'WordPress\\AiClient\\', [] );
-	$composer_loader->setPsr4( 'WordPress\\AI_Client\\', [] );
+if ( ! clawpress_is_supported_wp_version() ) {
+	add_action( 'admin_notices', 'clawpress_render_minimum_wp_version_notice' );
+	return;
 }
 
 // Load Action Scheduler library bundled via Composer.
 if ( file_exists( CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
 	require_once CLAWPRESS_DIR . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
+
+if ( file_exists( CLAWPRESS_DIR . 'vendor/autoload.php' ) ) {
+	require_once CLAWPRESS_DIR . 'vendor/autoload.php';
 }
 
 if ( function_exists( 'register_activation_hook' ) ) {
