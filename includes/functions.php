@@ -301,10 +301,19 @@ if ( ! function_exists( 'clawpress_sanitize_provider' ) ) {
 	 * @param mixed $value Raw value.
 	 */
 	function clawpress_sanitize_provider( $value ): string {
-		$provider = strtolower( sanitize_text_field( (string) $value ) );
-		$allowed  = [ 'openai', 'anthropic', 'google' ];
+		$provider = strtolower( sanitize_key( sanitize_text_field( (string) $value ) ) );
+		if ( '' === $provider ) {
+			return '';
+		}
 
-		return in_array( $provider, $allowed, true ) ? $provider : '';
+		try {
+			return \ClawPress\Helpers\Provider_Helper::get_instance()->supports_provider_id( $provider )
+				? $provider
+				: '';
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return '';
+		}
 	}
 }
 
@@ -328,6 +337,17 @@ if ( ! function_exists( 'clawpress_check_permissions_for_user' ) ) {
 		}
 
 		return current_user_can( $capability );
+	}
+}
+
+if ( ! function_exists( 'clawpress_check_permissions' ) ) {
+	/**
+	 * Check permissions for the current user.
+	 *
+	 * Filter hook: `clawpress_permissions_capability`.
+	 */
+	function clawpress_check_permissions(): bool {
+		return clawpress_check_permissions_for_user( (int) get_current_user_id() );
 	}
 }
 

@@ -56,6 +56,10 @@ final class Plugin {
 	 * Determine whether ClawPress should register the AI client bootstrap.
 	 */
 	private function should_bootstrap_ai_client(): bool {
+		if ( ! class_exists( '\WordPress\AI_Client\AI_Client' ) ) {
+			return false;
+		}
+
 		if (
 			false !== has_action( 'init', [ 'WordPress\AI_Client\AI_Client', 'init' ] )
 		) {
