@@ -18,6 +18,7 @@ final class PolicyHelperTest extends TestCase {
 
 		$this->assertSame( 'chat', $policy['trigger_type'] );
 		$this->assertTrue( $policy['allow_tools'] );
+		$this->assertTrue( $policy['allow_network'] );
 		$this->assertTrue( $policy['allow_destructive_tools'] );
 		$this->assertTrue( $policy['require_confirmation_for_destructive'] );
 		$this->assertSame( 6, $policy['max_tool_rounds'] );
@@ -29,6 +30,7 @@ final class PolicyHelperTest extends TestCase {
 
 		$this->assertSame( 'heartbeat', $policy['trigger_type'] );
 		$this->assertTrue( $policy['allow_tools'] );
+		$this->assertTrue( $policy['allow_network'] );
 		$this->assertFalse( $policy['allow_destructive_tools'] );
 		$this->assertFalse( $policy['allow_file_delete'] );
 		$this->assertSame( 2, $policy['max_tool_rounds'] );

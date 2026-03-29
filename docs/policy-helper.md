@@ -67,7 +67,7 @@ Unknown or empty trigger types are normalized to `chat`.
 
 ### `chat`
 
-Uses base defaults (least restrictive profile).
+Uses base defaults (least restrictive profile), including `allow_network = true`.
 
 ### `heartbeat`
 
@@ -75,10 +75,11 @@ More restrictive than chat:
 
 1. `allow_destructive_tools = false`
 2. `allow_file_delete = false`
-3. `max_tool_rounds = 2`
-4. `max_tool_calls_per_round = 3`
-5. `max_wall_time_seconds = 45`
-6. `allow_background_followups = false`
+3. `allow_network = true`
+4. `max_tool_rounds = 2`
+5. `max_tool_calls_per_round = 3`
+6. `max_wall_time_seconds = 45`
+7. `allow_background_followups = false`
 
 ### `spawned_agent`
 
@@ -86,9 +87,10 @@ Restrictive but less constrained than heartbeat:
 
 1. `allow_destructive_tools = false`
 2. `allow_file_delete = false`
-3. `max_tool_rounds = 3`
-4. `max_tool_calls_per_round = 4`
-5. `max_wall_time_seconds = 90`
+3. `allow_network = true`
+4. `max_tool_rounds = 3`
+5. `max_tool_calls_per_round = 4`
+6. `max_wall_time_seconds = 90`
 
 ## Where It Is Used
 
@@ -107,9 +109,10 @@ Implementation: `includes/helpers/class-agent-loop-helper.php`
 `Abilities_Helper::execute_tool_call()` enforces policy gates in this order:
 
 1. `allow_tools`
-2. `allow_destructive_tools` (for destructive abilities)
-3. `allow_file_delete` (for `file_delete`)
-4. `require_confirmation_for_destructive` (confirmation workflow gate)
+2. `allow_network` (for network-capable abilities such as `web_fetch`)
+3. `allow_destructive_tools` (for destructive abilities)
+4. `allow_file_delete` (for `file_delete`)
+5. `require_confirmation_for_destructive` (confirmation workflow gate)
 
 On policy violation, it returns a structured payload with:
 
@@ -200,8 +203,8 @@ $result = Abilities_Helper::get_instance()->execute_tool_call(
 
 ## Suggested Future Improvements
 
-1. Wire `allow_network` to network-capable tools or provider request constraints.
-2. Add a policy filter hook (for example, `clawpress_runtime_policy_resolved`) if third-party plugins need policy customization without patching core code.
+1. Add a policy filter hook (for example, `clawpress_runtime_policy_resolved`) if third-party plugins need policy customization without patching core code.
+2. If future network-capable tools need different restrictions than `web_fetch`, split `allow_network` into capability-specific fields without overloading destructive-tool policy.
 
 ## Test Coverage Today
 
@@ -214,4 +217,4 @@ Current coverage includes:
 Recommended additional coverage:
 
 1. Chat loop behavior under non-default `max_tool_rounds` and `max_tool_calls_per_round`.
-2. Any new enforcement path added for currently informational fields.
+2. Any new enforcement path added for future policy fields beyond the current tool and network gates.

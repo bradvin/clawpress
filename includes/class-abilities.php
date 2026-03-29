@@ -19,6 +19,7 @@ use ClawPress\Abilities\BuiltIn\Memory_Long_Term_Update_Ability;
 use ClawPress\Abilities\BuiltIn\Memory_Short_Term_Add_Ability;
 use ClawPress\Abilities\BuiltIn\Memory_Short_Term_Delete_Ability;
 use ClawPress\Abilities\BuiltIn\Memory_Short_Term_Update_Ability;
+use ClawPress\Abilities\BuiltIn\Web_Fetch_Ability;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -60,6 +61,7 @@ final class Abilities {
 		File_Write_Ability::register();
 		File_Delete_Ability::register();
 		File_List_Ability::register();
+		Web_Fetch_Ability::register();
 
 		Memory_Short_Term_Add_Ability::register();
 		Memory_Short_Term_Update_Ability::register();

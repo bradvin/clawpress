@@ -346,7 +346,7 @@ final class Abilities_Helper {
 				],
 				'tool'    => $normalized_tool_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -360,7 +360,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -375,7 +375,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -392,7 +392,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -416,6 +416,31 @@ final class Abilities_Helper {
 				$execution_user_id,
 				$this->resolve_policy_violation_log_status( $payload ),
 				$args_hash,
+				$args,
+				$payload,
+				$event_context
+			);
+			return $payload;
+		}
+
+		if ( $this->is_network_capable( $ability ) && ! $this->is_policy_enabled( $runtime_policy['allow_network'] ?? false ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_network_denied',
+				__( 'Network access is blocked by runtime policy.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_network'
+			);
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$args,
 				$payload,
 				$event_context
 			);
@@ -439,6 +464,7 @@ final class Abilities_Helper {
 				$execution_user_id,
 				$this->resolve_policy_violation_log_status( $payload ),
 				$args_hash,
+				$args,
 				$payload,
 				$event_context
 			);
@@ -462,6 +488,7 @@ final class Abilities_Helper {
 				$execution_user_id,
 				$this->resolve_policy_violation_log_status( $payload ),
 				$args_hash,
+				$args,
 				$payload,
 				$event_context
 			);
@@ -481,7 +508,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $args, $payload, $event_context );
 				return $payload;
 			}
 
@@ -508,7 +535,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $args, $payload, $event_context );
 				return $payload;
 			}
 		}
@@ -531,7 +558,7 @@ final class Abilities_Helper {
 				'ability'      => $ability_name,
 				'safety_class' => $safety_class,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -543,7 +570,7 @@ final class Abilities_Helper {
 			'result'       => $result,
 		];
 
-		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $payload, $event_context );
+		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $args, $payload, $event_context );
 
 		return $payload;
 	}
@@ -696,6 +723,16 @@ final class Abilities_Helper {
 			'destructive' => true === ( $annotations['destructive'] ?? false ),
 			'idempotent'  => true === ( $annotations['idempotent'] ?? false ),
 		];
+	}
+
+	/**
+	 * Whether an ability is marked as network-capable.
+	 *
+	 * @param \WP_Ability $ability Ability instance.
+	 */
+	private function is_network_capable( \WP_Ability $ability ): bool {
+		$annotations = $ability->get_meta_item( 'annotations', [] );
+		return is_array( $annotations ) && true === ( $annotations['network'] ?? false );
 	}
 
 	/**
@@ -1016,6 +1053,7 @@ final class Abilities_Helper {
 	 * @param int                 $execution_user_id Execution user ID.
 	 * @param string              $status Log status.
 	 * @param string              $args_hash Hash of arguments.
+	 * @param array<string,mixed> $args Tool arguments.
 	 * @param array<string,mixed> $payload Tool payload.
 	 * @param array<string,mixed> $event_context Optional run/session context.
 	 */
@@ -1026,6 +1064,7 @@ final class Abilities_Helper {
 		int $execution_user_id,
 		string $status,
 		string $args_hash,
+		array $args,
 		array $payload,
 		array $event_context
 	): void {
@@ -1038,6 +1077,21 @@ final class Abilities_Helper {
 			$args_hash,
 			$payload,
 			$event_context
+		);
+
+		do_action(
+			'clawpress_tool_call_logged',
+			[
+				'tool_name'           => $tool_name,
+				'ability_name'        => $ability_name,
+				'requesting_user_id'  => $requesting_user_id,
+				'execution_user_id'   => $execution_user_id,
+				'status'              => $status,
+				'args_hash'           => $args_hash,
+				'args'                => $args,
+				'payload'             => $payload,
+				'event_context'       => $event_context,
+			]
 		);
 	}
 }

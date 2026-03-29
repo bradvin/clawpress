@@ -63,6 +63,7 @@ Current Agent Features:
   - `file_read`
   - `file_write`
   - `file_delete`
+  - `web_fetch` (read-only remote fetch via the WordPress HTTP API, validated with `wp_http_validate_url()`, logged to the action log table)
   - `memory_long_term_add`
   - `memory_long_term_update`
   - `memory_long_term_delete`

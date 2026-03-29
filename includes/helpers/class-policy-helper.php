@@ -35,7 +35,7 @@ final class Policy_Helper {
 		'max_tool_rounds'                      => 4,
 		'max_tool_calls_per_round'             => 6,
 		'max_wall_time_seconds'                => 120,
-		'allow_network'                        => false,
+		'allow_network'                        => true,
 		'allow_background_followups'           => true,
 		'on_policy_violation'                  => 'deny',
 	];
