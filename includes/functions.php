@@ -58,8 +58,9 @@ if ( ! function_exists( 'clawpress_render_minimum_wp_version_notice' ) ) {
 		}
 
 		/* translators: 1: minimum supported WordPress version, 2: current WordPress version. */
-		$message = sprintf(
-			__( 'ClawPress requires WordPress %1$s or newer. You are currently running WordPress %2$s.', 'clawpress' ),
+		$message_template = __( 'ClawPress requires WordPress %1$s or newer. You are currently running WordPress %2$s.', 'clawpress' );
+		$message          = sprintf(
+			$message_template,
 			'7.0',
 			clawpress_get_wp_version() ?: __( 'an unknown version', 'clawpress' )
 		);

@@ -73,6 +73,18 @@ final class WordPress_Stubs {
 	/** @var array<int,array<string,mixed>> */
 	public static array $post_meta = array();
 
+	/** @var array<int,array<string,mixed>> */
+	public static array $remote_requests = array();
+
+	/** @var array<string,mixed> */
+	public static array $remote_request_responses = array();
+
+	/** @var array<int,string> */
+	public static array $validated_urls = array();
+
+	/** @var array<string,mixed> */
+	public static array $http_validate_url_results = array();
+
 	public static int $next_post_id = 1;
 
 	public static bool $can_manage_options = true;
@@ -114,6 +126,10 @@ final class WordPress_Stubs {
 		self::$user_meta            = array();
 		self::$posts                = array();
 		self::$post_meta            = array();
+		self::$remote_requests      = array();
+		self::$remote_request_responses = array();
+		self::$validated_urls       = array();
+		self::$http_validate_url_results = array();
 		self::$next_post_id         = 1;
 		self::$can_manage_options   = true;
 		self::$user_capabilities    = array();
@@ -763,6 +779,97 @@ namespace {
 	if ( ! function_exists( 'esc_url_raw' ) ) {
 		function esc_url_raw( string $url ): string {
 			return $url;
+		}
+	}
+
+	if ( ! function_exists( 'wp_http_validate_url' ) ) {
+		function wp_http_validate_url( string $url ) {
+			WordPress_Stubs::$validated_urls[] = $url;
+
+			if ( array_key_exists( $url, WordPress_Stubs::$http_validate_url_results ) ) {
+				return WordPress_Stubs::$http_validate_url_results[ $url ];
+			}
+
+			$validated = filter_var( $url, FILTER_VALIDATE_URL );
+			if ( false === $validated ) {
+				return false;
+			}
+
+			$scheme = strtolower( (string) parse_url( $validated, PHP_URL_SCHEME ) );
+			if ( ! in_array( $scheme, [ 'http', 'https' ], true ) ) {
+				return false;
+			}
+
+			return (string) $validated;
+		}
+	}
+
+	if ( ! function_exists( 'wp_remote_request' ) ) {
+		function wp_remote_request( string $url, array $args = array() ) {
+			WordPress_Stubs::$remote_requests[] = [
+				'url'  => $url,
+				'args' => $args,
+			];
+
+			$method    = strtoupper( trim( (string) ( $args['method'] ?? 'GET' ) ) );
+			$signature = $method . ' ' . $url;
+
+			if ( array_key_exists( $signature, WordPress_Stubs::$remote_request_responses ) ) {
+				return WordPress_Stubs::$remote_request_responses[ $signature ];
+			}
+
+			if ( array_key_exists( $url, WordPress_Stubs::$remote_request_responses ) ) {
+				return WordPress_Stubs::$remote_request_responses[ $url ];
+			}
+
+			return [
+				'response' => [
+					'code'    => 200,
+					'message' => 'OK',
+				],
+				'headers'  => [],
+				'body'     => '',
+			];
+		}
+	}
+
+	if ( ! function_exists( 'wp_remote_retrieve_response_code' ) ) {
+		function wp_remote_retrieve_response_code( $response ): int {
+			if ( ! is_array( $response ) || ! isset( $response['response']['code'] ) ) {
+				return 0;
+			}
+
+			return (int) $response['response']['code'];
+		}
+	}
+
+	if ( ! function_exists( 'wp_remote_retrieve_response_message' ) ) {
+		function wp_remote_retrieve_response_message( $response ): string {
+			if ( ! is_array( $response ) || ! isset( $response['response']['message'] ) ) {
+				return '';
+			}
+
+			return (string) $response['response']['message'];
+		}
+	}
+
+	if ( ! function_exists( 'wp_remote_retrieve_headers' ) ) {
+		function wp_remote_retrieve_headers( $response ) {
+			if ( ! is_array( $response ) || ! isset( $response['headers'] ) ) {
+				return [];
+			}
+
+			return $response['headers'];
+		}
+	}
+
+	if ( ! function_exists( 'wp_remote_retrieve_body' ) ) {
+		function wp_remote_retrieve_body( $response ): string {
+			if ( ! is_array( $response ) || ! isset( $response['body'] ) ) {
+				return '';
+			}
+
+			return (string) $response['body'];
 		}
 	}
 

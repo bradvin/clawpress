@@ -67,10 +67,11 @@ final class AbilitiesHelperTest extends TestCase {
 	public function test_tool_declarations_are_built_from_registered_allowlist(): void {
 		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
 
-		$this->assertCount( 10, $declarations );
+		$this->assertCount( 11, $declarations );
 		$this->assertInstanceOf( FunctionDeclaration::class, $declarations[0] );
 		$this->assertContains( 'file_read', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
 		$this->assertContains( 'memory_long_term_delete', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
+		$this->assertContains( 'web_fetch', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
 	}
 
 	public function test_tool_declarations_respect_enabled_abilities_option(): void {
@@ -361,6 +362,45 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertFalse( $result['success'] );
 		$this->assertSame( 'clawpress_policy_file_delete_denied_fail', $result['error']['code'] );
 		$this->assertSame( 'fail', $result['policy']['on_violation'] );
+	}
+
+	public function test_network_tools_are_denied_when_runtime_policy_disallows_network_and_logged(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'web_fetch',
+			[
+				'url' => 'https://example.test/feed',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'                         => 'spawned_agent',
+					'policy_profile'                       => 'default',
+					'allow_tools'                          => true,
+					'allow_network'                        => false,
+					'allow_destructive_tools'              => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'                    => true,
+					'on_policy_violation'                  => 'deny',
+				],
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_network_denied', $result['error']['code'] );
+		$this->assertSame( 'deny_network', $result['policy']['decision'] );
+
+		$action_log_inserts = array_values(
+			array_filter(
+				$GLOBALS['wpdb']->insert_calls,
+				static fn( array $call ): bool => 'wp_clawpress_action_logs' === $call['table']
+			)
+		);
+
+		$this->assertNotEmpty( $action_log_inserts );
+		$context = json_decode( (string) $action_log_inserts[0]['data']['context'], true );
+		$this->assertIsArray( $context );
+		$this->assertSame( 'deny_network', $context['policy']['decision'] );
 	}
 
 	public function test_destructive_confirmation_token_must_be_allowlisted_by_execution_context(): void {

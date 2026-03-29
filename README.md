@@ -6,17 +6,6 @@
 
 [Preview in WordPress Playground](https://playground.wordpress.net/?wp=beta&blueprint-url=https://raw.githubusercontent.com/bradvin/clawpress/refs/heads/main/blueprint.json)
 
-```
-Contributors: bradvin, welbinator, foo-bender
-Tags: ai, assistant, admin
-Requires at least: 7.0
-Tested up to: 7.0
-Requires PHP: 8.1
-Stable tag: 0.0.2
-License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
-```
-
 ## Quick Start
 
 ```bash
@@ -63,6 +52,7 @@ Current Agent Features:
   - `file_read`
   - `file_write`
   - `file_delete`
+  - `web_fetch` (read-only remote fetch via the WordPress HTTP API, validated with `wp_http_validate_url()`, logged to the action log table)
   - `memory_long_term_add`
   - `memory_long_term_update`
   - `memory_long_term_delete`
