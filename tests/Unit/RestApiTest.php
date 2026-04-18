@@ -13,6 +13,7 @@ use ClawPress\Helpers\Memory_Helper;
 use ClawPress\RestAPI\Rest_API;
 use ClawPress\RestAPI\Controllers\Abilities_Settings_Controller;
 use ClawPress\RestAPI\Controllers\Chat_Controller;
+use ClawPress\RestAPI\Controllers\Logs_Controller;
 use ClawPress\RestAPI\Controllers\Panel_State_Controller;
 use ClawPress\RestAPI\Controllers\Settings_Controller;
 use ClawPress\RestAPI\Controllers\Status_Controller;
@@ -38,11 +39,14 @@ final class RestApiTest extends TestCase {
 			WordPress_Stubs::$rest_routes
 		);
 
-		$this->assertCount( 14, WordPress_Stubs::$rest_routes );
+		$this->assertCount( 17, WordPress_Stubs::$rest_routes );
 		$this->assertContains( '/settings:GET', $routes );
 		$this->assertContains( '/settings:POST', $routes );
 		$this->assertContains( '/settings/abilites:GET', $routes );
 		$this->assertContains( '/settings/abilites:POST', $routes );
+		$this->assertContains( '/logs:GET', $routes );
+		$this->assertContains( '/logs:DELETE', $routes );
+		$this->assertContains( '/logs/linked-events:GET', $routes );
 		$this->assertContains( '/status:GET', $routes );
 		$this->assertContains( '/panel/state:GET', $routes );
 		$this->assertContains( '/panel/state:POST', $routes );
@@ -91,6 +95,25 @@ final class RestApiTest extends TestCase {
 		$this->assertCount( 2, $settings_routes );
 		$this->assertSame( 'clawpress_check_permissions', $settings_routes[0]['args']['permission_callback'] );
 		$this->assertSame( 'clawpress_check_permissions', $settings_routes[1]['args']['permission_callback'] );
+	}
+
+	public function test_logs_routes_use_global_manage_options_permission_callback(): void {
+		$logs_controller = new Logs_Controller();
+		$logs_controller->register_routes();
+
+		$logs_routes = array_values(
+			array_filter(
+				WordPress_Stubs::$rest_routes,
+				static function ( array $route ): bool {
+					return '/logs' === $route['route'];
+				}
+			)
+		);
+
+		$this->assertCount( 3, $logs_routes );
+		$this->assertSame( 'clawpress_check_permissions', $logs_routes[0]['args']['permission_callback'] );
+		$this->assertSame( 'clawpress_check_permissions', $logs_routes[1]['args']['permission_callback'] );
+		$this->assertSame( 'clawpress_check_permissions', $logs_routes[2]['args']['permission_callback'] );
 	}
 
 	public function test_get_settings_returns_current_option_value(): void {

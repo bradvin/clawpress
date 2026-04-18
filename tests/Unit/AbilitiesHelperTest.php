@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\Abilities\Abilities;
+use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Helpers\Abilities_Helper;
 use ClawPress\Tests\Support\TestCase;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
@@ -54,6 +55,7 @@ final class AbilitiesHelperTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['wpdb'] = new AbilitiesHelperTestWpdb();
+		Action_Log_Helper::register_tool_call_logging_hook();
 		( new Abilities() );
 		do_action( 'wp_abilities_api_categories_init' );
 		do_action( 'wp_abilities_api_init' );

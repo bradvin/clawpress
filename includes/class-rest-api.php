@@ -18,6 +18,7 @@ namespace ClawPress\RestAPI;
 use ClawPress\RestAPI\Controllers\Chat_Controller;
 use ClawPress\RestAPI\Controllers\Agent_Run_Controller;
 use ClawPress\RestAPI\Controllers\Abilities_Settings_Controller;
+use ClawPress\RestAPI\Controllers\Logs_Controller;
 use ClawPress\RestAPI\Controllers\Panel_State_Controller;
 use ClawPress\RestAPI\Controllers\Route_Controller;
 use ClawPress\RestAPI\Controllers\Settings_Controller;
@@ -43,6 +44,7 @@ final class Rest_API {
 		$this->controllers = [
 			new Settings_Controller(),
 			new Abilities_Settings_Controller(),
+			new Logs_Controller(),
 			new Status_Controller(),
 			new Panel_State_Controller(),
 			new Chat_Controller(),

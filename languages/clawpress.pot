@@ -9,19 +9,19 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-03-06T16:59:50+00:00\n"
+"POT-Creation-Date: 2026-04-18T14:35:15+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
 
 #. Plugin Name of the plugin
 #: clawpress.php
-#: includes/class-abilities.php:49
-#: includes/class-admin-page.php:35
-#: includes/class-admin-page.php:36
-#: includes/class-admin-page.php:48
-#: includes/class-admin-page.php:49
-#: includes/class-admin-page.php:102
+#: includes/class-abilities.php:50
+#: includes/class-admin-page.php:45
+#: includes/class-admin-page.php:46
+#: includes/class-admin-page.php:58
+#: includes/class-admin-page.php:59
+#: includes/class-admin-page.php:121
 #: src/panel/components/PanelToggle.jsx:9
 msgid "ClawPress"
 msgstr ""
@@ -203,20 +203,63 @@ msgstr ""
 msgid "Unable to update short-term memory."
 msgstr ""
 
-#: includes/class-abilities.php:50
+#: includes/abilities/class-web-fetch-ability.php:33
+msgid "Web Fetch"
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:34
+msgid "Fetch a remote URL using the configured fetcher."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:42
+msgid "Remote URL to fetch."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:46
+msgid "Fetcher provider slug. Defaults to `wp`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:51
+msgid "Read-only HTTP method. Defaults to `GET`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:55
+msgid "Optional request headers."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:62
+msgid "Request timeout in seconds. Defaults to `15`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:66
+msgid "Maximum redirect count. Defaults to `5`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:70
+msgid "Optional fetcher-specific arguments for future providers."
+msgstr ""
+
+#: includes/class-abilities.php:51
 msgid "Abilities provided by the ClawPress plugin."
 msgstr ""
 
-#: includes/class-admin-page.php:62
+#: includes/class-admin-page.php:68
+#: includes/class-admin-page.php:69
+#: includes/class-admin-page.php:130
+#: src/js/admin/components/views/LogsView.js:524
+msgid "Logs"
+msgstr ""
+
+#: includes/class-admin-page.php:82
 #: includes/class-post-types.php:45
 #: includes/class-post-types.php:55
 #: includes/class-post-types.php:56
 #: includes/commands/handlers/class-setup-command-handler.php:676
-#: src/js/admin/components/App.js:19
+#: src/js/admin/components/App.js:20
 msgid "Agent Files"
 msgstr ""
 
-#: includes/class-admin-page.php:66
+#: includes/class-admin-page.php:86
 #: includes/class-post-types.php:81
 #: includes/class-post-types.php:91
 #: includes/class-post-types.php:92
@@ -327,7 +370,7 @@ msgstr ""
 msgid "No agent memories found in Trash."
 msgstr ""
 
-#: includes/class-security.php:74
+#: includes/class-security.php:76
 msgid "The requesting user is not allowed to use ClawPress."
 msgstr ""
 
@@ -838,6 +881,7 @@ msgid "Choose a model for `%s`."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:787
+#: src/js/admin/components/views/LogsView.js:539
 msgid "Refresh"
 msgstr ""
 
@@ -1118,12 +1162,13 @@ msgstr ""
 msgid "- tool_execution: unavailable (no enabled abilities)"
 msgstr ""
 
-#: includes/functions.php:62
+#. translators: 1: minimum supported WordPress version, 2: current WordPress version.
+#: includes/functions.php:61
 #, php-format
 msgid "ClawPress requires WordPress %1$s or newer. You are currently running WordPress %2$s."
 msgstr ""
 
-#: includes/functions.php:64
+#: includes/functions.php:65
 msgid "an unknown version"
 msgstr ""
 
@@ -1143,20 +1188,60 @@ msgstr ""
 msgid "Tool execution is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:428
+#: includes/helpers/class-abilities-helper.php:429
+msgid "Network access is blocked by runtime policy."
+msgstr ""
+
+#: includes/helpers/class-abilities-helper.php:453
 msgid "Destructive tools are not allowed for this runtime trigger."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:451
+#: includes/helpers/class-abilities-helper.php:477
 msgid "File delete is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:478
+#: includes/helpers/class-abilities-helper.php:505
 msgid "This destructive action is pending batch confirmation."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:503
+#: includes/helpers/class-abilities-helper.php:530
 msgid "Explicit confirmation is required for this destructive action."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:293
+#, php-format
+msgid "Tool %s requires confirmation."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:301
+#, php-format
+msgid "Tool %s completed with degraded output."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:309
+#, php-format
+msgid "Tool %s completed successfully."
+msgstr ""
+
+#. translators: 1: tool name, 2: error message
+#: includes/helpers/class-action-log-helper.php:317
+#, php-format
+msgid "Tool %1$s failed: %2$s"
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:326
+#, php-format
+msgid "Tool %s was blocked by policy."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:333
+#, php-format
+msgid "Tool %s failed."
 msgstr ""
 
 #. translators: %d: maximum number of tool calls executed per round.
@@ -1261,6 +1346,36 @@ msgstr ""
 msgid "No settings provided"
 msgstr ""
 
+#. translators: 1: HTTP method, 2: URL, 3: HTTP status code.
+#: includes/helpers/class-web-fetch-helper.php:130
+#, php-format
+msgid "Web fetch %1$s %2$s completed with status %3$d."
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL, 3: error message.
+#: includes/helpers/class-web-fetch-helper.php:138
+#, php-format
+msgid "Web fetch %1$s %2$s failed: %3$s"
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL.
+#: includes/helpers/class-web-fetch-helper.php:146
+#, php-format
+msgid "Web fetch %1$s %2$s was blocked."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:221
+msgid "The requested `fetcher` is not registered."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:247
+msgid "A valid `url` is required."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:260
+msgid "The provided `method` is not supported."
+msgstr ""
+
 #: includes/helpers/class-workspace-helper.php:72
 msgid "Invalid user ID for workspace creation."
 msgstr ""
@@ -1314,27 +1429,16 @@ msgstr ""
 msgid "Message is required."
 msgstr ""
 
-#: includes/rest/class-settings-controller.php:147
-#: src/js/admin/components/views/SettingsView.js:103
-msgid "OpenAI"
+#: includes/rest/class-logs-controller.php:187
+msgid "A run ID or session ID is required."
 msgstr ""
 
-#: includes/rest/class-settings-controller.php:151
-#: src/js/admin/components/views/SettingsView.js:107
-msgid "Anthropic"
-msgstr ""
-
-#: includes/rest/class-settings-controller.php:155
-#: src/js/admin/components/views/SettingsView.js:111
-msgid "Google"
-msgstr ""
-
-#: src/js/admin/components/App.js:24
+#: src/js/admin/components/App.js:25
 #: src/js/admin/components/views/SettingsView.js:966
 msgid "Settings"
 msgstr ""
 
-#: src/js/admin/components/App.js:29
+#: src/js/admin/components/App.js:30
 #: src/js/admin/components/views/AbilitiesView.js:211
 msgid "Abilities"
 msgstr ""
@@ -1412,8 +1516,202 @@ msgstr ""
 msgid "This ability is not currently registered."
 msgstr ""
 
+#: src/js/admin/components/views/LogsView.js:27
+msgid "All"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:31
+#: src/js/admin/components/views/LogsView.js:44
+msgid "Tool Calls"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:35
+#: src/js/admin/components/views/LogsView.js:45
+msgid "Commands"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:39
+#: src/js/admin/components/views/LogsView.js:46
+msgid "Messages"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:47
+msgid "Events"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:127
+msgid "Unknown"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:152
+msgid "Unable to render log details."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:222
+msgid "Linked Events"
+msgstr ""
+
+#. translators: %d: run ID
+#: src/js/admin/components/views/LogsView.js:228
+#, js-format
+msgid "Linked Events for Run %d"
+msgstr ""
+
+#. translators: %d: session ID
+#: src/js/admin/components/views/LogsView.js:235
+#, js-format
+msgid "Linked Events for Session %d"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:258
+msgid "Request"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:264
+msgid "Response"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:271
+msgid "Metadata"
+msgstr ""
+
+#. translators: 1: log tab label, 2: log count
+#: src/js/admin/components/views/LogsView.js:319
+#: src/js/admin/components/views/LogsView.js:330
+#, js-format
+msgid "%1$s (%2$d)"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:371
+msgid "Unable to load logs."
+msgstr ""
+
+#. translators: %d: number of cleared logs
+#: src/js/admin/components/views/LogsView.js:434
+#, js-format
+msgid "%d log cleared."
+msgid_plural "%d logs cleared."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/js/admin/components/views/LogsView.js:444
+msgid "Logs cleared."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:455
+msgid "Unable to clear logs."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:498
+msgid "Unable to load linked events."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:526
+msgid "Review ClawPress activity, including tool calls, commands, and chat log entries."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:547
+msgid "Clear All Logs"
+msgstr ""
+
+#. translators: %d: total logs in current tab
+#: src/js/admin/components/views/LogsView.js:582
+#, js-format
+msgid "%d logs in this view."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:594
+msgid "Timestamp"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:600
+msgid "Type"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:606
+msgid "Action"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:612
+#: src/js/admin/config/itemConfig.js:31
+msgid "Status"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:618
+msgid "Message"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:624
+msgid "Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:636
+msgid "No logs found for this tab."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:687
+msgid "info"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:711
+msgid "Hide Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:715
+msgid "View Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:730
+msgid "View Events"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:768
+msgid "Load More"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:783
+msgid "Clear all logs?"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:791
+msgid "This removes every action log entry, including tool calls, commands, and messages."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:802
+#: src/js/admin/config/itemConfig.js:138
+#: src/panel/components/ToolDialogForm.jsx:164
+#: src/panel/utils/toolDialogHelpers.js:98
+#: src/panel/utils/tools/updatePostsFindReplace.js:97
+#: src/panel/utils/tools/updatePostsFindReplace.js:200
+msgid "Cancel"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:811
+msgid "Clear Logs"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:836
+msgid "No linked events were found for this log entry."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:876
+msgid "Load More Events"
+msgstr ""
+
 #: src/js/admin/components/views/PagesView.js:27
 msgid "Showing ClawPress Agent Files."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:103
+msgid "OpenAI"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:107
+msgid "Anthropic"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:111
+msgid "Google"
 msgstr ""
 
 #: src/js/admin/components/views/SettingsView.js:577
@@ -1548,10 +1846,6 @@ msgstr ""
 msgid "(no title)"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:31
-msgid "Status"
-msgstr ""
-
 #: src/js/admin/config/itemConfig.js:38
 #: src/panel/utils/tools/updatePostsFindReplace.js:59
 msgid "Published"
@@ -1603,14 +1897,6 @@ msgstr ""
 #: src/js/admin/config/itemConfig.js:129
 #, js-format
 msgid "Move %d agent files to trash?"
-msgstr ""
-
-#: src/js/admin/config/itemConfig.js:138
-#: src/panel/components/ToolDialogForm.jsx:164
-#: src/panel/utils/toolDialogHelpers.js:98
-#: src/panel/utils/tools/updatePostsFindReplace.js:97
-#: src/panel/utils/tools/updatePostsFindReplace.js:200
-msgid "Cancel"
 msgstr ""
 
 #: src/js/admin/utils/requestJson.js:43

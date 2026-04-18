@@ -27,8 +27,6 @@ final class Web_Fetch_Ability {
 	 * Register ability.
 	 */
 	public static function register(): void {
-		Web_Fetch_Helper::register_logging_hook();
-
 		wp_register_ability(
 			self::ABILITY_NAME,
 			[

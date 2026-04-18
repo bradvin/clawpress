@@ -7,10 +7,11 @@ import { TabPanel } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useNavigation } from '../hooks/useNavigation';
 import AbilitiesView from './views/AbilitiesView';
+import LogsView from './views/LogsView';
 import PagesView from './views/PagesView';
 import SettingsView from './views/SettingsView';
 
-export default function App() {
+function MainAdminApp() {
 	const { currentView, handleTabSelect, VIEWS } = useNavigation();
 
 	const tabs = [
@@ -44,4 +45,16 @@ export default function App() {
 			</TabPanel>
 		</div>
 	);
+}
+
+export default function App( { screen = 'main' } ) {
+	if ( 'logs' === screen ) {
+		return (
+			<div className="clawpress-app clawpress-app--logs">
+				<LogsView />
+			</div>
+		);
+	}
+
+	return <MainAdminApp />;
 }

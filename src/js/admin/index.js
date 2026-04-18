@@ -18,5 +18,11 @@ domReady( () => {
 		return;
 	}
 
-	createRoot( rootElement ).render( <App /> );
+	const screen =
+		typeof window !== 'undefined' &&
+		typeof window.CLAWPRESS_ADMIN?.screen === 'string'
+			? window.CLAWPRESS_ADMIN.screen
+			: 'main';
+
+	createRoot( rootElement ).render( <App screen={ screen } /> );
 } );

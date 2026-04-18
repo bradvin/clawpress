@@ -67,6 +67,27 @@ final class ActionLogHelperTestWpdb {
 	public array $results = [];
 
 	/**
+	 * Prepared query result queue.
+	 *
+	 * @var array<int,array<int,array<string,mixed>>>
+	 */
+	public array $results_queue = [];
+
+	/**
+	 * Captured raw query calls.
+	 *
+	 * @var array<int,string>
+	 */
+	public array $query_calls = [];
+
+	/**
+	 * Raw query return value.
+	 *
+	 * @var int|false
+	 */
+	public $query_result = 0;
+
+	/**
 	 * Get charset/collation SQL.
 	 */
 	public function get_charset_collate(): string {
@@ -127,7 +148,23 @@ final class ActionLogHelperTestWpdb {
 	 */
 	public function get_results( string $query, string $output ): array {
 		unset( $query, $output );
+
+		if ( [] !== $this->results_queue ) {
+			return array_shift( $this->results_queue );
+		}
+
 		return $this->results;
+	}
+
+	/**
+	 * Capture raw SQL query calls.
+	 *
+	 * @param string $query Query string.
+	 * @return int|false
+	 */
+	public function query( string $query ) {
+		$this->query_calls[] = $query;
+		return $this->query_result;
 	}
 }
 
@@ -272,6 +309,98 @@ final class ActionLogHelperTest extends TestCase {
 		$this->assertSame( 9, $rows[0]['execution_user_id'] );
 		$this->assertSame( [ 'ability' => 'create_workspace' ], $rows[0]['context'] );
 		$this->assertSame( [ 'tool_call', 10, 0 ], $GLOBALS['wpdb']->last_prepare_args );
+	}
+
+	public function test_get_log_counts_by_type_returns_normalized_counts(): void {
+		$GLOBALS['wpdb']->results = [
+			[
+				'event_type' => 'command',
+				'total'      => '2',
+			],
+			[
+				'event_type' => 'tool_call',
+				'total'      => '7',
+			],
+		];
+
+		$counts = Action_Log_Helper::get_instance()->get_log_counts_by_type();
+
+		$this->assertSame(
+			[
+				'command'   => 2,
+				'tool_call' => 7,
+			],
+			$counts
+		);
+	}
+
+	public function test_get_log_count_returns_total_for_optional_event_type(): void {
+		$GLOBALS['wpdb']->results = [
+			[
+				'total' => '4',
+			],
+		];
+
+		$total = Action_Log_Helper::get_instance()->get_log_count( 'tool_call' );
+
+		$this->assertSame( 4, $total );
+		$this->assertSame( [ 'tool_call', 'tool_call' ], $GLOBALS['wpdb']->last_prepare_args );
+	}
+
+	public function test_delete_all_logs_runs_delete_query_and_returns_deleted_count(): void {
+		$GLOBALS['wpdb']->query_result = 9;
+
+		$deleted = Action_Log_Helper::get_instance()->delete_all_logs();
+
+		$this->assertSame( 9, $deleted );
+		$this->assertCount( 1, $GLOBALS['wpdb']->query_calls );
+		$this->assertStringContainsString( 'DELETE FROM wp_clawpress_action_logs', $GLOBALS['wpdb']->query_calls[0] );
+	}
+
+	public function test_handle_tool_call_logged_persists_generic_summary_with_run_and_session_context(): void {
+		Action_Log_Helper::handle_tool_call_logged(
+			[
+				'tool_name'           => 'file_read',
+				'ability_name'        => 'clawpress/file-read',
+				'requesting_user_id'  => 12,
+					'execution_user_id'   => 9,
+					'status'              => 'success',
+					'args_hash'           => 'abc123',
+					'args'                => [
+						'path' => 'README.md',
+					],
+					'payload'             => [
+					'success' => true,
+					'result'  => [
+						'path'    => 'README.md',
+						'content' => 'Hello',
+					],
+				],
+				'event_context'       => [
+					'run_id'     => 77,
+					'session_id' => 11,
+				],
+			]
+		);
+
+		$this->assertCount( 1, $GLOBALS['wpdb']->insert_calls );
+		$this->assertSame( 'wp_clawpress_action_logs', $GLOBALS['wpdb']->insert_calls[0]['table'] );
+		$this->assertSame( 'file_read', $GLOBALS['wpdb']->insert_calls[0]['data']['action_name'] );
+		$this->assertSame( 'tool_call', $GLOBALS['wpdb']->insert_calls[0]['data']['event_type'] );
+		$this->assertSame( 'success', $GLOBALS['wpdb']->insert_calls[0]['data']['status'] );
+		$this->assertSame( 12, $GLOBALS['wpdb']->insert_calls[0]['data']['requesting_user_id'] );
+		$this->assertSame( 9, $GLOBALS['wpdb']->insert_calls[0]['data']['execution_user_id'] );
+
+			$context = json_decode( (string) $GLOBALS['wpdb']->insert_calls[0]['data']['context'], true );
+			$this->assertIsArray( $context );
+			$this->assertSame( 'file_read', $context['tool'] );
+			$this->assertSame( 'clawpress/file-read', $context['ability'] );
+			$this->assertSame( [ 'path' => 'README.md' ], $context['request'] );
+			$this->assertSame( true, $context['response']['success'] );
+			$this->assertSame( 'README.md', $context['response']['result']['path'] );
+			$this->assertSame( 77, $context['run_id'] );
+			$this->assertSame( 11, $context['session_id'] );
+			$this->assertSame( [ 'path', 'content' ], $context['result_keys'] );
 	}
 }
 }
