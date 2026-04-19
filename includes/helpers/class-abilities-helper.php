@@ -128,23 +128,218 @@ final class Abilities_Helper {
 				continue;
 			}
 
-			$parameters = $ability->get_input_schema();
-			if ( [] === $parameters ) {
-				$parameters = [
-					'type'                 => 'object',
-					'properties'           => new \stdClass(),
-					'additionalProperties' => false,
-				];
-			}
-
-			$declarations[] = new FunctionDeclaration(
-				$tool_name,
-				(string) $ability->get_description(),
-				$parameters
+			$declarations[] = $this->normalize_function_declaration(
+				new FunctionDeclaration(
+					$tool_name,
+					(string) $ability->get_description(),
+					$this->normalize_tool_input_schema( $ability->get_input_schema() )
+				)
 			);
 		}
 
 		return $declarations;
+	}
+
+	/**
+	 * Normalize a function declaration for provider-safe JSON schema encoding.
+	 *
+	 * @param FunctionDeclaration $declaration Raw function declaration.
+	 */
+	public function normalize_function_declaration( FunctionDeclaration $declaration ): FunctionDeclaration {
+		$parameters = $declaration->getParameters();
+		$normalized = null;
+
+		if ( is_array( $parameters ) && ! $this->should_omit_function_parameters( $parameters ) ) {
+			$normalized = $this->normalize_tool_input_schema( $parameters );
+		}
+
+		return new FunctionDeclaration( $declaration->getName(), $declaration->getDescription(), $normalized );
+	}
+
+	/**
+	 * Normalize one ability input schema for function-declaration compatibility.
+	 *
+	 * The AI client expects JSON-object positions like `properties` and
+	 * `additionalProperties` to serialize as `{}` instead of `[]`.
+	 *
+	 * @param array<string,mixed> $schema Raw ability schema.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_tool_input_schema( array $schema ): array {
+		if ( [] === $schema ) {
+			return [
+				'type'                 => 'object',
+				'properties'           => new \stdClass(),
+				'additionalProperties' => false,
+			];
+		}
+
+		return $this->normalize_schema_node( $schema );
+	}
+
+	/**
+	 * Determine whether a function declaration should omit `parameters`.
+	 *
+	 * For no-argument tools, OpenAI-compatible providers accept omitted
+	 * `parameters`, which is safer than emitting an empty-object schema.
+	 *
+	 * @param array<string,mixed> $schema Raw or normalized schema.
+	 */
+	private function should_omit_function_parameters( array $schema ): bool {
+		if ( [] === $schema ) {
+			return true;
+		}
+
+		if ( ! isset( $schema['type'] ) || 'object' !== $schema['type'] ) {
+			return false;
+		}
+
+		$required = $schema['required'] ?? [];
+		if ( is_array( $required ) && [] !== $required ) {
+			return false;
+		}
+
+		if ( ! array_key_exists( 'properties', $schema ) ) {
+			return true;
+		}
+
+		$properties = $schema['properties'];
+
+		if ( $properties instanceof \stdClass ) {
+			return [] === get_object_vars( $properties );
+		}
+
+		return is_array( $properties ) && [] === $properties;
+	}
+
+	/**
+	 * Normalize one JSON schema node recursively.
+	 *
+	 * @param array<string,mixed> $schema Raw schema node.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_schema_node( array $schema ): array {
+		if (
+			isset( $schema['type'], $schema['default'] ) &&
+			'object' === $schema['type'] &&
+			is_array( $schema['default'] ) &&
+			[] === $schema['default']
+		) {
+			$schema['default'] = (object) [];
+		}
+
+		foreach ( [ 'properties', 'patternProperties', 'definitions', '$defs' ] as $keyword ) {
+			if ( ! array_key_exists( $keyword, $schema ) ) {
+				continue;
+			}
+
+			$schema[ $keyword ] = $this->normalize_schema_map( $schema[ $keyword ] );
+		}
+
+		if ( array_key_exists( 'dependencies', $schema ) ) {
+			$schema['dependencies'] = $this->normalize_dependencies_keyword( $schema['dependencies'] );
+		}
+
+		foreach ( [ 'additionalProperties', 'items', 'not' ] as $keyword ) {
+			if ( ! array_key_exists( $keyword, $schema ) ) {
+				continue;
+			}
+
+			$schema[ $keyword ] = $this->normalize_schema_value( $schema[ $keyword ] );
+		}
+
+		foreach ( [ 'allOf', 'anyOf', 'oneOf' ] as $keyword ) {
+			if ( ! isset( $schema[ $keyword ] ) || ! is_array( $schema[ $keyword ] ) ) {
+				continue;
+			}
+
+			$schema[ $keyword ] = array_values(
+				array_map(
+					fn( $item ) => $this->normalize_schema_value( $item ),
+					$schema[ $keyword ]
+				)
+			);
+		}
+
+		return $schema;
+	}
+
+	/**
+	 * Normalize a schema-map keyword like `properties`.
+	 *
+	 * @param mixed $value Raw schema-map value.
+	 * @return mixed
+	 */
+	private function normalize_schema_map( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( [] === $value ) {
+			return (object) [];
+		}
+
+		$normalized = [];
+		foreach ( $value as $key => $schema ) {
+			$normalized[ $key ] = $this->normalize_schema_value( $schema );
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize the `dependencies` keyword.
+	 *
+	 * @param mixed $value Raw dependencies value.
+	 * @return mixed
+	 */
+	private function normalize_dependencies_keyword( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( [] === $value ) {
+			return (object) [];
+		}
+
+		$normalized = [];
+		foreach ( $value as $key => $dependency ) {
+			if ( is_array( $dependency ) && ! array_is_list( $dependency ) ) {
+				$normalized[ $key ] = $this->normalize_schema_node( $dependency );
+				continue;
+			}
+
+			$normalized[ $key ] = $dependency;
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize a schema-bearing value.
+	 *
+	 * @param mixed $value Raw schema value.
+	 * @return mixed
+	 */
+	private function normalize_schema_value( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( [] === $value ) {
+			return (object) [];
+		}
+
+		if ( array_is_list( $value ) ) {
+			return array_values(
+				array_map(
+					fn( $item ) => $this->normalize_schema_value( $item ),
+					$value
+				)
+			);
+		}
+
+		return $this->normalize_schema_node( $value );
 	}
 
 	/**
