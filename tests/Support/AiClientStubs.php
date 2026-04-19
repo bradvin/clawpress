@@ -18,6 +18,11 @@ namespace {
 	}
 
 	$load_test_stubs = defined( 'CLAWPRESS_ALLOW_AI_CLIENT_STUBS' ) && true === CLAWPRESS_ALLOW_AI_CLIENT_STUBS;
+	if ( ! $load_test_stubs && 'cli' === PHP_SAPI ) {
+		$load_test_stubs = ! interface_exists( 'WordPress\AiClientDependencies\Psr\Http\Client\ClientInterface', false )
+			&& ! class_exists( 'WordPress\AiClient\AiClient', false );
+	}
+
 	if (
 		! $load_test_stubs &&
 		(
