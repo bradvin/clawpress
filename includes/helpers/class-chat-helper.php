@@ -111,14 +111,18 @@ final class Chat_Helper {
 	/**
 	 * Generate a model reply payload.
 	 *
-	 * @param string $message User message.
+	 * @param string              $message User message.
+	 * @param array<string,mixed> $options Optional generation options.
 	 * @return array<string,mixed>
 	 */
-	public function generate_ai_reply( string $message ): array {
+	public function generate_ai_reply( string $message, array $options = [] ): array {
 		$settings = $this->settings_helper->get_settings();
 		$resolved = call_user_func( $this->provider_model_resolver, $settings );
 		$provider = isset( $resolved['provider'] ) ? trim( (string) $resolved['provider'] ) : '';
 		$model    = isset( $resolved['model'] ) ? trim( (string) $resolved['model'] ) : '';
+		$transport_mode = isset( $options['transport_mode'] ) && 'streaming' === strtolower( trim( (string) $options['transport_mode'] ) )
+			? 'streaming'
+			: 'polling';
 
 		if ( '' === $provider ) {
 			return [
@@ -137,13 +141,13 @@ final class Chat_Helper {
 
 		try {
 			$slice_budget_ms    = $this->resolve_chat_slice_budget_ms( $settings );
-			$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+			$requesting_user_id = get_current_user_id();
 			$execution_user_id  = $this->resolve_execution_user_id( $settings, $requesting_user_id );
 			$has_persistent_run = false;
 			$turn_request       = [
 				'message'                 => $message,
 				'trigger'                 => 'chat',
-				'transport_mode'          => 'polling',
+				'transport_mode'          => $transport_mode,
 				'slice_budget_ms'         => $slice_budget_ms,
 				'max_steps_per_slice'     => 2,
 				'requesting_user_id'      => $requesting_user_id,
@@ -165,7 +169,7 @@ final class Chat_Helper {
 					$session_id,
 					[
 						'trigger_type'   => 'chat',
-						'transport_mode' => 'polling',
+						'transport_mode' => $transport_mode,
 						'status'         => 'queued',
 						'meta'           => [
 							'message'             => $message,
@@ -202,6 +206,10 @@ final class Chat_Helper {
 
 			if ( null !== $this->online_reply_generator ) {
 				$turn_request['online_reply_generator'] = $this->online_reply_generator;
+			}
+
+			if ( isset( $options['stream_event_callback'] ) && is_callable( $options['stream_event_callback'] ) ) {
+				$turn_request['stream_event_callback'] = $options['stream_event_callback'];
 			}
 
 			$runtime_result = $this->agent_loop_helper->run_slice( $turn_request );

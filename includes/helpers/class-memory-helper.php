@@ -66,9 +66,7 @@ final class Memory_Helper {
 	 */
 	public function build_daily_memory_filename( ?int $timestamp = null ): string {
 		$resolved_timestamp = null === $timestamp || $timestamp <= 0 ? time() : $timestamp;
-		$date_fragment      = function_exists( 'wp_date' )
-			? wp_date( 'dmY', $resolved_timestamp )
-			: gmdate( 'dmY', $resolved_timestamp );
+		$date_fragment      = wp_date( 'dmY', $resolved_timestamp );
 
 		return sprintf( 'memory-%s.md', $date_fragment );
 	}
@@ -271,10 +269,6 @@ final class Memory_Helper {
 	 * @return array<int,array{post_id:int,filename:string,type:string,content:string,daily_timestamp:int|null}>
 	 */
 	public function list_memories( int $limit = 20 ): array {
-		if ( ! function_exists( 'get_posts' ) ) {
-			return [];
-		}
-
 		$posts = get_posts(
 			[
 				'post_type'      => Post_Types::AGENT_MEMORY_POST_TYPE,
@@ -345,7 +339,7 @@ final class Memory_Helper {
 
 		foreach ( $entries as $entry ) {
 			$post_id = isset( $entry['post_id'] ) ? (int) $entry['post_id'] : 0;
-			if ( $post_id <= 0 || ! function_exists( 'wp_delete_post' ) ) {
+			if ( $post_id <= 0 ) {
 				continue;
 			}
 
@@ -385,13 +379,6 @@ final class Memory_Helper {
 	 * @return array<string,mixed>
 	 */
 	private function upsert_memory_file( string $filename, string $content ): array {
-		if ( ! function_exists( 'wp_insert_post' ) || ! function_exists( 'is_wp_error' ) ) {
-			return [
-				'success' => false,
-				'error'   => 'wp_insert_post_unavailable',
-			];
-		}
-
 		$filename = $this->normalize_filename( $filename );
 		if ( ! $this->is_valid_filename( $filename ) ) {
 			return [
@@ -404,7 +391,7 @@ final class Memory_Helper {
 		$agent_user_id = $this->settings_helper->resolve_agent_user_id();
 		$author_id     = $agent_user_id > 0
 			? $agent_user_id
-			: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
+			: get_current_user_id();
 
 		$post_data = [
 			'post_type'    => Post_Types::AGENT_MEMORY_POST_TYPE,
@@ -441,10 +428,6 @@ final class Memory_Helper {
 	 * @param string $filename Memory filename.
 	 */
 	private function find_memory_post_by_filename( string $filename ): ?\WP_Post {
-		if ( ! function_exists( 'get_posts' ) || ! function_exists( 'get_post' ) ) {
-			return null;
-		}
-
 		$slug = $this->build_slug_from_filename( $filename );
 		$ids  = get_posts(
 			[
@@ -531,10 +514,6 @@ final class Memory_Helper {
 	 * @param string $filename Normalized filename.
 	 */
 	private function build_slug_from_filename( string $filename ): string {
-		if ( ! function_exists( 'sanitize_title' ) ) {
-			return 'memory-' . substr( md5( $filename ), 0, 8 );
-		}
-
 		$slug_source = str_replace( '.', '-', strtolower( $filename ) );
 		$slug        = sanitize_title( $slug_source );
 
@@ -565,13 +544,6 @@ final class Memory_Helper {
 			return [
 				'success' => false,
 				'error'   => 'memory_not_found',
-			];
-		}
-
-		if ( ! function_exists( 'wp_delete_post' ) ) {
-			return [
-				'success' => false,
-				'error'   => 'wp_delete_post_unavailable',
 			];
 		}
 

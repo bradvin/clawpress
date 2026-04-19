@@ -198,7 +198,7 @@ final class Commands {
 			);
 		}
 
-		$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$requesting_user_id = get_current_user_id();
 		$execution_user_id  = $this->settings_helper->resolve_agent_user_id();
 		if ( $execution_user_id <= 0 ) {
 			$execution_user_id = $requesting_user_id;

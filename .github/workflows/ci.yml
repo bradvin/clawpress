@@ -12,10 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          tools: composer:v2
+      - name: Ensure PHP toolchain
+        run: |
+          php -r "exit( version_compare( PHP_VERSION, '8.1', '>=' ) ? 0 : 1 );"
+          php -v
+          composer --version
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
       - name: Run PHP Unit tests
@@ -31,14 +32,30 @@ jobs:
         with:
           fetch-depth: 0
       - id: changed-js
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            js:
-              - '**/*.js'
-              - '**/*.jsx'
-              - '**/*.mjs'
-              - '**/*.cjs'
+        name: Detect JS changes
+        run: |
+          if [ "${AGENT_CI_LOCAL:-}" = "true" ]; then
+            echo "js=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_ref="${GITHUB_BASE_REF:-}"
+          if [ -n "$base_ref" ]; then
+            git fetch --no-tags --depth=1 origin "$base_ref"
+            base="origin/$base_ref"
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            base="HEAD^"
+          else
+            base="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          merge_base="$(git merge-base "$base" HEAD 2>/dev/null || echo "$base")"
+
+          if git diff --name-only "$merge_base" HEAD | grep -Eq '\.(js|jsx|mjs|cjs)$'; then
+            echo "js=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "js=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         if: steps.changed-js.outputs.js == 'true'
         with:
@@ -59,6 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
     timeout-minutes: 20
+    env:
+      WP_ENV_CORE: WordPress/WordPress#7.0-branch
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -67,10 +86,11 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          tools: composer:v2
+      - name: Ensure PHP toolchain
+        run: |
+          php -r "exit( version_compare( PHP_VERSION, '8.1', '>=' ) ? 0 : 1 );"
+          php -v
+          composer --version
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
       - name: Run dist plugin standards check

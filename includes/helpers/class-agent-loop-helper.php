@@ -10,9 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Helpers;
 
 use ClawPress\Commands\Command_Confirmation_Store;
-use ClawPress\Transports\Agent_Transport;
-use ClawPress\Transports\Null_Transport;
-use ClawPress\Transports\Polling_Transport;
+use ClawPress\Transports\Agent_Event_Sink;
 use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Builders\MessageBuilder;
@@ -28,7 +26,7 @@ use WordPress\AiClient\Tools\DTO\FunctionResponse;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Reusable transport-agnostic agent loop runtime.
+ * Reusable agent loop runtime.
  */
 final class Agent_Loop_Helper {
 	/**
@@ -181,7 +179,7 @@ final class Agent_Loop_Helper {
 			];
 		}
 
-		$transport              = $this->create_transport( $transport_mode, $run_id, $session_id );
+		$event_sink             = $this->create_event_sink( $transport_mode, $run_id, $session_id, $turn_request );
 		$online_reply_generator = isset( $turn_request['online_reply_generator'] ) && is_callable( $turn_request['online_reply_generator'] )
 			? $turn_request['online_reply_generator']
 			: [ $this, 'generate_online_reply' ];
@@ -189,7 +187,7 @@ final class Agent_Loop_Helper {
 		try {
 			$requesting_user_id = isset( $turn_request['requesting_user_id'] )
 				? (int) $turn_request['requesting_user_id']
-				: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
+				: get_current_user_id();
 
 			$context                        = $this->context_helper->build_model_context(
 				isset( $turn_request['message'] ) ? (string) $turn_request['message'] : '',
@@ -198,7 +196,7 @@ final class Agent_Loop_Helper {
 			$context['request_timeout']     = $this->settings_helper->get_request_timeout( $settings );
 			$context['generation_settings'] = $this->settings_helper->get_generation_settings( $settings );
 
-			$transport->emit(
+			$event_sink->emit(
 				[
 					'type'    => 'agent.run.started',
 					'payload' => [
@@ -219,7 +217,7 @@ final class Agent_Loop_Helper {
 					$provider,
 					$model,
 					$turn_request,
-					$transport,
+					$event_sink,
 					$is_slice
 				)
 			);
@@ -247,7 +245,7 @@ final class Agent_Loop_Helper {
 				$result['mode']  = 'error';
 			}
 
-			$transport->emit(
+			$event_sink->emit(
 				[
 					'type'    => 'agent.run.finished',
 					'payload' => [
@@ -257,8 +255,9 @@ final class Agent_Loop_Helper {
 				]
 			);
 
-			if ( $transport instanceof Polling_Transport ) {
-				$result['events_cursor'] = $transport->get_last_event_id();
+			$last_event_id = $event_sink->get_last_event_id();
+			if ( $last_event_id > 0 ) {
+				$result['events_cursor'] = $last_event_id;
 			}
 
 			return $result;
@@ -269,7 +268,7 @@ final class Agent_Loop_Helper {
 			}
 
 			$error_type = $this->classify_provider_error_type( $throwable, $error_message );
-			$transport->emit(
+			$event_sink->emit(
 				[
 					'type'    => 'agent.run.error',
 					'payload' => [
@@ -297,13 +296,14 @@ final class Agent_Loop_Helper {
 				],
 			];
 
-			if ( $transport instanceof Polling_Transport ) {
-				$result['events_cursor'] = $transport->get_last_event_id();
+			$last_event_id = $event_sink->get_last_event_id();
+			if ( $last_event_id > 0 ) {
+				$result['events_cursor'] = $last_event_id;
 			}
 
 			return $result;
 		} finally {
-			$transport->close();
+			$event_sink->close();
 		}
 	}
 
@@ -352,11 +352,11 @@ final class Agent_Loop_Helper {
 	 * @param string               $provider Provider identifier.
 	 * @param string               $model Model identifier.
 	 * @param array<string,mixed>  $turn_request Turn request metadata.
-	 * @param Agent_Transport|null $transport Transport implementation.
+	 * @param Agent_Event_Sink|null $event_sink Event sink implementation.
 	 * @param bool                 $is_slice Whether slice execution mode is enabled.
 	 * @return array<string,mixed>
 	 */
-	private function generate_online_reply( array $context, string $provider, string $model, array $turn_request = [], ?Agent_Transport $transport = null, bool $is_slice = false ): array {
+	private function generate_online_reply( array $context, string $provider, string $model, array $turn_request = [], ?Agent_Event_Sink $event_sink = null, bool $is_slice = false ): array {
 		$current_message     = isset( $context['message'] ) ? trim( (string) $context['message'] ) : '';
 		$system_prompt       = isset( $context['system_prompt'] ) ? trim( (string) $context['system_prompt'] ) : '';
 		$request_timeout     = isset( $context['request_timeout'] ) ? (int) $context['request_timeout'] : 45;
@@ -382,7 +382,8 @@ final class Agent_Loop_Helper {
 		$slice_budget_ms     = $is_slice ? max( 1, (int) ( $turn_request['slice_budget_ms'] ?? 1500 ) ) : 0;
 		$max_steps_per_slice = $is_slice ? max( 1, (int) ( $turn_request['max_steps_per_slice'] ?? 1 ) ) : PHP_INT_MAX;
 		$resume_state        = $this->normalize_resume_cursor( $turn_request['resume_cursor'] ?? null );
-		$transport           = $transport ?? new Null_Transport();
+		$event_sink             = $event_sink ?? new Agent_Event_Sink();
+		$stream_generation_args = $this->build_stream_generation_args( $turn_request, $event_sink );
 
 		$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
 
@@ -413,7 +414,7 @@ final class Agent_Loop_Helper {
 			: ( isset( $resume_state['steps_completed'] ) ? max( 0, (int) $resume_state['steps_completed'] ) : 0 );
 
 		if ( $is_slice && $round_start > 0 ) {
-			$transport->emit(
+			$event_sink->emit(
 				[
 					'type'    => 'agent.slice.resumed',
 					'payload' => [
@@ -436,7 +437,7 @@ final class Agent_Loop_Helper {
 					$latest_context_usage
 				);
 
-				$transport->emit(
+				$event_sink->emit(
 					[
 						'type'    => 'agent.slice.paused',
 						'payload' => [
@@ -464,7 +465,8 @@ final class Agent_Loop_Helper {
 				$system_prompt,
 				$request_timeout,
 				$generation_settings,
-				$tool_declarations
+				$tool_declarations,
+				$stream_generation_args
 			);
 			$assistant_message     = $result->toMessage();
 			$conversation[]        = $assistant_message;
@@ -473,7 +475,7 @@ final class Agent_Loop_Helper {
 			++$steps_completed;
 
 			$function_calls = $this->extract_function_calls( $assistant_message );
-			$transport->emit(
+			$event_sink->emit(
 				[
 					'type'    => 'agent.llm.response',
 					'payload' => [
@@ -520,7 +522,7 @@ final class Agent_Loop_Helper {
 						$function_responses
 					);
 
-					$transport->emit(
+					$event_sink->emit(
 						[
 							'type'    => 'agent.tool_calls.deferred',
 							'payload' => [
@@ -566,7 +568,7 @@ final class Agent_Loop_Helper {
 					$tool_call_payload['message'] = $latest_tool_trace['message'];
 				}
 
-				$transport->emit(
+				$event_sink->emit(
 					[
 						'type'    => 'agent.tool_call',
 						'payload' => $tool_call_payload,
@@ -606,7 +608,7 @@ final class Agent_Loop_Helper {
 					$requesting_user_id > 0 ? $requesting_user_id : null
 				);
 
-				$transport->emit(
+				$event_sink->emit(
 					[
 						'type'    => 'agent.confirmation.required',
 						'payload' => [
@@ -643,7 +645,7 @@ final class Agent_Loop_Helper {
 					$latest_context_usage
 				);
 
-				$transport->emit(
+				$event_sink->emit(
 					[
 						'type'    => 'agent.slice.paused',
 						'payload' => [
@@ -729,19 +731,23 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
-	 * Create transport from transport mode.
+	 * Create an event sink from the requested delivery mode.
 	 *
 	 * @param string $transport_mode Transport mode.
 	 * @param int    $run_id Run identifier.
 	 * @param int    $session_id Session identifier.
 	 */
-	private function create_transport( string $transport_mode, int $run_id, int $session_id ): Agent_Transport {
+	private function create_event_sink( string $transport_mode, int $run_id, int $session_id, array $turn_request = [] ): Agent_Event_Sink {
 		$transport_mode = strtolower( trim( $transport_mode ) );
-		if ( in_array( $transport_mode, [ 'polling', 'streaming' ], true ) && ( $run_id > 0 || $session_id > 0 ) ) {
-			return new Polling_Transport( $run_id, $session_id );
+		if ( 'streaming' === $transport_mode && isset( $turn_request['stream_event_callback'] ) && is_callable( $turn_request['stream_event_callback'] ) ) {
+			return new Agent_Event_Sink( $turn_request['stream_event_callback'], $run_id, $session_id );
 		}
 
-		return new Null_Transport();
+		if ( in_array( $transport_mode, [ 'polling', 'streaming' ], true ) && ( $run_id > 0 || $session_id > 0 ) ) {
+			return new Agent_Event_Sink( null, $run_id, $session_id );
+		}
+
+		return new Agent_Event_Sink();
 	}
 
 	/**
@@ -1199,9 +1205,7 @@ final class Agent_Loop_Helper {
 		);
 		$total_calls   = count( $calls );
 		$expires_at    = $expires_at > 0 ? $expires_at : time();
-		$expires_label = function_exists( 'wp_date' )
-			? wp_date( 'Y-m-d H:i:s', $expires_at )
-			: gmdate( 'Y-m-d H:i:s', $expires_at );
+		$expires_label = wp_date( 'Y-m-d H:i:s', $expires_at );
 
 		if ( 1 === $total_calls ) {
 			$message = sprintf(
@@ -1306,7 +1310,7 @@ final class Agent_Loop_Helper {
 
 		foreach ( $context['tool_declarations'] as $declaration ) {
 			if ( $declaration instanceof FunctionDeclaration ) {
-				$declarations[] = $declaration;
+				$declarations[] = $this->abilities_helper->normalize_function_declaration( $declaration );
 			}
 		}
 
@@ -1325,6 +1329,260 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
+	 * Build streaming generation args for a turn when live transport delivery is enabled.
+	 *
+	 * @param array<string,mixed> $turn_request Turn request payload.
+	 * @return array<string,mixed>
+	 */
+	private function build_stream_generation_args( array $turn_request, Agent_Event_Sink $event_sink ): array {
+		$transport_mode = isset( $turn_request['transport_mode'] ) ? strtolower( trim( (string) $turn_request['transport_mode'] ) ) : 'polling';
+		if ( 'streaming' !== $transport_mode || ! function_exists( 'wp_ai_client_stream_prompt' ) ) {
+			return [];
+		}
+
+		if ( class_exists( '\WP_AI_Client_Streaming_Discovery_Strategy' ) ) {
+			\WP_AI_Client_Streaming_Discovery_Strategy::init();
+		}
+
+		return [
+			'streaming_enabled' => true,
+			'on_event'          => function ( \WP_AI_Client_SSE_Event $event ) use ( $event_sink ): void {
+				$this->emit_transport_stream_delta( $event, $event_sink );
+			},
+			'should_continue'   => static function (): bool {
+				return ! connection_aborted();
+			},
+		];
+	}
+
+	/**
+	 * Mirror one streamed provider event to the live transport.
+	 */
+	private function emit_transport_stream_delta( \WP_AI_Client_SSE_Event $event, Agent_Event_Sink $event_sink ): void {
+		if ( $event->is_done() ) {
+			return;
+		}
+
+		$text = $this->extract_stream_event_text( $event );
+		if ( '' === $text ) {
+			return;
+		}
+
+		$event_sink->emit(
+			[
+				'type'    => 'agent.llm.delta',
+				'payload' => [
+					'text' => $text,
+				],
+			]
+		);
+	}
+
+	/**
+	 * Extract incremental text content from a streamed provider event.
+	 */
+	private function extract_stream_event_text( \WP_AI_Client_SSE_Event $event ): string {
+		$data = $event->get_json_data();
+		if ( ! is_array( $data ) ) {
+			return '';
+		}
+
+		$type = $this->resolve_stream_event_type( $event, $data );
+
+		if ( 'response.output_text.delta' === $type && isset( $data['delta'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['delta'] );
+		}
+
+		if ( 'response.content_part.added' === $type && isset( $data['part'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['part'] );
+		}
+
+		if (
+			$this->is_non_text_stream_event_type( $type ) ||
+			$this->contains_stream_tool_call_payload( $data )
+		) {
+			return '';
+		}
+
+		if ( isset( $data['choices'][0]['delta']['content'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['choices'][0]['delta']['content'] );
+		}
+
+		if ( isset( $data['choices'][0]['delta']['text'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['choices'][0]['delta']['text'] );
+		}
+
+		if ( isset( $data['choices'][0]['text'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['choices'][0]['text'] );
+		}
+
+		if ( '' === $type && isset( $data['delta'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['delta'] );
+		}
+
+		if ( '' === $type && isset( $data['text'] ) ) {
+			return $this->normalize_stream_event_text_value( $data['text'] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Resolve the canonical stream event type.
+	 *
+	 * @param \WP_AI_Client_SSE_Event $event Stream event.
+	 * @param array<string,mixed>     $data Decoded event payload.
+	 */
+	private function resolve_stream_event_type( \WP_AI_Client_SSE_Event $event, array $data ): string {
+		if ( isset( $data['type'] ) && is_string( $data['type'] ) ) {
+			return strtolower( trim( $data['type'] ) );
+		}
+
+		$event_name = trim( $event->get_event() );
+		return '' !== $event_name ? strtolower( $event_name ) : '';
+	}
+
+	/**
+	 * Determine whether a streamed event type should never be rendered as assistant text.
+	 *
+	 * @param string $type Normalized stream event type.
+	 */
+	private function is_non_text_stream_event_type( string $type ): bool {
+		if ( '' === $type ) {
+			return false;
+		}
+
+		if (
+			false !== strpos( $type, 'function_call' ) ||
+			false !== strpos( $type, 'tool_call' ) ||
+			false !== strpos( $type, 'function.arguments' ) ||
+			false !== strpos( $type, 'arguments' )
+		) {
+			return true;
+		}
+
+		return in_array(
+			$type,
+			[
+				'response.created',
+				'response.in_progress',
+				'response.output_text.done',
+				'response.content_part.done',
+				'response.output_item.added',
+				'response.output_item.done',
+				'response.completed',
+			],
+			true
+		);
+	}
+
+	/**
+	 * Detect tool-call payloads that should never be mirrored into assistant text.
+	 *
+	 * @param array<string,mixed> $data Decoded stream event payload.
+	 */
+	private function contains_stream_tool_call_payload( array $data ): bool {
+		if ( isset( $data['tool_calls'] ) || isset( $data['function_call'] ) ) {
+			return true;
+		}
+
+		if (
+			isset( $data['choices'][0]['delta'] ) &&
+			is_array( $data['choices'][0]['delta'] ) &&
+			(
+				isset( $data['choices'][0]['delta']['tool_calls'] ) ||
+				isset( $data['choices'][0]['delta']['function_call'] )
+			)
+		) {
+			return true;
+		}
+
+		if ( isset( $data['item'] ) && is_array( $data['item'] ) && $this->is_stream_tool_item( $data['item'] ) ) {
+			return true;
+		}
+
+		if ( isset( $data['delta'] ) && is_array( $data['delta'] ) && $this->is_stream_tool_item( $data['delta'] ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Determine whether an event fragment represents a tool/function call item.
+	 *
+	 * @param array<string,mixed> $item Event fragment payload.
+	 */
+	private function is_stream_tool_item( array $item ): bool {
+		if ( isset( $item['tool_calls'] ) || isset( $item['function_call'] ) ) {
+			return true;
+		}
+
+		$item_type = isset( $item['type'] ) && is_string( $item['type'] )
+			? strtolower( trim( $item['type'] ) )
+			: '';
+
+		return '' !== $item_type &&
+			(
+				false !== strpos( $item_type, 'function_call' ) ||
+				false !== strpos( $item_type, 'tool_call' ) ||
+				false !== strpos( $item_type, 'tool_use' ) ||
+				false !== strpos( $item_type, 'input_json' )
+			);
+	}
+
+	/**
+	 * Normalize streamed text values into a flat string.
+	 *
+	 * @param mixed $value Raw streamed text value.
+	 */
+	private function normalize_stream_event_text_value( $value ): string {
+		if ( is_string( $value ) ) {
+			return $value;
+		}
+
+		if ( ! is_array( $value ) ) {
+			return '';
+		}
+
+		if ( isset( $value['text'] ) && is_string( $value['text'] ) ) {
+			return $value['text'];
+		}
+
+		$text = '';
+		foreach ( $value as $item ) {
+			if ( is_string( $item ) ) {
+				$text .= $item;
+				continue;
+			}
+
+			if ( is_array( $item ) && isset( $item['text'] ) && is_string( $item['text'] ) ) {
+				$text .= $item['text'];
+			}
+		}
+
+		return $text;
+	}
+
+	/**
+	 * Generate a result from a streaming builder.
+	 *
+	 * @param object $builder Streaming prompt builder.
+	 */
+	private function generate_result_from_streaming_builder( object $builder ): GenerativeAiResult {
+		$result = $builder->generate_result();
+		if ( is_wp_error( $result ) ) {
+			throw new \RuntimeException( $result->get_error_message() );
+		}
+
+		if ( ! $result instanceof GenerativeAiResult ) {
+			throw new \RuntimeException( __( 'AI client did not return a generative result.', 'clawpress' ) );
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Generate a result and retry once with explicit model binding when provider metadata matching fails.
 	 *
 	 * @param array<int,Message>      $conversation Conversation messages.
@@ -1334,6 +1592,7 @@ final class Agent_Loop_Helper {
 	 * @param int                     $request_timeout Request timeout in seconds.
 	 * @param array<string,mixed>     $generation_settings Generation settings.
 	 * @param array<int,FunctionDeclaration> $tool_declarations Tool declarations.
+	 * @param array<string,mixed>     $stream_generation_args Optional streaming generation args.
 	 */
 	private function generate_result_with_explicit_model_fallback(
 		array $conversation,
@@ -1342,8 +1601,22 @@ final class Agent_Loop_Helper {
 		string $system_prompt,
 		int $request_timeout,
 		array $generation_settings,
-		array $tool_declarations
+		array $tool_declarations,
+		array $stream_generation_args = []
 	): GenerativeAiResult {
+		if ( [] !== $stream_generation_args ) {
+			return $this->generate_streaming_result_with_explicit_model_fallback(
+				$conversation,
+				$provider,
+				$model,
+				$system_prompt,
+				$request_timeout,
+				$generation_settings,
+				$tool_declarations,
+				$stream_generation_args
+			);
+		}
+
 		$builder = $this->build_prompt_builder_for_round(
 			$conversation,
 			$provider,
@@ -1374,6 +1647,63 @@ final class Agent_Loop_Helper {
 			);
 
 			return $fallback_builder->generateResult();
+		}
+	}
+
+	/**
+	 * Generate a streaming-aware result and retry once with explicit model binding when needed.
+	 *
+	 * @param array<int,Message>          $conversation Conversation messages.
+	 * @param string                      $provider Provider identifier.
+	 * @param string                      $model Model identifier.
+	 * @param string                      $system_prompt System prompt.
+	 * @param int                         $request_timeout Request timeout in seconds.
+	 * @param array<string,mixed>         $generation_settings Generation settings.
+	 * @param array<int,FunctionDeclaration> $tool_declarations Tool declarations.
+	 * @param array<string,mixed>         $stream_generation_args Streaming generation args.
+	 */
+	private function generate_streaming_result_with_explicit_model_fallback(
+		array $conversation,
+		string $provider,
+		string $model,
+		string $system_prompt,
+		int $request_timeout,
+		array $generation_settings,
+		array $tool_declarations,
+		array $stream_generation_args
+	): GenerativeAiResult {
+		$builder = $this->build_streaming_prompt_builder_for_round(
+			$conversation,
+			$provider,
+			$model,
+			$system_prompt,
+			$request_timeout,
+			$generation_settings,
+			$tool_declarations,
+			false,
+			$stream_generation_args
+		);
+
+		try {
+			return $this->generate_result_from_streaming_builder( $builder );
+		} catch ( Throwable $throwable ) {
+			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+				throw $throwable;
+			}
+
+			$fallback_builder = $this->build_streaming_prompt_builder_for_round(
+				$conversation,
+				$provider,
+				$model,
+				$system_prompt,
+				$request_timeout,
+				$generation_settings,
+				$tool_declarations,
+				true,
+				$stream_generation_args
+			);
+
+			return $this->generate_result_from_streaming_builder( $fallback_builder );
 		}
 	}
 
@@ -1421,6 +1751,58 @@ final class Agent_Loop_Helper {
 		$builder = $this->apply_generation_settings_to_prompt_builder( $builder, $generation_settings, $provider, $model );
 		if ( [] !== $tool_declarations ) {
 			$builder = $builder->usingFunctionDeclarations( ...$tool_declarations );
+		}
+
+		return $builder;
+	}
+
+	/**
+	 * Build a configured streaming prompt builder for the current round.
+	 *
+	 * @param array<int,Message>          $conversation Conversation messages.
+	 * @param string                      $provider Provider identifier.
+	 * @param string                      $model Model identifier.
+	 * @param string                      $system_prompt System prompt.
+	 * @param int                         $request_timeout Request timeout in seconds.
+	 * @param array<string,mixed>         $generation_settings Generation settings.
+	 * @param array<int,FunctionDeclaration> $tool_declarations Tool declarations.
+	 * @param bool                        $use_explicit_model Whether to bind the selected model explicitly.
+	 * @param array<string,mixed>         $stream_generation_args Streaming generation args.
+	 * @return object
+	 */
+	private function build_streaming_prompt_builder_for_round(
+		array $conversation,
+		string $provider,
+		string $model,
+		string $system_prompt,
+		int $request_timeout,
+		array $generation_settings,
+		array $tool_declarations,
+		bool $use_explicit_model,
+		array $stream_generation_args
+	): object {
+		$builder = wp_ai_client_stream_prompt( $conversation, $stream_generation_args )->using_provider( $provider );
+		if ( '' !== $system_prompt ) {
+			$builder = $builder->using_system_instruction( $system_prompt );
+		}
+
+		if ( '' !== $model ) {
+			if ( $use_explicit_model ) {
+				$selected_model = AiClient::defaultRegistry()->getProviderModel(
+					$provider,
+					$model,
+					ModelConfig::fromArray( [] )
+				);
+				$builder        = $builder->using_model( $selected_model );
+			} else {
+				$builder = $builder->using_model_preference( [ $provider, $model ] );
+			}
+		}
+
+		$builder = $builder->using_request_options( $this->build_request_options( $request_timeout ) );
+		$builder = $this->apply_generation_settings_to_streaming_prompt_builder( $builder, $generation_settings, $provider, $model );
+		if ( [] !== $tool_declarations ) {
+			$builder = $builder->using_function_declarations( ...$tool_declarations );
 		}
 
 		return $builder;
@@ -1520,6 +1902,59 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
+	 * Apply generation settings to a streaming prompt builder.
+	 *
+	 * @param object              $builder Streaming prompt builder.
+	 * @param array<string,mixed> $generation_settings Generation settings.
+	 * @return object
+	 */
+	private function apply_generation_settings_to_streaming_prompt_builder( object $builder, array $generation_settings, string $provider, string $model ): object {
+		$option_setters = [
+			fn ( object $current ): object => $this->apply_temperature_to_streaming_prompt_builder(
+				$current,
+				(float) $generation_settings['temperature'],
+				$provider,
+				$model
+			),
+			fn ( object $current ): object => $this->apply_top_p_to_streaming_prompt_builder(
+				$current,
+				(float) $generation_settings['top_p'],
+				$provider,
+				$model
+			),
+			fn ( object $current ): object => $this->apply_max_output_tokens_to_streaming_prompt_builder(
+				$current,
+				(int) $generation_settings['max_output_tokens'],
+				$provider,
+				$model
+			),
+			fn ( object $current ): object => $this->apply_frequency_penalty_to_streaming_prompt_builder(
+				$current,
+				(float) $generation_settings['frequency_penalty'],
+				$provider,
+				$model
+			),
+			fn ( object $current ): object => $this->apply_presence_penalty_to_streaming_prompt_builder(
+				$current,
+				(float) $generation_settings['presence_penalty'],
+				$provider,
+				$model
+			),
+		];
+
+		foreach ( $option_setters as $setter ) {
+			try {
+				$builder = $setter( $builder );
+			} catch ( Throwable $throwable ) {
+				unset( $throwable );
+				continue;
+			}
+		}
+
+		return $builder;
+	}
+
+	/**
 	 * Apply max output token setting to prompt builder.
 	 *
 	 * @param PromptBuilder $builder Prompt builder.
@@ -1544,6 +1979,28 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
+	 * Apply max output token setting to a streaming prompt builder.
+	 *
+	 * @param object $builder Streaming prompt builder.
+	 * @return object
+	 */
+	private function apply_max_output_tokens_to_streaming_prompt_builder( object $builder, int $max_output_tokens, string $provider, string $model ): object {
+		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) ) {
+			$model_config = ModelConfig::fromArray(
+				[
+					ModelConfig::KEY_CUSTOM_OPTIONS => [
+						'max_output_tokens' => $max_output_tokens,
+					],
+				]
+			);
+
+			return $builder->using_model_config( $model_config );
+		}
+
+		return $builder->using_max_tokens( $max_output_tokens );
+	}
+
+	/**
 	 * Apply temperature when supported by the provider/model pair.
 	 *
 	 * @param PromptBuilder $builder Prompt builder.
@@ -1557,6 +2014,20 @@ final class Agent_Loop_Helper {
 		}
 
 		return $builder->usingTemperature( $temperature );
+	}
+
+	/**
+	 * Apply temperature when supported to a streaming prompt builder.
+	 *
+	 * @param object $builder Streaming prompt builder.
+	 * @return object
+	 */
+	private function apply_temperature_to_streaming_prompt_builder( object $builder, float $temperature, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->using_temperature( $temperature );
 	}
 
 	/**
@@ -1576,6 +2047,20 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
+	 * Apply top-p when supported to a streaming prompt builder.
+	 *
+	 * @param object $builder Streaming prompt builder.
+	 * @return object
+	 */
+	private function apply_top_p_to_streaming_prompt_builder( object $builder, float $top_p, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->using_top_p( $top_p );
+	}
+
+	/**
 	 * Apply frequency penalty when supported by the provider/model pair.
 	 *
 	 * @param PromptBuilder $builder Prompt builder.
@@ -1592,6 +2077,20 @@ final class Agent_Loop_Helper {
 	}
 
 	/**
+	 * Apply frequency penalty when supported to a streaming prompt builder.
+	 *
+	 * @param object $builder Streaming prompt builder.
+	 * @return object
+	 */
+	private function apply_frequency_penalty_to_streaming_prompt_builder( object $builder, float $frequency_penalty, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->using_frequency_penalty( $frequency_penalty );
+	}
+
+	/**
 	 * Apply presence penalty when supported by the provider/model pair.
 	 *
 	 * @param PromptBuilder $builder Prompt builder.
@@ -1605,6 +2104,20 @@ final class Agent_Loop_Helper {
 		}
 
 		return $builder->usingPresencePenalty( $presence_penalty );
+	}
+
+	/**
+	 * Apply presence penalty when supported to a streaming prompt builder.
+	 *
+	 * @param object $builder Streaming prompt builder.
+	 * @return object
+	 */
+	private function apply_presence_penalty_to_streaming_prompt_builder( object $builder, float $presence_penalty, string $provider, string $model ): object {
+		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+			return $builder;
+		}
+
+		return $builder->using_presence_penalty( $presence_penalty );
 	}
 
 	/**
@@ -1686,7 +2199,7 @@ final class Agent_Loop_Helper {
 	 * @param string              $provider Provider ID.
 	 * @param string              $model Model ID.
 	 * @param array<string,mixed> $turn_request Turn request payload.
-	 * @param Agent_Transport     $transport Runtime transport.
+	 * @param Agent_Event_Sink    $event_sink Runtime event sink.
 	 * @param bool                $is_slice Whether this is a slice execution.
 	 * @return mixed
 	 */
@@ -1696,10 +2209,10 @@ final class Agent_Loop_Helper {
 		string $provider,
 		string $model,
 		array $turn_request,
-		Agent_Transport $transport,
+		Agent_Event_Sink $event_sink,
 		bool $is_slice
 	) {
-		$args  = [ $context, $provider, $model, $turn_request, $transport, $is_slice ];
+		$args  = [ $context, $provider, $model, $turn_request, $event_sink, $is_slice ];
 		$arity = $this->resolve_callable_arity( $online_reply_generator );
 		if ( $arity > 0 && $arity < count( $args ) ) {
 			$args = array_slice( $args, 0, $arity );

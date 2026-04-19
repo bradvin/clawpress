@@ -223,7 +223,7 @@ final class Agent_Run_Controller implements Route_Controller {
 			$trigger = 'chat';
 		}
 
-		$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$requesting_user_id = get_current_user_id();
 		$session_id         = (int) $request->get_param( 'session_id' );
 		if ( $session_id > 0 ) {
 			$session = $this->session_helper->get_session( $session_id );
@@ -313,7 +313,7 @@ final class Agent_Run_Controller implements Route_Controller {
 	 * @param \WP_REST_Request $request Request object.
 	 */
 	public function spawn_agent( \WP_REST_Request $request ): \WP_REST_Response {
-		$requesting_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$requesting_user_id = get_current_user_id();
 		$session_id         = $this->session_helper->create_session(
 			[
 				'trigger_type'       => 'spawned_agent',

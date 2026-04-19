@@ -24,6 +24,54 @@ if ( ! function_exists( 'clawpress_sanitize_boolean' ) ) {
 	}
 }
 
+if ( ! function_exists( 'clawpress_get_wp_version' ) ) {
+	/**
+	 * Get the current WordPress version string.
+	 */
+	function clawpress_get_wp_version(): string {
+		$version = wp_get_wp_version();
+		if ( is_string( $version ) ) {
+			return $version;
+		}
+
+		return (string) get_bloginfo( 'version' );
+	}
+}
+
+if ( ! function_exists( 'clawpress_is_supported_wp_version' ) ) {
+	/**
+	 * Check whether the running WordPress version is supported.
+	 */
+	function clawpress_is_supported_wp_version(): bool {
+		$version = clawpress_get_wp_version();
+		return '' !== $version && version_compare( $version, '7.0-alpha', '>=' );
+	}
+}
+
+if ( ! function_exists( 'clawpress_render_minimum_wp_version_notice' ) ) {
+	/**
+	 * Render an admin notice when WordPress is below the minimum supported version.
+	 */
+	function clawpress_render_minimum_wp_version_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		/* translators: 1: minimum supported WordPress version, 2: current WordPress version. */
+		$message_template = __( 'ClawPress requires WordPress %1$s or newer. You are currently running WordPress %2$s.', 'clawpress' );
+		$message          = sprintf(
+			$message_template,
+			'7.0',
+			clawpress_get_wp_version() ?: __( 'an unknown version', 'clawpress' )
+		);
+
+		printf(
+			'<div class="notice notice-error"><p>%s</p></div>',
+			esc_html( $message )
+		);
+	}
+}
+
 if ( ! function_exists( 'clawpress_sanitize_int' ) ) {
 	/**
 	 * Sanitize an integer value.
@@ -254,10 +302,19 @@ if ( ! function_exists( 'clawpress_sanitize_provider' ) ) {
 	 * @param mixed $value Raw value.
 	 */
 	function clawpress_sanitize_provider( $value ): string {
-		$provider = strtolower( sanitize_text_field( (string) $value ) );
-		$allowed  = [ 'openai', 'anthropic', 'google' ];
+		$provider = strtolower( sanitize_key( sanitize_text_field( (string) $value ) ) );
+		if ( '' === $provider ) {
+			return '';
+		}
 
-		return in_array( $provider, $allowed, true ) ? $provider : '';
+		try {
+			return \ClawPress\Helpers\Provider_Helper::get_instance()->supports_provider_id( $provider )
+				? $provider
+				: '';
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return '';
+		}
 	}
 }
 
@@ -276,7 +333,7 @@ if ( ! function_exists( 'clawpress_check_permissions_for_user' ) ) {
 			$capability = 'manage_options';
 		}
 
-		if ( $user_id > 0 && function_exists( 'user_can' ) ) {
+		if ( $user_id > 0 ) {
 			return user_can( $user_id, $capability );
 		}
 
@@ -286,13 +343,12 @@ if ( ! function_exists( 'clawpress_check_permissions_for_user' ) ) {
 
 if ( ! function_exists( 'clawpress_check_permissions' ) ) {
 	/**
-	 * Check permissions for ClawPress routes.
+	 * Check permissions for the current user.
 	 *
 	 * Filter hook: `clawpress_permissions_capability`.
 	 */
 	function clawpress_check_permissions(): bool {
-		$user_id = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
-		return clawpress_check_permissions_for_user( $user_id );
+		return clawpress_check_permissions_for_user( (int) get_current_user_id() );
 	}
 }
 

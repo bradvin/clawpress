@@ -19,6 +19,7 @@ use ClawPress\Abilities\BuiltIn\Memory_Long_Term_Update_Ability;
 use ClawPress\Abilities\BuiltIn\Memory_Short_Term_Add_Ability;
 use ClawPress\Abilities\BuiltIn\Memory_Short_Term_Delete_Ability;
 use ClawPress\Abilities\BuiltIn\Memory_Short_Term_Update_Ability;
+use ClawPress\Abilities\BuiltIn\Web_Fetch_Ability;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -43,10 +44,6 @@ final class Abilities {
 	 * Register the ClawPress ability category.
 	 */
 	public function register_category(): void {
-		if ( ! function_exists( 'wp_register_ability_category' ) ) {
-			return;
-		}
-
 		wp_register_ability_category(
 			self::CATEGORY_SLUG,
 			[
@@ -60,14 +57,11 @@ final class Abilities {
 	 * Register all built-in abilities.
 	 */
 	public function register_abilities(): void {
-		if ( ! function_exists( 'wp_register_ability' ) ) {
-			return;
-		}
-
 		File_Read_Ability::register();
 		File_Write_Ability::register();
 		File_Delete_Ability::register();
 		File_List_Ability::register();
+		Web_Fetch_Ability::register();
 
 		Memory_Short_Term_Add_Ability::register();
 		Memory_Short_Term_Update_Ability::register();

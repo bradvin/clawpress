@@ -5,9 +5,8 @@
 	"license": "GPL-2.0-or-later",
 	"require": {
 		"php": ">=8.1",
-		"wordpress/wp-ai-client": "^0.4",
 		"woocommerce/action-scheduler": "^3.9",
-		"automattic/jetpack-autoloader": "^3.0"
+		"bradvin/wp-ai-client-streaming": "^0.1.1"
 	},
 	"require-dev": {
 		"wp-coding-standards/wpcs": "^3.0",
@@ -22,17 +21,20 @@
 			"includes/functions.php"
 		]
 	},
+	"autoload-dev": {
+		"classmap": [
+			"tests/Support/AiClientStubs.php"
+		]
+	},
 	"config": {
 		"allow-plugins": {
-			"dealerdirect/phpcodesniffer-composer-installer": true,
-			"php-http/discovery": true,
-			"automattic/jetpack-autoloader": true
+			"dealerdirect/phpcodesniffer-composer-installer": true
 		}
 	},
 	"scripts": {
-		"lint": "phpcs",
-		"lint:fix": "phpcbf",
-		"test": "vendor/bin/phpunit --configuration phpunit.xml.dist",
-		"test:coverage": "vendor/bin/phpunit --configuration phpunit.xml.dist --coverage-text"
+		"lint": "php -d auto_prepend_file=tests/Support/AiClientStubs.php vendor/bin/phpcs",
+		"lint:fix": "php -d auto_prepend_file=tests/Support/AiClientStubs.php vendor/bin/phpcbf",
+		"test": "php -d auto_prepend_file=tests/Support/AiClientStubs.php vendor/bin/phpunit --configuration phpunit.xml.dist",
+		"test:coverage": "php -d auto_prepend_file=tests/Support/AiClientStubs.php vendor/bin/phpunit --configuration phpunit.xml.dist --coverage-text"
 	}
 }

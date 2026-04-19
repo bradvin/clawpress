@@ -35,7 +35,7 @@ final class Policy_Helper {
 		'max_tool_rounds'                      => 4,
 		'max_tool_calls_per_round'             => 6,
 		'max_wall_time_seconds'                => 120,
-		'allow_network'                        => false,
+		'allow_network'                        => true,
 		'allow_background_followups'           => true,
 		'on_policy_violation'                  => 'deny',
 	];
@@ -159,11 +159,6 @@ final class Policy_Helper {
 	 * @param string $value Raw key-like text.
 	 */
 	private function normalize_key( string $value ): string {
-		if ( function_exists( 'sanitize_key' ) ) {
-			return sanitize_key( $value );
-		}
-
-		$normalized = strtolower( trim( $value ) );
-		return (string) preg_replace( '/[^a-z0-9_\-]/', '', $normalized );
+		return sanitize_key( $value );
 	}
 }

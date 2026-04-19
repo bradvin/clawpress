@@ -109,7 +109,7 @@ final class File_Read_Ability {
 	 * Resolve user ID used for workspace operations.
 	 */
 	private static function resolve_workspace_user_id(): int {
-		$current_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$current_user_id = get_current_user_id();
 		if ( $current_user_id > 0 ) {
 			return $current_user_id;
 		}

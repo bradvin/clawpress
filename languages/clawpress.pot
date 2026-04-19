@@ -9,19 +9,19 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-03-04T21:15:06+00:00\n"
+"POT-Creation-Date: 2026-04-19T15:46:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
 
 #. Plugin Name of the plugin
 #: clawpress.php
-#: includes/class-abilities.php:53
-#: includes/class-admin-page.php:35
-#: includes/class-admin-page.php:36
-#: includes/class-admin-page.php:48
-#: includes/class-admin-page.php:49
-#: includes/class-admin-page.php:102
+#: includes/class-abilities.php:50
+#: includes/class-admin-page.php:45
+#: includes/class-admin-page.php:46
+#: includes/class-admin-page.php:58
+#: includes/class-admin-page.php:59
+#: includes/class-admin-page.php:121
 #: src/panel/components/PanelToggle.jsx:9
 msgid "ClawPress"
 msgstr ""
@@ -203,20 +203,63 @@ msgstr ""
 msgid "Unable to update short-term memory."
 msgstr ""
 
-#: includes/class-abilities.php:54
+#: includes/abilities/class-web-fetch-ability.php:33
+msgid "Web Fetch"
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:34
+msgid "Fetch a remote URL using the configured fetcher."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:42
+msgid "Remote URL to fetch."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:46
+msgid "Fetcher provider slug. Defaults to `wp`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:51
+msgid "Read-only HTTP method. Defaults to `GET`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:55
+msgid "Optional request headers."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:62
+msgid "Request timeout in seconds. Defaults to `15`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:66
+msgid "Maximum redirect count. Defaults to `5`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:70
+msgid "Optional fetcher-specific arguments for future providers."
+msgstr ""
+
+#: includes/class-abilities.php:51
 msgid "Abilities provided by the ClawPress plugin."
 msgstr ""
 
-#: includes/class-admin-page.php:62
+#: includes/class-admin-page.php:68
+#: includes/class-admin-page.php:69
+#: includes/class-admin-page.php:130
+#: src/js/admin/components/views/LogsView.js:524
+msgid "Logs"
+msgstr ""
+
+#: includes/class-admin-page.php:82
 #: includes/class-post-types.php:45
 #: includes/class-post-types.php:55
 #: includes/class-post-types.php:56
 #: includes/commands/handlers/class-setup-command-handler.php:676
-#: src/js/admin/components/App.js:19
+#: src/js/admin/components/App.js:20
 msgid "Agent Files"
 msgstr ""
 
-#: includes/class-admin-page.php:66
+#: includes/class-admin-page.php:86
 #: includes/class-post-types.php:81
 #: includes/class-post-types.php:91
 #: includes/class-post-types.php:92
@@ -238,23 +281,23 @@ msgid "Background follow-up slices are disabled for this trigger."
 msgstr ""
 
 #: includes/class-agent-runner.php:457
-#: includes/helpers/class-chat-helper.php:232
+#: includes/helpers/class-chat-helper.php:240
 msgid "Agent run failed."
 msgstr ""
 
 #: includes/class-agent-runner.php:496
 #: includes/helpers/class-agent-loop-helper.php:337
-#: src/panel/services/realClient.js:643
+#: src/panel/services/realClient.js:672
 msgid "Action requires confirmation before continuing."
 msgstr ""
 
 #: includes/class-agent-runner.php:497
 #: includes/helpers/class-agent-loop-helper.php:341
-#: src/panel/services/realClient.js:654
+#: src/panel/services/realClient.js:683
 msgid "I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here."
 msgstr ""
 
-#: includes/class-panel.php:116
+#: includes/class-panel.php:114
 msgid "Toggle ClawPress panel"
 msgstr ""
 
@@ -327,7 +370,7 @@ msgstr ""
 msgid "No agent memories found in Trash."
 msgstr ""
 
-#: includes/class-security.php:80
+#: includes/class-security.php:76
 msgid "The requesting user is not allowed to use ClawPress."
 msgstr ""
 
@@ -355,12 +398,12 @@ msgid "Confirmed batch `%1$s`. Executing %2$d tool call(s):"
 msgstr ""
 
 #: includes/commands/class-commands.php:245
-#: src/panel/Panel.jsx:180
+#: src/panel/Panel.jsx:177
 msgid "success"
 msgstr ""
 
 #: includes/commands/class-commands.php:246
-#: src/panel/Panel.jsx:182
+#: src/panel/Panel.jsx:179
 msgid "error"
 msgstr ""
 
@@ -699,9 +742,9 @@ msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:395
 #: includes/commands/handlers/class-test-command-handler.php:207
-#: includes/helpers/class-agent-loop-helper.php:268
-#: includes/helpers/class-chat-helper.php:537
-#: includes/helpers/class-chat-helper.php:590
+#: includes/helpers/class-agent-loop-helper.php:267
+#: includes/helpers/class-chat-helper.php:545
+#: includes/helpers/class-chat-helper.php:598
 msgid "Unknown provider error."
 msgstr ""
 
@@ -775,12 +818,12 @@ msgid "Agent files created."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:671
-#: src/js/admin/components/views/SettingsView.js:847
+#: src/js/admin/components/views/SettingsView.js:820
 msgid "Provider"
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:672
-#: src/js/admin/components/views/SettingsView.js:864
+#: src/js/admin/components/views/SettingsView.js:837
 msgid "Model"
 msgstr ""
 
@@ -838,6 +881,7 @@ msgid "Choose a model for `%s`."
 msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:787
+#: src/js/admin/components/views/LogsView.js:539
 msgid "Refresh"
 msgstr ""
 
@@ -942,11 +986,6 @@ msgstr ""
 msgid "Show site name, URL, WordPress version, and plugin version."
 msgstr ""
 
-#: includes/commands/handlers/class-site-command-handler.php:79
-msgid "WordPress Site"
-msgstr ""
-
-#: includes/commands/handlers/class-site-command-handler.php:81
 #: includes/commands/handlers/class-site-command-handler.php:82
 #: includes/commands/handlers/class-site-command-handler.php:83
 msgid "unknown"
@@ -1123,142 +1162,222 @@ msgstr ""
 msgid "- tool_execution: unavailable (no enabled abilities)"
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:345
+#. translators: 1: minimum supported WordPress version, 2: current WordPress version.
+#: includes/functions.php:61
+#, php-format
+msgid "ClawPress requires WordPress %1$s or newer. You are currently running WordPress %2$s."
+msgstr ""
+
+#: includes/functions.php:65
+msgid "an unknown version"
+msgstr ""
+
+#: includes/helpers/class-abilities-helper.php:540
 msgid "The requested tool is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:358
+#: includes/helpers/class-abilities-helper.php:553
 msgid "The requested ability is disabled in settings."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:372
-msgid "The WordPress Abilities API is unavailable."
-msgstr ""
-
-#: includes/helpers/class-abilities-helper.php:387
+#: includes/helpers/class-abilities-helper.php:568
 msgid "The requested ability is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:419
+#: includes/helpers/class-abilities-helper.php:600
 msgid "Tool execution is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:442
+#: includes/helpers/class-abilities-helper.php:624
+msgid "Network access is blocked by runtime policy."
+msgstr ""
+
+#: includes/helpers/class-abilities-helper.php:648
 msgid "Destructive tools are not allowed for this runtime trigger."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:465
+#: includes/helpers/class-abilities-helper.php:672
 msgid "File delete is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:492
+#: includes/helpers/class-abilities-helper.php:700
 msgid "This destructive action is pending batch confirmation."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:517
+#: includes/helpers/class-abilities-helper.php:725
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:293
+#, php-format
+msgid "Tool %s requires confirmation."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:301
+#, php-format
+msgid "Tool %s completed with degraded output."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:309
+#, php-format
+msgid "Tool %s completed successfully."
+msgstr ""
+
+#. translators: 1: tool name, 2: error message
+#: includes/helpers/class-action-log-helper.php:317
+#, php-format
+msgid "Tool %1$s failed: %2$s"
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:326
+#, php-format
+msgid "Tool %s was blocked by policy."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:333
+#, php-format
+msgid "Tool %s failed."
+msgstr ""
+
 #. translators: %d: maximum number of tool calls executed per round.
-#: includes/helpers/class-agent-loop-helper.php:916
+#: includes/helpers/class-agent-loop-helper.php:922
 #, php-format
 msgid "Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round."
 msgstr ""
 
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1209
+#: includes/helpers/class-agent-loop-helper.php:1213
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1217
+#: includes/helpers/class-agent-loop-helper.php:1221
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1220
+#: includes/helpers/class-agent-loop-helper.php:1224
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1228
+#: includes/helpers/class-agent-loop-helper.php:1232
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1229
+#: includes/helpers/class-agent-loop-helper.php:1233
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1235
+#: includes/helpers/class-agent-loop-helper.php:1239
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1236
+#: includes/helpers/class-agent-loop-helper.php:1240
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1242
+#: includes/helpers/class-agent-loop-helper.php:1246
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:366
+#: includes/helpers/class-agent-loop-helper.php:1579
+msgid "AI client did not return a generative result."
+msgstr ""
+
+#: includes/helpers/class-chat-helper.php:374
 msgid "Unable to persist paused run state."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:376
+#: includes/helpers/class-chat-helper.php:384
 msgid "Unable to release session after pausing run."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:388
+#: includes/helpers/class-chat-helper.php:396
 #: src/panel/components/PanelMessages.jsx:45
-#: src/panel/Panel.jsx:636
+#: src/panel/Panel.jsx:649
 #: src/panel/services/realClient.js:7
 msgid "I am still working on this"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:462
+#: includes/helpers/class-chat-helper.php:470
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:465
+#: includes/helpers/class-chat-helper.php:473
 msgid "Action required."
 msgstr ""
 
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:476
+#: includes/helpers/class-chat-helper.php:484
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:553
-#: includes/helpers/class-chat-helper.php:602
+#: includes/helpers/class-chat-helper.php:561
+#: includes/helpers/class-chat-helper.php:610
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:569
-#: includes/helpers/class-chat-helper.php:618
+#: includes/helpers/class-chat-helper.php:577
+#: includes/helpers/class-chat-helper.php:626
 #: src/panel/components/cards/ErrorCard.jsx:7
-#: src/panel/Panel.jsx:144
+#: src/panel/Panel.jsx:141
 msgid "Request Error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:571
-#: includes/helpers/class-chat-helper.php:620
-#: src/panel/Panel.jsx:131
+#: includes/helpers/class-chat-helper.php:579
+#: includes/helpers/class-chat-helper.php:628
+#: src/panel/Panel.jsx:128
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:572
-#: includes/helpers/class-chat-helper.php:621
-#: src/panel/Panel.jsx:133
+#: includes/helpers/class-chat-helper.php:580
+#: includes/helpers/class-chat-helper.php:629
+#: src/panel/Panel.jsx:130
 msgid "Provider error"
 msgstr ""
 
 #: includes/helpers/class-settings-helper.php:142
 msgid "No settings provided"
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL, 3: HTTP status code.
+#: includes/helpers/class-web-fetch-helper.php:130
+#, php-format
+msgid "Web fetch %1$s %2$s completed with status %3$d."
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL, 3: error message.
+#: includes/helpers/class-web-fetch-helper.php:138
+#, php-format
+msgid "Web fetch %1$s %2$s failed: %3$s"
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL.
+#: includes/helpers/class-web-fetch-helper.php:146
+#, php-format
+msgid "Web fetch %1$s %2$s was blocked."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:221
+msgid "The requested `fetcher` is not registered."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:247
+msgid "A valid `url` is required."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:260
+msgid "The provided `method` is not supported."
 msgstr ""
 
 #: includes/helpers/class-workspace-helper.php:72
@@ -1310,31 +1429,29 @@ msgstr ""
 msgid "Unable to enqueue run."
 msgstr ""
 
-#: includes/rest/class-chat-controller.php:112
+#: includes/rest/class-chat-controller.php:128
+#: includes/rest/class-chat-controller.php:153
 msgid "Message is required."
 msgstr ""
 
-#: includes/rest/class-settings-controller.php:147
-#: src/js/admin/components/views/SettingsView.js:104
-msgid "OpenAI"
+#: includes/rest/class-chat-controller.php:179
+#: includes/rest/class-chat-controller.php:421
+#: src/panel/Panel.jsx:146
+#: src/panel/services/realClient.js:917
+#: src/panel/services/realClient.js:1013
+msgid "Chat request failed."
 msgstr ""
 
-#: includes/rest/class-settings-controller.php:151
-#: src/js/admin/components/views/SettingsView.js:108
-msgid "Anthropic"
+#: includes/rest/class-logs-controller.php:187
+msgid "A run ID or session ID is required."
 msgstr ""
 
-#: includes/rest/class-settings-controller.php:155
-#: src/js/admin/components/views/SettingsView.js:112
-msgid "Google"
-msgstr ""
-
-#: src/js/admin/components/App.js:24
-#: src/js/admin/components/views/SettingsView.js:999
+#: src/js/admin/components/App.js:25
+#: src/js/admin/components/views/SettingsView.js:966
 msgid "Settings"
 msgstr ""
 
-#: src/js/admin/components/App.js:29
+#: src/js/admin/components/App.js:30
 #: src/js/admin/components/views/AbilitiesView.js:211
 msgid "Abilities"
 msgstr ""
@@ -1382,7 +1499,7 @@ msgid "Reset to Defaults"
 msgstr ""
 
 #: src/js/admin/components/views/AbilitiesView.js:274
-#: src/js/admin/components/views/SettingsView.js:1069
+#: src/js/admin/components/views/SettingsView.js:1037
 msgid "Saving…"
 msgstr ""
 
@@ -1412,155 +1529,326 @@ msgstr ""
 msgid "This ability is not currently registered."
 msgstr ""
 
+#: src/js/admin/components/views/LogsView.js:27
+msgid "All"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:31
+#: src/js/admin/components/views/LogsView.js:44
+msgid "Tool Calls"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:35
+#: src/js/admin/components/views/LogsView.js:45
+msgid "Commands"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:39
+#: src/js/admin/components/views/LogsView.js:46
+msgid "Messages"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:47
+msgid "Events"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:127
+msgid "Unknown"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:152
+msgid "Unable to render log details."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:222
+msgid "Linked Events"
+msgstr ""
+
+#. translators: %d: run ID
+#: src/js/admin/components/views/LogsView.js:228
+#, js-format
+msgid "Linked Events for Run %d"
+msgstr ""
+
+#. translators: %d: session ID
+#: src/js/admin/components/views/LogsView.js:235
+#, js-format
+msgid "Linked Events for Session %d"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:258
+msgid "Request"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:264
+msgid "Response"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:271
+msgid "Metadata"
+msgstr ""
+
+#. translators: 1: log tab label, 2: log count
+#: src/js/admin/components/views/LogsView.js:319
+#: src/js/admin/components/views/LogsView.js:330
+#, js-format
+msgid "%1$s (%2$d)"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:371
+msgid "Unable to load logs."
+msgstr ""
+
+#. translators: %d: number of cleared logs
+#: src/js/admin/components/views/LogsView.js:434
+#, js-format
+msgid "%d log cleared."
+msgid_plural "%d logs cleared."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/js/admin/components/views/LogsView.js:444
+msgid "Logs cleared."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:455
+msgid "Unable to clear logs."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:498
+msgid "Unable to load linked events."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:526
+msgid "Review ClawPress activity, including tool calls, commands, and chat log entries."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:547
+msgid "Clear All Logs"
+msgstr ""
+
+#. translators: %d: total logs in current tab
+#: src/js/admin/components/views/LogsView.js:582
+#, js-format
+msgid "%d logs in this view."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:594
+msgid "Timestamp"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:600
+msgid "Type"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:606
+msgid "Action"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:612
+#: src/js/admin/config/itemConfig.js:31
+msgid "Status"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:618
+msgid "Message"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:624
+msgid "Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:636
+msgid "No logs found for this tab."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:687
+msgid "info"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:711
+msgid "Hide Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:715
+msgid "View Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:730
+msgid "View Events"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:768
+msgid "Load More"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:783
+msgid "Clear all logs?"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:791
+msgid "This removes every action log entry, including tool calls, commands, and messages."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:802
+#: src/js/admin/config/itemConfig.js:138
+#: src/panel/components/ToolDialogForm.jsx:164
+#: src/panel/utils/toolDialogHelpers.js:98
+#: src/panel/utils/tools/updatePostsFindReplace.js:97
+#: src/panel/utils/tools/updatePostsFindReplace.js:200
+msgid "Cancel"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:811
+msgid "Clear Logs"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:836
+msgid "No linked events were found for this log entry."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:876
+msgid "Load More Events"
+msgstr ""
+
 #: src/js/admin/components/views/PagesView.js:27
 msgid "Showing ClawPress Agent Files."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:493
-msgid "Select a provider first."
+#: src/js/admin/components/views/SettingsView.js:103
+msgid "OpenAI"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:504
-msgid "Loading models for this provider…"
+#: src/js/admin/components/views/SettingsView.js:107
+msgid "Anthropic"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:507
-msgid "No models were discovered for this provider. Configure it in Connectors, then refresh the model list."
+#: src/js/admin/components/views/SettingsView.js:111
+msgid "Google"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:514
-msgid "Select a model to view context and cost details."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:534
-msgid "Context and cost are not available for this model in the curated catalog."
-msgstr ""
-
-#. translators: 1: model context window, 2: model cost information
-#: src/js/admin/components/views/SettingsView.js:542
-#, js-format
-msgid "Context window: %1$s | Cost: %2$s"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:543
-#: src/js/admin/components/views/SettingsView.js:544
-msgid "Unknown"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:602
+#: src/js/admin/components/views/SettingsView.js:577
 msgid "Unable to load settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:668
+#: src/js/admin/components/views/SettingsView.js:643
 msgid "Settings saved."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:671
+#: src/js/admin/components/views/SettingsView.js:646
 msgid "Unable to save settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:717
+#: src/js/admin/components/views/SettingsView.js:692
 msgid "Unable to refresh models for the selected provider."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:795
+#: src/js/admin/components/views/SettingsView.js:765
 msgid "Select a model"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:833
-msgid "Refresh models"
+#: src/js/admin/components/views/SettingsView.js:801
+msgid "Context Size :"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:848
+#: src/js/admin/components/views/SettingsView.js:808
+msgid "Cost :"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:821
 msgid "Choose which AI service ClawPress should use."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:855
+#: src/js/admin/components/views/SettingsView.js:828
 msgid "Select a provider"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:878
+#: src/js/admin/components/views/SettingsView.js:845
 msgid "Temperature"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:879
+#: src/js/admin/components/views/SettingsView.js:846
 msgid "Lower values make replies more focused and consistent. Higher values make replies more creative and varied."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:887
+#: src/js/admin/components/views/SettingsView.js:854
 msgid "Top P"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:888
+#: src/js/admin/components/views/SettingsView.js:855
 msgid "Lower values keep replies more predictable. Higher values allow more variety in wording and ideas."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:896
+#: src/js/admin/components/views/SettingsView.js:863
 msgid "Max Output Tokens"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:897
+#: src/js/admin/components/views/SettingsView.js:864
 msgid "Sets the maximum reply length. Higher values allow longer answers; lower values keep answers shorter."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:905
+#: src/js/admin/components/views/SettingsView.js:872
 msgid "Frequency Penalty"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:906
+#: src/js/admin/components/views/SettingsView.js:873
 msgid "Higher values reduce repeated words and phrases. Lower values allow more repetition."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:914
+#: src/js/admin/components/views/SettingsView.js:881
 msgid "Presence Penalty"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:915
+#: src/js/admin/components/views/SettingsView.js:882
 msgid "Higher values encourage fresh ideas. Lower values keep replies closer to what has already been said."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:923
+#: src/js/admin/components/views/SettingsView.js:890
 msgid "Request Timeout (seconds)"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:924
+#: src/js/admin/components/views/SettingsView.js:891
 msgid "How long ClawPress waits for a reply before stopping the request."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:932
+#: src/js/admin/components/views/SettingsView.js:899
 msgid "Agent User ID"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:933
+#: src/js/admin/components/views/SettingsView.js:900
 msgid "Use 0 if this is not configured yet."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:941
+#: src/js/admin/components/views/SettingsView.js:908
 msgid "Enable Memory"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:942
+#: src/js/admin/components/views/SettingsView.js:909
 msgid "When enabled, ClawPress can remember useful details from earlier chats."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:951
+#: src/js/admin/components/views/SettingsView.js:918
 msgid "Setup Completed"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:952
+#: src/js/admin/components/views/SettingsView.js:919
 msgid "Turn this on after you finish the initial setup."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:974
+#: src/js/admin/components/views/SettingsView.js:941
 msgid "LLM Reply Settings"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:975
+#: src/js/admin/components/views/SettingsView.js:942
 msgid "Not all settings are supported by every provider or model. Unsupported settings are skipped automatically."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:1070
+#: src/js/admin/components/views/SettingsView.js:1038
 msgid "Save Settings"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:1052
+msgid "Refresh Models"
 msgstr ""
 
 #: src/js/admin/config/itemConfig.js:17
@@ -1569,10 +1857,6 @@ msgstr ""
 
 #: src/js/admin/config/itemConfig.js:25
 msgid "(no title)"
-msgstr ""
-
-#: src/js/admin/config/itemConfig.js:31
-msgid "Status"
 msgstr ""
 
 #: src/js/admin/config/itemConfig.js:38
@@ -1628,14 +1912,6 @@ msgstr ""
 msgid "Move %d agent files to trash?"
 msgstr ""
 
-#: src/js/admin/config/itemConfig.js:138
-#: src/panel/components/ToolDialogForm.jsx:164
-#: src/panel/utils/toolDialogHelpers.js:98
-#: src/panel/utils/tools/updatePostsFindReplace.js:97
-#: src/panel/utils/tools/updatePostsFindReplace.js:200
-msgid "Cancel"
-msgstr ""
-
 #: src/js/admin/utils/requestJson.js:43
 msgid "Request failed."
 msgstr ""
@@ -1687,12 +1963,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:829
+#: src/panel/Panel.jsx:787
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:833
+#: src/panel/Panel.jsx:791
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1714,7 +1990,7 @@ msgid "Tool Error"
 msgstr ""
 
 #: src/panel/components/MockPanel.jsx:21
-#: src/panel/Panel.jsx:139
+#: src/panel/Panel.jsx:136
 msgid "Error"
 msgstr ""
 
@@ -1916,72 +2192,66 @@ msgstr ""
 msgid "Sample Post"
 msgstr ""
 
-#: src/panel/Panel.jsx:132
+#: src/panel/Panel.jsx:129
 msgid "Network or API request error"
 msgstr ""
 
-#: src/panel/Panel.jsx:149
-#: src/panel/services/realClient.js:810
-#: src/panel/services/realClient.js:881
-msgid "Chat request failed."
-msgstr ""
-
-#: src/panel/Panel.jsx:184
+#: src/panel/Panel.jsx:181
 msgid "confirmation required"
 msgstr ""
 
 #. translators: 1: tool name, 2: tool call status
-#: src/panel/Panel.jsx:189
+#: src/panel/Panel.jsx:186
 #, js-format
 msgid "Tool call `%1$s` (%2$s)"
 msgstr ""
 
 #. translators: 1: tool call position, 2: total tool calls, 3: tool summary text
-#: src/panel/Panel.jsx:200
+#: src/panel/Panel.jsx:197
 #, js-format
 msgid "[%1$d/%2$d] %3$s"
 msgstr ""
 
-#: src/panel/Panel.jsx:621
+#: src/panel/Panel.jsx:634
 msgid "Preparing tool plan…"
 msgstr ""
 
-#: src/panel/Panel.jsx:643
+#: src/panel/Panel.jsx:656
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:841
+#: src/panel/Panel.jsx:799
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:869
+#: src/panel/Panel.jsx:827
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:940
+#: src/panel/Panel.jsx:898
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:982
+#: src/panel/Panel.jsx:940
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:1049
-#: src/panel/Panel.jsx:1073
+#: src/panel/Panel.jsx:1007
+#: src/panel/Panel.jsx:1031
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:1060
+#: src/panel/Panel.jsx:1018
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:1116
+#: src/panel/Panel.jsx:1074
 #, js-format
 msgid "Mock: %s"
 msgstr ""
 
-#: src/panel/Panel.jsx:1206
+#: src/panel/Panel.jsx:1164
 msgid "Resize panel"
 msgstr ""
 
@@ -1991,23 +2261,27 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:580
+#: src/panel/services/realClient.js:609
 msgid "Run failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:667
+#: src/panel/services/realClient.js:696
 msgid "Run ended with an error."
 msgstr ""
 
-#: src/panel/services/realClient.js:698
+#: src/panel/services/realClient.js:727
 msgid "Run polling timed out before a terminal status was received."
 msgstr ""
 
-#: src/panel/services/realClient.js:863
-msgid "Run entered progress mode without a valid run ID."
+#: src/panel/services/realClient.js:806
+msgid "Streaming request failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:893
+#: src/panel/services/realClient.js:816
+msgid "Streaming endpoint returned a non-streaming response."
+msgstr ""
+
+#: src/panel/services/realClient.js:1025
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 

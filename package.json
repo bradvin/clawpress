@@ -1,22 +1,27 @@
 {
   "name": "clawpress",
   "version": "0.0.3",
-  "files": [
-    "build",
-    "includes",
-    "languages",
-    "vendor",
-    "clawpress.php",
-    "composer.json",
-    "README.md",
-    "LICENSE"
-  ],
+	"files": [
+		"build",
+		"includes",
+		"languages",
+		"vendor",
+		"clawpress.php",
+		"composer.json",
+		"readme.txt",
+		"LICENSE"
+	],
   "scripts": {
+    "agent-ci": "npx @redwoodjs/agent-ci",
+    "ci:agent": "npx @redwoodjs/agent-ci run --quiet --all --pause-on-failure",
+    "ci:agent:ci": "npx @redwoodjs/agent-ci run --quiet --pause-on-failure --workflow .github/workflows/ci.yml",
+    "ci:agent:retry": "npx @redwoodjs/agent-ci retry",
+    "ci:agent:abort": "npx @redwoodjs/agent-ci abort",
     "build": "npm run build:scripts && npm run build:panel && npm run build:pot",
     "build:scripts": "wp-scripts build --config webpack.scripts.config.js",
     "build:panel": "wp-scripts build --config webpack.panel.config.js",
     "build:pot": "mkdir -p languages && wp i18n make-pot . languages/clawpress.pot --domain=clawpress --exclude=build,node_modules,vendor,tests,ideas,docs",
-    "plugin-zip": "mkdir -p dist && wp-scripts plugin-zip && mv -f \"$npm_package_name.zip\" dist/",
+	    "plugin-zip": "mkdir -p dist && wp-scripts plugin-zip && if unzip -l \"$npm_package_name.zip\" \"$npm_package_name/README.md\" >/dev/null 2>&1; then zip -dq \"$npm_package_name.zip\" \"$npm_package_name/README.md\"; fi && mv -f \"$npm_package_name.zip\" dist/",
     "start": "npm run start:scripts & npm run start:panel",
     "start:scripts": "wp-scripts start --config webpack.scripts.config.js",
     "start:panel": "wp-scripts start --config webpack.panel.config.js",

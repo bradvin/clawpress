@@ -3,7 +3,7 @@
   "landingPage": "/wp-admin/admin.php?page=clawpress",
   "preferredVersions": {
     "php": "8.2",
-    "wp": "latest"
+    "wp": "7.0"
   },
   "features": {
     "networking": true

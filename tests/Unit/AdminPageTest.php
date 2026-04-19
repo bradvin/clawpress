@@ -34,10 +34,11 @@ final class AdminPageTest extends TestCase {
 		$this->assertCount( 1, WordPress_Stubs::$menu_pages );
 		$this->assertSame( 'clawpress', WordPress_Stubs::$menu_pages[0]['menu_slug'] );
 		$this->assertCount( 1, WordPress_Stubs::$removed_submenu_pages );
-		$this->assertCount( 3, WordPress_Stubs::$submenu_pages );
+		$this->assertCount( 4, WordPress_Stubs::$submenu_pages );
 		$this->assertSame( 'clawpress', WordPress_Stubs::$submenu_pages[0]['menu_slug'] );
-		$this->assertSame( 'edit.php?post_type=' . Post_Types::AGENT_FILE_POST_TYPE, WordPress_Stubs::$submenu_pages[1]['menu_slug'] );
-		$this->assertSame( 'edit.php?post_type=' . Post_Types::AGENT_MEMORY_POST_TYPE, WordPress_Stubs::$submenu_pages[2]['menu_slug'] );
+		$this->assertSame( 'clawpress-logs', WordPress_Stubs::$submenu_pages[1]['menu_slug'] );
+		$this->assertSame( 'edit.php?post_type=' . Post_Types::AGENT_FILE_POST_TYPE, WordPress_Stubs::$submenu_pages[2]['menu_slug'] );
+		$this->assertSame( 'edit.php?post_type=' . Post_Types::AGENT_MEMORY_POST_TYPE, WordPress_Stubs::$submenu_pages[3]['menu_slug'] );
 	}
 
 	public function test_render_admin_page_outputs_mount_node(): void {
@@ -46,6 +47,16 @@ final class AdminPageTest extends TestCase {
 		$admin_page->render_admin_page();
 		$output = (string) ob_get_clean();
 
+		$this->assertStringContainsString( 'id="clawpress-admin-root"', $output );
+	}
+
+	public function test_render_logs_page_outputs_logs_heading_and_mount_node(): void {
+		$admin_page = new Admin_Page();
+		ob_start();
+		$admin_page->render_logs_page();
+		$output = (string) ob_get_clean();
+
+		$this->assertStringContainsString( '<h1>Logs</h1>', $output );
 		$this->assertStringContainsString( 'id="clawpress-admin-root"', $output );
 	}
 
@@ -71,5 +82,16 @@ final class AdminPageTest extends TestCase {
 		$this->assertSame( 'CLAWPRESS_ADMIN', WordPress_Stubs::$localized_scripts[0]['object_name'] );
 		$this->assertArrayHasKey( 'restBase', WordPress_Stubs::$localized_scripts[0]['data'] );
 		$this->assertArrayHasKey( 'nonce', WordPress_Stubs::$localized_scripts[0]['data'] );
+		$this->assertSame( 'main', WordPress_Stubs::$localized_scripts[0]['data']['screen'] );
+	}
+
+	public function test_enqueue_admin_assets_supports_logs_submenu_screen(): void {
+		new Admin_Page();
+
+		do_action( 'admin_enqueue_scripts', 'clawpress_page_clawpress-logs' );
+
+		$this->assertCount( 1, WordPress_Stubs::$enqueued_scripts );
+		$this->assertCount( 1, WordPress_Stubs::$enqueued_styles );
+		$this->assertSame( 'logs', WordPress_Stubs::$localized_scripts[0]['data']['screen'] );
 	}
 }

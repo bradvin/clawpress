@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\Helpers\Agent_Loop_Helper;
+use ClawPress\Transports\Agent_Event_Sink;
 use ClawPress\Tests\Support\Agent_Runtime_Wpdb;
 use ClawPress\Tests\Support\TestCase;
 
@@ -113,6 +114,72 @@ final class AgentLoopHelperTest extends TestCase {
 		$this->assertNotEmpty( $GLOBALS['wpdb']->events );
 	}
 
+	public function test_run_turn_streaming_mode_emits_live_delta_without_persisting_delta_events(): void {
+		$stream_events = [];
+
+		$result = Agent_Loop_Helper::get_instance()->run_turn(
+			[
+				'run_id'                  => 155,
+				'session_id'              => 177,
+				'message'                 => 'Stream live delta',
+				'transport_mode'          => 'streaming',
+				'stream_event_callback'   => static function ( array $event ) use ( &$stream_events ): void {
+					$stream_events[] = $event;
+				},
+				'provider_model_resolver' => static fn( array $settings ): array => [
+					'provider' => 'openai',
+					'model'    => 'gpt-4.1-mini',
+				],
+				'online_reply_generator'  => static function ( array $context, string $provider, string $model, array $turn_request, \ClawPress\Transports\Agent_Event_Sink $event_sink ): array {
+					unset( $context, $provider, $model, $turn_request );
+
+					$event_sink->emit(
+						[
+							'type'    => 'agent.llm.delta',
+							'payload' => [
+								'text' => 'Hello ',
+							],
+						]
+					);
+					$event_sink->emit(
+						[
+							'type'    => 'agent.tool_call',
+							'payload' => [
+								'tool_name' => 'file_read',
+								'status'    => 'success',
+								'round'     => 1,
+								'sequence'  => 1,
+							],
+						]
+					);
+
+					return [
+						'status'      => 'success',
+						'next_action' => 'stop',
+						'reply'       => 'Hello world',
+					];
+				},
+			]
+		);
+
+		$this->assertSame( 'success', $result['status'] );
+		$this->assertSame( 'Hello world', $result['assistant_text'] );
+		$this->assertCount( 4, $stream_events );
+		$this->assertSame( 'agent.run.started', $stream_events[0]['type'] );
+		$this->assertSame( 'agent.llm.delta', $stream_events[1]['type'] );
+		$this->assertSame( 'agent.tool_call', $stream_events[2]['type'] );
+		$this->assertSame( 'agent.run.finished', $stream_events[3]['type'] );
+
+		$persisted_event_types = array_values(
+			array_map(
+				static fn( array $event ): string => (string) ( $event['event_type'] ?? '' ),
+				$GLOBALS['wpdb']->events
+			)
+		);
+		$this->assertContains( 'agent.tool_call', $persisted_event_types );
+		$this->assertNotContains( 'agent.llm.delta', $persisted_event_types );
+	}
+
 	public function test_run_turn_fills_terminal_empty_assistant_text_with_friendly_message(): void {
 		$result = Agent_Loop_Helper::get_instance()->run_turn(
 			[
@@ -148,6 +215,65 @@ final class AgentLoopHelperTest extends TestCase {
 			'I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here.',
 			$result['assistant_text']
 		);
+	}
+
+	public function test_emit_transport_stream_delta_ignores_function_call_argument_payloads(): void {
+		$stream_events = [];
+		$helper        = Agent_Loop_Helper::get_instance();
+		$reflection    = new \ReflectionClass( Agent_Loop_Helper::class );
+		$method        = $reflection->getMethod( 'emit_transport_stream_delta' );
+		$method->setAccessible( true );
+		$event_sink = new Agent_Event_Sink(
+			static function ( array $event ) use ( &$stream_events ): void {
+				$stream_events[] = $event;
+			}
+		);
+
+		$method->invoke(
+			$helper,
+			new \WP_AI_Client_SSE_Event(
+				'response.function_call_arguments.delta',
+				'{"type":"response.function_call_arguments.delta","delta":"{}"}'
+			),
+			$event_sink
+		);
+		$method->invoke(
+			$helper,
+			new \WP_AI_Client_SSE_Event(
+				'response.output_text.delta',
+				'{"type":"response.output_text.delta","delta":"Files:"}'
+			),
+			$event_sink
+		);
+
+		$this->assertCount( 1, $stream_events );
+		$this->assertSame( 'agent.llm.delta', $stream_events[0]['type'] );
+		$this->assertSame( 'Files:', $stream_events[0]['payload']['text'] );
+	}
+
+	public function test_emit_transport_stream_delta_keeps_legacy_top_level_text_deltas(): void {
+		$stream_events = [];
+		$helper        = Agent_Loop_Helper::get_instance();
+		$reflection    = new \ReflectionClass( Agent_Loop_Helper::class );
+		$method        = $reflection->getMethod( 'emit_transport_stream_delta' );
+		$method->setAccessible( true );
+		$event_sink = new Agent_Event_Sink(
+			static function ( array $event ) use ( &$stream_events ): void {
+				$stream_events[] = $event;
+			}
+		);
+
+		$method->invoke(
+			$helper,
+			new \WP_AI_Client_SSE_Event(
+				'',
+				'{"delta":"Files:"}'
+			),
+			$event_sink
+		);
+
+		$this->assertCount( 1, $stream_events );
+		$this->assertSame( 'Files:', $stream_events[0]['payload']['text'] );
 	}
 
 	public function test_run_slice_returns_in_progress_with_resume_cursor(): void {

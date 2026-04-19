@@ -128,23 +128,218 @@ final class Abilities_Helper {
 				continue;
 			}
 
-			$parameters = $ability->get_input_schema();
-			if ( [] === $parameters ) {
-				$parameters = [
-					'type'                 => 'object',
-					'properties'           => new \stdClass(),
-					'additionalProperties' => false,
-				];
-			}
-
-			$declarations[] = new FunctionDeclaration(
-				$tool_name,
-				(string) $ability->get_description(),
-				$parameters
+			$declarations[] = $this->normalize_function_declaration(
+				new FunctionDeclaration(
+					$tool_name,
+					(string) $ability->get_description(),
+					$this->normalize_tool_input_schema( $ability->get_input_schema() )
+				)
 			);
 		}
 
 		return $declarations;
+	}
+
+	/**
+	 * Normalize a function declaration for provider-safe JSON schema encoding.
+	 *
+	 * @param FunctionDeclaration $declaration Raw function declaration.
+	 */
+	public function normalize_function_declaration( FunctionDeclaration $declaration ): FunctionDeclaration {
+		$parameters = $declaration->getParameters();
+		$normalized = null;
+
+		if ( is_array( $parameters ) && ! $this->should_omit_function_parameters( $parameters ) ) {
+			$normalized = $this->normalize_tool_input_schema( $parameters );
+		}
+
+		return new FunctionDeclaration( $declaration->getName(), $declaration->getDescription(), $normalized );
+	}
+
+	/**
+	 * Normalize one ability input schema for function-declaration compatibility.
+	 *
+	 * The AI client expects JSON-object positions like `properties` and
+	 * `additionalProperties` to serialize as `{}` instead of `[]`.
+	 *
+	 * @param array<string,mixed> $schema Raw ability schema.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_tool_input_schema( array $schema ): array {
+		if ( [] === $schema ) {
+			return [
+				'type'                 => 'object',
+				'properties'           => new \stdClass(),
+				'additionalProperties' => false,
+			];
+		}
+
+		return $this->normalize_schema_node( $schema );
+	}
+
+	/**
+	 * Determine whether a function declaration should omit `parameters`.
+	 *
+	 * For no-argument tools, OpenAI-compatible providers accept omitted
+	 * `parameters`, which is safer than emitting an empty-object schema.
+	 *
+	 * @param array<string,mixed> $schema Raw or normalized schema.
+	 */
+	private function should_omit_function_parameters( array $schema ): bool {
+		if ( [] === $schema ) {
+			return true;
+		}
+
+		if ( ! isset( $schema['type'] ) || 'object' !== $schema['type'] ) {
+			return false;
+		}
+
+		$required = $schema['required'] ?? [];
+		if ( is_array( $required ) && [] !== $required ) {
+			return false;
+		}
+
+		if ( ! array_key_exists( 'properties', $schema ) ) {
+			return true;
+		}
+
+		$properties = $schema['properties'];
+
+		if ( $properties instanceof \stdClass ) {
+			return [] === get_object_vars( $properties );
+		}
+
+		return is_array( $properties ) && [] === $properties;
+	}
+
+	/**
+	 * Normalize one JSON schema node recursively.
+	 *
+	 * @param array<string,mixed> $schema Raw schema node.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_schema_node( array $schema ): array {
+		if (
+			isset( $schema['type'], $schema['default'] ) &&
+			'object' === $schema['type'] &&
+			is_array( $schema['default'] ) &&
+			[] === $schema['default']
+		) {
+			$schema['default'] = (object) [];
+		}
+
+		foreach ( [ 'properties', 'patternProperties', 'definitions', '$defs' ] as $keyword ) {
+			if ( ! array_key_exists( $keyword, $schema ) ) {
+				continue;
+			}
+
+			$schema[ $keyword ] = $this->normalize_schema_map( $schema[ $keyword ] );
+		}
+
+		if ( array_key_exists( 'dependencies', $schema ) ) {
+			$schema['dependencies'] = $this->normalize_dependencies_keyword( $schema['dependencies'] );
+		}
+
+		foreach ( [ 'additionalProperties', 'items', 'not' ] as $keyword ) {
+			if ( ! array_key_exists( $keyword, $schema ) ) {
+				continue;
+			}
+
+			$schema[ $keyword ] = $this->normalize_schema_value( $schema[ $keyword ] );
+		}
+
+		foreach ( [ 'allOf', 'anyOf', 'oneOf' ] as $keyword ) {
+			if ( ! isset( $schema[ $keyword ] ) || ! is_array( $schema[ $keyword ] ) ) {
+				continue;
+			}
+
+			$schema[ $keyword ] = array_values(
+				array_map(
+					fn( $item ) => $this->normalize_schema_value( $item ),
+					$schema[ $keyword ]
+				)
+			);
+		}
+
+		return $schema;
+	}
+
+	/**
+	 * Normalize a schema-map keyword like `properties`.
+	 *
+	 * @param mixed $value Raw schema-map value.
+	 * @return mixed
+	 */
+	private function normalize_schema_map( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( [] === $value ) {
+			return (object) [];
+		}
+
+		$normalized = [];
+		foreach ( $value as $key => $schema ) {
+			$normalized[ $key ] = $this->normalize_schema_value( $schema );
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize the `dependencies` keyword.
+	 *
+	 * @param mixed $value Raw dependencies value.
+	 * @return mixed
+	 */
+	private function normalize_dependencies_keyword( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( [] === $value ) {
+			return (object) [];
+		}
+
+		$normalized = [];
+		foreach ( $value as $key => $dependency ) {
+			if ( is_array( $dependency ) && ! array_is_list( $dependency ) ) {
+				$normalized[ $key ] = $this->normalize_schema_node( $dependency );
+				continue;
+			}
+
+			$normalized[ $key ] = $dependency;
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Normalize a schema-bearing value.
+	 *
+	 * @param mixed $value Raw schema value.
+	 * @return mixed
+	 */
+	private function normalize_schema_value( $value ) {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		if ( [] === $value ) {
+			return (object) [];
+		}
+
+		if ( array_is_list( $value ) ) {
+			return array_values(
+				array_map(
+					fn( $item ) => $this->normalize_schema_value( $item ),
+					$value
+				)
+			);
+		}
+
+		return $this->normalize_schema_node( $value );
 	}
 
 	/**
@@ -301,14 +496,14 @@ final class Abilities_Helper {
 		$args                        = $this->normalize_tool_args( $raw_args );
 		$requesting_user_id          = isset( $execution_context['requesting_user_id'] )
 			? (int) $execution_context['requesting_user_id']
-			: ( function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0 );
+			: get_current_user_id();
 		$execution_user_id           = isset( $execution_context['execution_user_id'] ) && (int) $execution_context['execution_user_id'] > 0
 			? (int) $execution_context['execution_user_id']
 			: $this->resolve_execution_user_id();
 		$confirmation_scope          = isset( $execution_context['confirmation_scope'] )
 			? strtolower( trim( (string) $execution_context['confirmation_scope'] ) )
 			: '';
-		$skip_confirmation           = isset( $execution_context['skip_confirmation'] ) && function_exists( 'clawpress_sanitize_boolean' )
+		$skip_confirmation           = isset( $execution_context['skip_confirmation'] )
 			? clawpress_sanitize_boolean( $execution_context['skip_confirmation'] )
 			: false;
 		$has_confirmation_allowlist  = array_key_exists( 'allowed_confirmation_tokens', $execution_context );
@@ -346,7 +541,7 @@ final class Abilities_Helper {
 				],
 				'tool'    => $normalized_tool_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -360,21 +555,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
-			return $payload;
-		}
-
-		if ( ! function_exists( 'wp_get_ability' ) ) {
-			$payload = [
-				'success' => false,
-				'error'   => [
-					'code'    => 'clawpress_abilities_api_unavailable',
-					'message' => __( 'The WordPress Abilities API is unavailable.', 'clawpress' ),
-				],
-				'tool'    => $normalized_tool_name,
-				'ability' => $ability_name,
-			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -389,7 +570,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -406,7 +587,7 @@ final class Abilities_Helper {
 				'tool'    => $normalized_tool_name,
 				'ability' => $ability_name,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -430,6 +611,31 @@ final class Abilities_Helper {
 				$execution_user_id,
 				$this->resolve_policy_violation_log_status( $payload ),
 				$args_hash,
+				$args,
+				$payload,
+				$event_context
+			);
+			return $payload;
+		}
+
+		if ( $this->is_network_capable( $ability ) && ! $this->is_policy_enabled( $runtime_policy['allow_network'] ?? false ) ) {
+			$payload = $this->build_policy_violation_payload(
+				'clawpress_policy_network_denied',
+				__( 'Network access is blocked by runtime policy.', 'clawpress' ),
+				$normalized_tool_name,
+				$ability_name,
+				$safety_class,
+				$runtime_policy,
+				'deny_network'
+			);
+			$this->log_tool_call(
+				$normalized_tool_name,
+				$ability_name,
+				$requesting_user_id,
+				$execution_user_id,
+				$this->resolve_policy_violation_log_status( $payload ),
+				$args_hash,
+				$args,
 				$payload,
 				$event_context
 			);
@@ -453,6 +659,7 @@ final class Abilities_Helper {
 				$execution_user_id,
 				$this->resolve_policy_violation_log_status( $payload ),
 				$args_hash,
+				$args,
 				$payload,
 				$event_context
 			);
@@ -476,6 +683,7 @@ final class Abilities_Helper {
 				$execution_user_id,
 				$this->resolve_policy_violation_log_status( $payload ),
 				$args_hash,
+				$args,
 				$payload,
 				$event_context
 			);
@@ -495,12 +703,12 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $args, $payload, $event_context );
 				return $payload;
 			}
 
 			$confirm_token    = $this->normalize_confirmation_token( $args['confirm_token'] ?? null );
-			$is_confirmed     = isset( $args['confirm'] ) && function_exists( 'clawpress_sanitize_boolean' )
+			$is_confirmed     = isset( $args['confirm'] )
 				? clawpress_sanitize_boolean( $args['confirm'] )
 				: false;
 			$token_is_allowed = ! $has_confirmation_allowlist
@@ -522,7 +730,7 @@ final class Abilities_Helper {
 					'ability'               => $ability_name,
 					'safety_class'          => $safety_class,
 				];
-				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $payload, $event_context );
+				$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'warning', $args_hash, $args, $payload, $event_context );
 				return $payload;
 			}
 		}
@@ -545,7 +753,7 @@ final class Abilities_Helper {
 				'ability'      => $ability_name,
 				'safety_class' => $safety_class,
 			];
-			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $payload, $event_context );
+			$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'error', $args_hash, $args, $payload, $event_context );
 			return $payload;
 		}
 
@@ -557,7 +765,7 @@ final class Abilities_Helper {
 			'result'       => $result,
 		];
 
-		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $payload, $event_context );
+		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $args, $payload, $event_context );
 
 		return $payload;
 	}
@@ -647,7 +855,7 @@ final class Abilities_Helper {
 			return $agent_user_id;
 		}
 
-		return function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		return get_current_user_id();
 	}
 
 	/**
@@ -658,18 +866,16 @@ final class Abilities_Helper {
 	 * @return mixed
 	 */
 	private function run_as_execution_user( int $execution_user_id, callable $callback ) {
-		$original_user_id = function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0;
+		$original_user_id = get_current_user_id();
 
-		if ( $execution_user_id > 0 && function_exists( 'wp_set_current_user' ) ) {
+		if ( $execution_user_id > 0 ) {
 			wp_set_current_user( $execution_user_id );
 		}
 
 		try {
 			return $callback();
 		} finally {
-			if ( function_exists( 'wp_set_current_user' ) ) {
-				wp_set_current_user( $original_user_id );
-			}
+			wp_set_current_user( $original_user_id );
 		}
 	}
 
@@ -712,6 +918,16 @@ final class Abilities_Helper {
 			'destructive' => true === ( $annotations['destructive'] ?? false ),
 			'idempotent'  => true === ( $annotations['idempotent'] ?? false ),
 		];
+	}
+
+	/**
+	 * Whether an ability is marked as network-capable.
+	 *
+	 * @param \WP_Ability $ability Ability instance.
+	 */
+	private function is_network_capable( \WP_Ability $ability ): bool {
+		$annotations = $ability->get_meta_item( 'annotations', [] );
+		return is_array( $annotations ) && true === ( $annotations['network'] ?? false );
 	}
 
 	/**
@@ -761,14 +977,12 @@ final class Abilities_Helper {
 
 		$label = ucwords( str_replace( [ '-', '_' ], ' ', $slug ) );
 
-		if ( function_exists( 'wp_get_ability_category' ) ) {
-			$category = wp_get_ability_category( $slug );
-			if ( is_object( $category ) ) {
-				if ( method_exists( $category, 'get_label' ) ) {
-					$resolved_label = trim( (string) $category->get_label() );
-					if ( '' !== $resolved_label ) {
-						$label = $resolved_label;
-					}
+		$category = wp_get_ability_category( $slug );
+		if ( is_object( $category ) ) {
+			if ( method_exists( $category, 'get_label' ) ) {
+				$resolved_label = trim( (string) $category->get_label() );
+				if ( '' !== $resolved_label ) {
+					$label = $resolved_label;
 				}
 			}
 		}
@@ -832,10 +1046,6 @@ final class Abilities_Helper {
 	 * @return array<string,\WP_Ability>
 	 */
 	private function get_registered_abilities(): array {
-		if ( ! function_exists( 'wp_get_abilities' ) ) {
-			return [];
-		}
-
 		$registered = wp_get_abilities();
 		if ( ! is_array( $registered ) ) {
 			return [];
@@ -944,9 +1154,7 @@ final class Abilities_Helper {
 	 * @param mixed $value Raw value.
 	 */
 	private function is_policy_enabled( $value ): bool {
-		return function_exists( 'clawpress_sanitize_boolean' )
-			? clawpress_sanitize_boolean( $value )
-			: (bool) $value;
+		return clawpress_sanitize_boolean( $value );
 	}
 
 	/**
@@ -1040,6 +1248,7 @@ final class Abilities_Helper {
 	 * @param int                 $execution_user_id Execution user ID.
 	 * @param string              $status Log status.
 	 * @param string              $args_hash Hash of arguments.
+	 * @param array<string,mixed> $args Tool arguments.
 	 * @param array<string,mixed> $payload Tool payload.
 	 * @param array<string,mixed> $event_context Optional run/session context.
 	 */
@@ -1050,6 +1259,7 @@ final class Abilities_Helper {
 		int $execution_user_id,
 		string $status,
 		string $args_hash,
+		array $args,
 		array $payload,
 		array $event_context
 	): void {
@@ -1062,6 +1272,21 @@ final class Abilities_Helper {
 			$args_hash,
 			$payload,
 			$event_context
+		);
+
+		do_action(
+			'clawpress_tool_call_logged',
+			[
+				'tool_name'           => $tool_name,
+				'ability_name'        => $ability_name,
+				'requesting_user_id'  => $requesting_user_id,
+				'execution_user_id'   => $execution_user_id,
+				'status'              => $status,
+				'args_hash'           => $args_hash,
+				'args'                => $args,
+				'payload'             => $payload,
+				'event_context'       => $event_context,
+			]
 		);
 	}
 }

@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\Abilities\Abilities;
+use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Helpers\Abilities_Helper;
 use ClawPress\Tests\Support\TestCase;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
@@ -54,6 +55,7 @@ final class AbilitiesHelperTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['wpdb'] = new AbilitiesHelperTestWpdb();
+		Action_Log_Helper::register_tool_call_logging_hook();
 		( new Abilities() );
 		do_action( 'wp_abilities_api_categories_init' );
 		do_action( 'wp_abilities_api_init' );
@@ -67,10 +69,26 @@ final class AbilitiesHelperTest extends TestCase {
 	public function test_tool_declarations_are_built_from_registered_allowlist(): void {
 		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
 
-		$this->assertCount( 10, $declarations );
+		$this->assertCount( 11, $declarations );
 		$this->assertInstanceOf( FunctionDeclaration::class, $declarations[0] );
 		$this->assertContains( 'file_read', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
 		$this->assertContains( 'memory_long_term_delete', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
+		$this->assertContains( 'web_fetch', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
+	}
+
+	public function test_file_list_declaration_omits_parameters_for_no_argument_tool(): void {
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+		$file_list    = null;
+
+		foreach ( $declarations as $declaration ) {
+			if ( 'file_list' === $declaration->getName() ) {
+				$file_list = $declaration;
+				break;
+			}
+		}
+
+		$this->assertInstanceOf( FunctionDeclaration::class, $file_list );
+		$this->assertNull( $file_list->getParameters() );
 	}
 
 	public function test_tool_declarations_respect_enabled_abilities_option(): void {
@@ -195,6 +213,45 @@ final class AbilitiesHelperTest extends TestCase {
 		);
 
 		$this->assertSame( [ 'vendor__custom_tool' ], $names );
+	}
+
+	public function test_empty_registered_input_schema_omits_parameters(): void {
+		wp_register_ability(
+			'vendor/custom-empty-input',
+			[
+				'label'               => 'Custom Empty Input',
+				'description'         => 'External tool with empty input schema.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'vendor/custom-empty-input',
+			]
+		);
+
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+
+		$this->assertCount( 1, $declarations );
+		$this->assertNull( $declarations[0]->getParameters() );
+	}
+
+	public function test_normalize_function_declaration_omits_empty_object_parameter_schemas(): void {
+		$declaration = new FunctionDeclaration(
+			'file_list',
+			'List files.',
+			[
+				'type'                 => 'object',
+				'properties'           => [],
+				'additionalProperties' => false,
+			]
+		);
+
+		$normalized = Abilities_Helper::get_instance()->normalize_function_declaration( $declaration );
+		$this->assertNull( $normalized->getParameters() );
 	}
 
 	public function test_execute_tool_call_accepts_external_registered_ability_alias(): void {
@@ -361,6 +418,45 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertFalse( $result['success'] );
 		$this->assertSame( 'clawpress_policy_file_delete_denied_fail', $result['error']['code'] );
 		$this->assertSame( 'fail', $result['policy']['on_violation'] );
+	}
+
+	public function test_network_tools_are_denied_when_runtime_policy_disallows_network_and_logged(): void {
+		$result = Abilities_Helper::get_instance()->execute_tool_call(
+			'web_fetch',
+			[
+				'url' => 'https://example.test/feed',
+			],
+			[
+				'requesting_user_id' => 1,
+				'execution_user_id'  => 1,
+				'runtime_policy'     => [
+					'trigger_type'                         => 'spawned_agent',
+					'policy_profile'                       => 'default',
+					'allow_tools'                          => true,
+					'allow_network'                        => false,
+					'allow_destructive_tools'              => true,
+					'require_confirmation_for_destructive' => true,
+					'allow_file_delete'                    => true,
+					'on_policy_violation'                  => 'deny',
+				],
+			]
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertSame( 'clawpress_policy_network_denied', $result['error']['code'] );
+		$this->assertSame( 'deny_network', $result['policy']['decision'] );
+
+		$action_log_inserts = array_values(
+			array_filter(
+				$GLOBALS['wpdb']->insert_calls,
+				static fn( array $call ): bool => 'wp_clawpress_action_logs' === $call['table']
+			)
+		);
+
+		$this->assertNotEmpty( $action_log_inserts );
+		$context = json_decode( (string) $action_log_inserts[0]['data']['context'], true );
+		$this->assertIsArray( $context );
+		$this->assertSame( 'deny_network', $context['policy']['decision'] );
 	}
 
 	public function test_destructive_confirmation_token_must_be_allowlisted_by_execution_context(): void {

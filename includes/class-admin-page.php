@@ -18,6 +18,16 @@ defined( 'ABSPATH' ) || exit;
  */
 final class Admin_Page {
 	/**
+	 * Main admin screen hook suffix.
+	 */
+	private const MAIN_HOOK_SUFFIX = 'toplevel_page_clawpress';
+
+	/**
+	 * Logs admin screen hook suffix.
+	 */
+	private const LOGS_HOOK_SUFFIX = 'clawpress_page_clawpress-logs';
+
+	/**
 	 * Register all hooks for the admin page.
 	 */
 	public function __construct() {
@@ -51,6 +61,16 @@ final class Admin_Page {
 			'clawpress',
 			[ $this, 'render_admin_page' ],
 			0
+		);
+
+		add_submenu_page(
+			'clawpress',
+			__( 'Logs', 'clawpress' ),
+			__( 'Logs', 'clawpress' ),
+			'manage_options',
+			'clawpress-logs',
+			[ $this, 'render_logs_page' ],
+			10
 		);
 	}
 
@@ -97,9 +117,29 @@ final class Admin_Page {
 	 * Render the admin page container.
 	 */
 	public function render_admin_page(): void {
+		$this->render_screen(
+			__( 'ClawPress', 'clawpress' )
+		);
+	}
+
+	/**
+	 * Render the logs admin page container.
+	 */
+	public function render_logs_page(): void {
+		$this->render_screen(
+			__( 'Logs', 'clawpress' )
+		);
+	}
+
+	/**
+	 * Render a React admin screen container.
+	 *
+	 * @param string $title Screen title.
+	 */
+	private function render_screen( string $title ): void {
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'ClawPress', 'clawpress' ); ?></h1>
+			<h1><?php echo esc_html( $title ); ?></h1>
 			<div id="clawpress-admin-root"></div>
 		</div>
 		<?php
@@ -127,7 +167,7 @@ final class Admin_Page {
 	 * @param string $hook_suffix Current admin page hook.
 	 */
 	public function enqueue_admin_assets( string $hook_suffix ): void {
-		if ( 'toplevel_page_clawpress' !== $hook_suffix ) {
+		if ( ! in_array( $hook_suffix, [ self::MAIN_HOOK_SUFFIX, self::LOGS_HOOK_SUFFIX ], true ) ) {
 			return;
 		}
 
@@ -147,9 +187,7 @@ final class Admin_Page {
 			true
 		);
 
-		if ( function_exists( 'wp_set_script_translations' ) ) {
-			wp_set_script_translations( 'clawpress', 'clawpress', CLAWPRESS_DIR . 'languages' );
-		}
+		wp_set_script_translations( 'clawpress', 'clawpress', CLAWPRESS_DIR . 'languages' );
 
 		wp_localize_script(
 			'clawpress',
@@ -157,6 +195,7 @@ final class Admin_Page {
 			[
 				'restBase' => esc_url_raw( rest_url( 'clawpress/v1' ) ),
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
+				'screen'   => self::LOGS_HOOK_SUFFIX === $hook_suffix ? 'logs' : 'main',
 			]
 		);
 
