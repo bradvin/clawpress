@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-04-18T14:35:15+00:00\n"
+"POT-Creation-Date: 2026-04-19T15:46:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
@@ -281,19 +281,19 @@ msgid "Background follow-up slices are disabled for this trigger."
 msgstr ""
 
 #: includes/class-agent-runner.php:457
-#: includes/helpers/class-chat-helper.php:232
+#: includes/helpers/class-chat-helper.php:240
 msgid "Agent run failed."
 msgstr ""
 
 #: includes/class-agent-runner.php:496
 #: includes/helpers/class-agent-loop-helper.php:337
-#: src/panel/services/realClient.js:643
+#: src/panel/services/realClient.js:672
 msgid "Action requires confirmation before continuing."
 msgstr ""
 
 #: includes/class-agent-runner.php:497
 #: includes/helpers/class-agent-loop-helper.php:341
-#: src/panel/services/realClient.js:654
+#: src/panel/services/realClient.js:683
 msgid "I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here."
 msgstr ""
 
@@ -398,12 +398,12 @@ msgid "Confirmed batch `%1$s`. Executing %2$d tool call(s):"
 msgstr ""
 
 #: includes/commands/class-commands.php:245
-#: src/panel/Panel.jsx:180
+#: src/panel/Panel.jsx:177
 msgid "success"
 msgstr ""
 
 #: includes/commands/class-commands.php:246
-#: src/panel/Panel.jsx:182
+#: src/panel/Panel.jsx:179
 msgid "error"
 msgstr ""
 
@@ -742,9 +742,9 @@ msgstr ""
 
 #: includes/commands/handlers/class-setup-command-handler.php:395
 #: includes/commands/handlers/class-test-command-handler.php:207
-#: includes/helpers/class-agent-loop-helper.php:268
-#: includes/helpers/class-chat-helper.php:537
-#: includes/helpers/class-chat-helper.php:590
+#: includes/helpers/class-agent-loop-helper.php:267
+#: includes/helpers/class-chat-helper.php:545
+#: includes/helpers/class-chat-helper.php:598
 msgid "Unknown provider error."
 msgstr ""
 
@@ -1172,39 +1172,39 @@ msgstr ""
 msgid "an unknown version"
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:345
+#: includes/helpers/class-abilities-helper.php:540
 msgid "The requested tool is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:358
+#: includes/helpers/class-abilities-helper.php:553
 msgid "The requested ability is disabled in settings."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:373
+#: includes/helpers/class-abilities-helper.php:568
 msgid "The requested ability is not registered."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:405
+#: includes/helpers/class-abilities-helper.php:600
 msgid "Tool execution is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:429
+#: includes/helpers/class-abilities-helper.php:624
 msgid "Network access is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:453
+#: includes/helpers/class-abilities-helper.php:648
 msgid "Destructive tools are not allowed for this runtime trigger."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:477
+#: includes/helpers/class-abilities-helper.php:672
 msgid "File delete is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:505
+#: includes/helpers/class-abilities-helper.php:700
 msgid "This destructive action is pending batch confirmation."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:530
+#: includes/helpers/class-abilities-helper.php:725
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
@@ -1245,100 +1245,104 @@ msgid "Tool %s failed."
 msgstr ""
 
 #. translators: %d: maximum number of tool calls executed per round.
-#: includes/helpers/class-agent-loop-helper.php:916
+#: includes/helpers/class-agent-loop-helper.php:922
 #, php-format
 msgid "Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round."
 msgstr ""
 
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1207
+#: includes/helpers/class-agent-loop-helper.php:1213
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1215
+#: includes/helpers/class-agent-loop-helper.php:1221
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1218
+#: includes/helpers/class-agent-loop-helper.php:1224
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1226
+#: includes/helpers/class-agent-loop-helper.php:1232
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1227
+#: includes/helpers/class-agent-loop-helper.php:1233
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1233
+#: includes/helpers/class-agent-loop-helper.php:1239
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1234
+#: includes/helpers/class-agent-loop-helper.php:1240
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1240
+#: includes/helpers/class-agent-loop-helper.php:1246
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:366
+#: includes/helpers/class-agent-loop-helper.php:1579
+msgid "AI client did not return a generative result."
+msgstr ""
+
+#: includes/helpers/class-chat-helper.php:374
 msgid "Unable to persist paused run state."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:376
+#: includes/helpers/class-chat-helper.php:384
 msgid "Unable to release session after pausing run."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:388
+#: includes/helpers/class-chat-helper.php:396
 #: src/panel/components/PanelMessages.jsx:45
-#: src/panel/Panel.jsx:636
+#: src/panel/Panel.jsx:649
 #: src/panel/services/realClient.js:7
 msgid "I am still working on this"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:462
+#: includes/helpers/class-chat-helper.php:470
 msgid "A destructive action is waiting for your confirmation."
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:465
+#: includes/helpers/class-chat-helper.php:473
 msgid "Action required."
 msgstr ""
 
 #. translators: %s: the original user message
-#: includes/helpers/class-chat-helper.php:476
+#: includes/helpers/class-chat-helper.php:484
 #, php-format
 msgid "Offline mode: no configured AI provider was available. You said: \"%s\""
 msgstr ""
 
 #. translators: %s: provider/transport error message
-#: includes/helpers/class-chat-helper.php:553
-#: includes/helpers/class-chat-helper.php:602
+#: includes/helpers/class-chat-helper.php:561
+#: includes/helpers/class-chat-helper.php:610
 #, php-format
 msgid "AI request failed: %s"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:569
-#: includes/helpers/class-chat-helper.php:618
+#: includes/helpers/class-chat-helper.php:577
+#: includes/helpers/class-chat-helper.php:626
 #: src/panel/components/cards/ErrorCard.jsx:7
-#: src/panel/Panel.jsx:144
+#: src/panel/Panel.jsx:141
 msgid "Request Error"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:571
-#: includes/helpers/class-chat-helper.php:620
-#: src/panel/Panel.jsx:131
+#: includes/helpers/class-chat-helper.php:579
+#: includes/helpers/class-chat-helper.php:628
+#: src/panel/Panel.jsx:128
 msgid "Request timed out"
 msgstr ""
 
-#: includes/helpers/class-chat-helper.php:572
-#: includes/helpers/class-chat-helper.php:621
-#: src/panel/Panel.jsx:133
+#: includes/helpers/class-chat-helper.php:580
+#: includes/helpers/class-chat-helper.php:629
+#: src/panel/Panel.jsx:130
 msgid "Provider error"
 msgstr ""
 
@@ -1425,8 +1429,17 @@ msgstr ""
 msgid "Unable to enqueue run."
 msgstr ""
 
-#: includes/rest/class-chat-controller.php:112
+#: includes/rest/class-chat-controller.php:128
+#: includes/rest/class-chat-controller.php:153
 msgid "Message is required."
+msgstr ""
+
+#: includes/rest/class-chat-controller.php:179
+#: includes/rest/class-chat-controller.php:421
+#: src/panel/Panel.jsx:146
+#: src/panel/services/realClient.js:917
+#: src/panel/services/realClient.js:1013
+msgid "Chat request failed."
 msgstr ""
 
 #: includes/rest/class-logs-controller.php:187
@@ -1950,12 +1963,12 @@ msgid "Please confirm or decline this action."
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:8
-#: src/panel/Panel.jsx:829
+#: src/panel/Panel.jsx:787
 msgid "Welcome to ClawPress"
 msgstr ""
 
 #: src/panel/components/cards/WelcomeCard.jsx:12
-#: src/panel/Panel.jsx:833
+#: src/panel/Panel.jsx:791
 msgid "Hello! I am ready to help with your WordPress tasks."
 msgstr ""
 
@@ -1977,7 +1990,7 @@ msgid "Tool Error"
 msgstr ""
 
 #: src/panel/components/MockPanel.jsx:21
-#: src/panel/Panel.jsx:139
+#: src/panel/Panel.jsx:136
 msgid "Error"
 msgstr ""
 
@@ -2179,72 +2192,66 @@ msgstr ""
 msgid "Sample Post"
 msgstr ""
 
-#: src/panel/Panel.jsx:132
+#: src/panel/Panel.jsx:129
 msgid "Network or API request error"
 msgstr ""
 
-#: src/panel/Panel.jsx:149
-#: src/panel/services/realClient.js:810
-#: src/panel/services/realClient.js:881
-msgid "Chat request failed."
-msgstr ""
-
-#: src/panel/Panel.jsx:184
+#: src/panel/Panel.jsx:181
 msgid "confirmation required"
 msgstr ""
 
 #. translators: 1: tool name, 2: tool call status
-#: src/panel/Panel.jsx:189
+#: src/panel/Panel.jsx:186
 #, js-format
 msgid "Tool call `%1$s` (%2$s)"
 msgstr ""
 
 #. translators: 1: tool call position, 2: total tool calls, 3: tool summary text
-#: src/panel/Panel.jsx:200
+#: src/panel/Panel.jsx:197
 #, js-format
 msgid "[%1$d/%2$d] %3$s"
 msgstr ""
 
-#: src/panel/Panel.jsx:621
+#: src/panel/Panel.jsx:634
 msgid "Preparing tool plan…"
 msgstr ""
 
-#: src/panel/Panel.jsx:643
+#: src/panel/Panel.jsx:656
 msgid "Stream error."
 msgstr ""
 
-#: src/panel/Panel.jsx:841
+#: src/panel/Panel.jsx:799
 msgid "Start Setup"
 msgstr ""
 
-#: src/panel/Panel.jsx:869
+#: src/panel/Panel.jsx:827
 msgid "Unable to load chat history."
 msgstr ""
 
-#: src/panel/Panel.jsx:940
+#: src/panel/Panel.jsx:898
 msgid "Stream stopped."
 msgstr ""
 
-#: src/panel/Panel.jsx:982
+#: src/panel/Panel.jsx:940
 msgid "Tool execution failed."
 msgstr ""
 
-#: src/panel/Panel.jsx:1049
-#: src/panel/Panel.jsx:1073
+#: src/panel/Panel.jsx:1007
+#: src/panel/Panel.jsx:1031
 msgid "Invalid card action."
 msgstr ""
 
-#: src/panel/Panel.jsx:1060
+#: src/panel/Panel.jsx:1018
 msgid "Invalid card URL."
 msgstr ""
 
 #. translators: %s: selected mock scenario
-#: src/panel/Panel.jsx:1116
+#: src/panel/Panel.jsx:1074
 #, js-format
 msgid "Mock: %s"
 msgstr ""
 
-#: src/panel/Panel.jsx:1206
+#: src/panel/Panel.jsx:1164
 msgid "Resize panel"
 msgstr ""
 
@@ -2254,23 +2261,27 @@ msgstr ""
 msgid "Request failed (%d)"
 msgstr ""
 
-#: src/panel/services/realClient.js:580
+#: src/panel/services/realClient.js:609
 msgid "Run failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:667
+#: src/panel/services/realClient.js:696
 msgid "Run ended with an error."
 msgstr ""
 
-#: src/panel/services/realClient.js:698
+#: src/panel/services/realClient.js:727
 msgid "Run polling timed out before a terminal status was received."
 msgstr ""
 
-#: src/panel/services/realClient.js:863
-msgid "Run entered progress mode without a valid run ID."
+#: src/panel/services/realClient.js:806
+msgid "Streaming request failed."
 msgstr ""
 
-#: src/panel/services/realClient.js:893
+#: src/panel/services/realClient.js:816
+msgid "Streaming endpoint returned a non-streaming response."
+msgstr ""
+
+#: src/panel/services/realClient.js:1025
 msgid "Tool execution is not available in chat mode."
 msgstr ""
 

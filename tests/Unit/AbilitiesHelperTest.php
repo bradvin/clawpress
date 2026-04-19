@@ -76,6 +76,21 @@ final class AbilitiesHelperTest extends TestCase {
 		$this->assertContains( 'web_fetch', array_map( static fn( FunctionDeclaration $item ): string => $item->getName(), $declarations ) );
 	}
 
+	public function test_file_list_declaration_omits_parameters_for_no_argument_tool(): void {
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+		$file_list    = null;
+
+		foreach ( $declarations as $declaration ) {
+			if ( 'file_list' === $declaration->getName() ) {
+				$file_list = $declaration;
+				break;
+			}
+		}
+
+		$this->assertInstanceOf( FunctionDeclaration::class, $file_list );
+		$this->assertNull( $file_list->getParameters() );
+	}
+
 	public function test_tool_declarations_respect_enabled_abilities_option(): void {
 		update_option(
 			Abilities_Helper::ENABLED_ABILITIES_OPTION,
@@ -198,6 +213,45 @@ final class AbilitiesHelperTest extends TestCase {
 		);
 
 		$this->assertSame( [ 'vendor__custom_tool' ], $names );
+	}
+
+	public function test_empty_registered_input_schema_omits_parameters(): void {
+		wp_register_ability(
+			'vendor/custom-empty-input',
+			[
+				'label'               => 'Custom Empty Input',
+				'description'         => 'External tool with empty input schema.',
+				'input_schema'        => [],
+				'permission_callback' => static fn(): bool => true,
+				'execute_callback'    => static fn() => [ 'ok' => true ],
+			]
+		);
+		update_option(
+			Abilities_Helper::ENABLED_ABILITIES_OPTION,
+			[
+				'vendor/custom-empty-input',
+			]
+		);
+
+		$declarations = Abilities_Helper::get_instance()->get_tool_declarations();
+
+		$this->assertCount( 1, $declarations );
+		$this->assertNull( $declarations[0]->getParameters() );
+	}
+
+	public function test_normalize_function_declaration_omits_empty_object_parameter_schemas(): void {
+		$declaration = new FunctionDeclaration(
+			'file_list',
+			'List files.',
+			[
+				'type'                 => 'object',
+				'properties'           => [],
+				'additionalProperties' => false,
+			]
+		);
+
+		$normalized = Abilities_Helper::get_instance()->normalize_function_declaration( $declaration );
+		$this->assertNull( $normalized->getParameters() );
 	}
 
 	public function test_execute_tool_call_accepts_external_registered_ability_alias(): void {

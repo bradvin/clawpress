@@ -68,15 +68,44 @@ const requestJson = async ( { url, method = 'GET', nonce, body, signal } ) => {
 const isObjectRecord = ( value ) =>
 	Boolean( value ) && typeof value === 'object' && ! Array.isArray( value );
 
-const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
-	const sendMessage = ( message, signal ) =>
-		requestJson( {
-			url: `${ restBase }/chat/message`,
-			method: 'POST',
-			nonce,
-			body: { message },
-			signal,
+const createRealClient = ( {
+	restBase,
+	nonce,
+	streamNonce,
+	onEvent,
+	onDone,
+	onError,
+} ) => {
+	const parseSseBlock = ( block ) => {
+		const lines = block.split( '\n' );
+		let type = 'message';
+		const dataLines = [];
+
+		lines.forEach( ( line ) => {
+			if ( ! line || line.startsWith( ':' ) ) {
+				return;
+			}
+
+			if ( line.startsWith( 'event:' ) ) {
+				type = line.slice( 6 ).trim() || type;
+				return;
+			}
+
+			if ( line.startsWith( 'data:' ) ) {
+				dataLines.push( line.slice( 5 ).trimStart() );
+			}
 		} );
+
+		if ( dataLines.length === 0 ) {
+			return null;
+		}
+
+		try {
+			return JSON.parse( dataLines.join( '\n' ) );
+		} catch {
+			return null;
+		}
+	};
 
 	const getRunStatus = ( runId, signal ) =>
 		requestJson( {
@@ -747,126 +776,229 @@ const createRealClient = ( { restBase, nonce, onEvent, onDone, onError } ) => {
 		}
 	};
 
-	// Keep a stream-compatible interface for the existing panel flow.
+	const streamMessage = async ( message, signal, seenToolCallKeys ) => {
+		const response = await fetch( `${ restBase }/chat/stream`, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': streamNonce || nonce,
+				Accept: 'text/event-stream',
+			},
+			body: JSON.stringify( { message } ),
+			signal,
+		} );
+
+		if ( ! response.ok ) {
+			const rawText = await response.text();
+			let messageText = rawText;
+
+			if ( rawText ) {
+				try {
+					const parsed = JSON.parse( rawText );
+					messageText = parsed?.message || parsed?.error || rawText;
+				} catch {
+					messageText = rawText;
+				}
+			}
+
+			throw new Error(
+				messageText || __( 'Streaming request failed.', 'clawpress' )
+			);
+		}
+
+		const contentType = response.headers.get( 'content-type' ) || '';
+		if (
+			! response.body ||
+			! contentType.toLowerCase().includes( 'text/event-stream' )
+		) {
+			throw new Error(
+				__(
+					'Streaming endpoint returned a non-streaming response.',
+					'clawpress'
+				)
+			);
+		}
+
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
+		let streamedText = '';
+		let continuation = null;
+
+		const handleParsedFrame = ( frame ) => {
+			const type =
+				frame && typeof frame.type === 'string' ? frame.type : '';
+			const payload =
+				frame?.payload && typeof frame.payload === 'object'
+					? frame.payload
+					: {};
+
+			switch ( type ) {
+				case 'delta':
+					if (
+						typeof payload.text === 'string' &&
+						payload.text.length > 0
+					) {
+						streamedText += payload.text;
+						onEvent( 'delta', { text: payload.text } );
+					}
+					break;
+				case 'tool_call': {
+					const call = normalizeToolCall( payload.call );
+					if ( call ) {
+						emitToolCallIfNew(
+							call,
+							Number.isFinite( Number( payload.index ) )
+								? Number( payload.index )
+								: undefined,
+							Number.isFinite( Number( payload.total ) )
+								? Number( payload.total )
+								: undefined,
+							seenToolCallKeys
+						);
+					}
+					break;
+				}
+				case 'history_reset':
+					onEvent( 'history_reset', {} );
+					break;
+				case 'suggestions':
+					if ( Array.isArray( payload.items ) ) {
+						onEvent( 'suggestions', {
+							items: payload.items,
+						} );
+					}
+					break;
+				case 'context_usage': {
+					const context = normalizeContextUsage( payload.context );
+					if ( context ) {
+						onEvent( 'context_usage', { context } );
+					}
+					break;
+				}
+				case 'response_card': {
+					const card = normalizeCard( payload.card );
+					if ( card ) {
+						onEvent( 'response_card', {
+							card,
+							text:
+								typeof payload.text === 'string'
+									? payload.text
+									: '',
+							role:
+								payload.role === 'system'
+									? 'system'
+									: 'assistant',
+						} );
+					}
+					break;
+				}
+				case 'response_message':
+					if (
+						typeof payload.text === 'string' &&
+						payload.text.trim()
+					) {
+						onEvent( 'response_message', {
+							text: payload.text.trim(),
+							role:
+								payload.role === 'system'
+									? 'system'
+									: 'assistant',
+						} );
+					}
+					break;
+				case 'error':
+					onEvent( 'error', {
+						error:
+							typeof payload.error === 'string' &&
+							payload.error.trim()
+								? payload.error.trim()
+								: __( 'Chat request failed.', 'clawpress' ),
+						type:
+							typeof payload.type === 'string' &&
+							payload.type.trim()
+								? payload.type.trim()
+								: 'request',
+						card: normalizeCard( payload.card ),
+					} );
+					break;
+				case 'in_progress': {
+					const runId = Number( payload.run_id );
+					if ( Number.isFinite( runId ) && runId > 0 ) {
+						continuation = {
+							runId,
+							initialEventsCursor: Number(
+								payload.events_cursor
+							),
+							initialReply:
+								streamedText ||
+								( typeof payload.initial_reply === 'string'
+									? payload.initial_reply.trim()
+									: '' ),
+						};
+					}
+					break;
+				}
+			}
+		};
+
+		while ( true ) {
+			const { done, value } = await reader.read();
+
+			buffer += decoder.decode( value || new Uint8Array(), {
+				stream: ! done,
+			} );
+
+			const blocks = buffer.split( '\n\n' );
+			buffer = blocks.pop() || '';
+
+			blocks.forEach( ( block ) => {
+				const frame = parseSseBlock( block );
+				if ( frame ) {
+					handleParsedFrame( frame );
+				}
+			} );
+
+			if ( done ) {
+				if ( buffer.trim() ) {
+					const frame = parseSseBlock( buffer );
+					if ( frame ) {
+						handleParsedFrame( frame );
+					}
+				}
+
+				break;
+			}
+		}
+
+		return {
+			initialReply: streamedText,
+			continuation,
+		};
+	};
+
 	const stream = ( prompt ) => {
 		const controller = new AbortController();
 		const seenToolCallKeys = new Set();
 
 		( async () => {
 			try {
-				const response = await sendMessage( prompt, controller.signal );
-				const clearHistory =
-					response?.meta?.command?.effects &&
-					response.meta.command.effects.clear_history === true;
-
-				if ( clearHistory ) {
-					onEvent( 'history_reset', {} );
-				}
-
-				if ( Array.isArray( response?.meta?.suggestions ) ) {
-					onEvent( 'suggestions', {
-						items: response.meta.suggestions,
-					} );
-				}
-
-				const contextUsage = normalizeContextUsage(
-					response?.meta?.context
+				const streamed = await streamMessage(
+					prompt,
+					controller.signal,
+					seenToolCallKeys
 				);
-				if ( contextUsage ) {
-					onEvent( 'context_usage', { context: contextUsage } );
-				}
 
-				const toolCalls = Array.isArray( response?.meta?.tool_calls )
-					? response.meta.tool_calls
-							.map( ( rawCall ) => normalizeToolCall( rawCall ) )
-							.filter( Boolean )
-					: [];
-
-				toolCalls.forEach( ( call, index ) => {
-					emitToolCallIfNew(
-						call,
-						index + 1,
-						toolCalls.length,
-						seenToolCallKeys
-					);
-				} );
-
-				const responseError =
-					response?.meta?.error &&
-					typeof response.meta.error === 'object'
-						? response.meta.error
-						: null;
-				const responseCard =
-					response?.meta?.card &&
-					typeof response.meta.card === 'object'
-						? normalizeCard( response.meta.card )
-						: null;
-
-				if ( responseError ) {
-					const errorMessage =
-						typeof responseError.message === 'string' &&
-						responseError.message.trim()
-							? responseError.message.trim()
-							: __( 'Chat request failed.', 'clawpress' );
-					onEvent( 'error', {
-						error: errorMessage,
-						type:
-							typeof responseError.type === 'string' &&
-							responseError.type.trim()
-								? responseError.type.trim()
-								: 'provider',
-						card: responseCard,
+				if ( streamed?.continuation ) {
+					await pollRunUntilTerminal( {
+						runId: streamed.continuation.runId,
+						initialReply: streamed.continuation.initialReply || '',
+						signal: controller.signal,
+						initialEventsCursor:
+							streamed.continuation.initialEventsCursor,
+						seenToolCallKeys,
 					} );
-					onDone?.( { aborted: false } );
-					return;
-				}
-
-				const reply =
-					typeof response?.reply === 'string'
-						? response.reply.trim()
-						: '';
-
-				const isCommandResponse = Boolean(
-					response?.meta?.command?.name
-				);
-				const card = normalizeCard( response?.meta?.card );
-
-				if ( card ) {
-					onEvent( 'response_card', {
-						card,
-						text: reply,
-						role: isCommandResponse ? 'system' : 'assistant',
-					} );
-				} else if ( reply ) {
-					onEvent( 'response_message', {
-						text: reply,
-						role: isCommandResponse ? 'system' : 'assistant',
-					} );
-				}
-
-				const runStatus = normalizeRunStatus( response?.meta?.status );
-				const runId = Number( response?.meta?.run_id );
-				const initialEventsCursor = Number(
-					response?.meta?.events_cursor
-				);
-				if ( runStatus === 'in_progress' ) {
-					if ( Number.isFinite( runId ) && runId > 0 ) {
-						await pollRunUntilTerminal( {
-							runId,
-							initialReply: reply,
-							signal: controller.signal,
-							initialEventsCursor,
-							seenToolCallKeys,
-						} );
-					} else {
-						onEvent( 'error', {
-							error: __(
-								'Run entered progress mode without a valid run ID.',
-								'clawpress'
-							),
-							type: 'request',
-						} );
-					}
 				}
 
 				onDone?.( { aborted: false } );

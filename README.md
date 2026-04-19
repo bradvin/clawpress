@@ -20,7 +20,34 @@ make test
 make lint
 make lint-changed
 npm run plugin:check
+npm run ci:agent:ci
+npm run ci:agent
 ```
+
+## Local GitHub Actions With Agent CI
+
+ClawPress is set up to run its GitHub Actions workflows locally with [Agent CI](https://github.com/redwoodjs/agent-ci).
+
+One-time agent skill setup:
+
+```bash
+npx skills add redwoodjs/agent-ci --skill agent-ci
+```
+
+Local workflow commands:
+
+```bash
+npm run ci:agent:ci
+npm run ci:agent
+npm run ci:agent:retry -- --name <runner-name>
+```
+
+Notes:
+
+- Agent CI needs Docker available locally.
+- The current `agent-ci` CLI release expects Node.js 22+ for these local runner commands.
+- Local secrets belong in `.env.agent-ci` and should never be committed.
+- `.github/agent-ci.Dockerfile` adds the extra tools this repo needs for local workflow runs, including Docker CLI access for `wp-env`.
 
 ## Key Features
 
