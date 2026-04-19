@@ -1,7 +1,7 @@
 ## Agent Loop Spec (Final)
 
 ## Summary
-Refactor the current chat-bound agent execution into a reusable, transport-agnostic **Agent Loop runtime** that can be called from:
+Refactor the current chat-bound agent execution into a reusable **Agent Loop runtime** that can be called from:
 
 1. synchronous chat requests,
 2. heartbeat/background jobs,

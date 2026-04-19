@@ -61,9 +61,6 @@ const Panel = () => {
 	const [ showFloatingToggle, setShowFloatingToggle ] = useState( false );
 	const streamHandleRef = useRef( null );
 	const timelineRef = useRef( 0 );
-	const eventQueueRef = useRef( [] );
-	const isTypingRef = useRef( false );
-	const typingTimerRef = useRef( null );
 	const panelStateSyncTimerRef = useRef( null );
 	const welcomeCardSeenRef = useRef( false );
 	const appendMessageRef = useRef( null );
@@ -554,6 +551,14 @@ const Panel = () => {
 		requestStatus( true );
 	};
 
+	const handleStreamEvent = ( eventType, parsed = {} ) => {
+		if ( 'suggestions' !== eventType && 'context_usage' !== eventType ) {
+			setWaitingForResponse( false );
+		}
+
+		processStreamEvent( eventType, parsed );
+	};
+
 	const processStreamEvent = ( eventType, parsed ) => {
 		switch ( eventType ) {
 			case 'delta':
@@ -578,6 +583,14 @@ const Panel = () => {
 			case 'response_card':
 				clearEphemeralStatus();
 				if ( parsed?.card ) {
+					const streamedText = currentStreamTextRef.current || '';
+					if ( parsed?.role !== 'system' && streamedText.trim() ) {
+						appendMessage( 'assistant', streamedText, parsed.card );
+						setCurrentStreamText( '' );
+						currentStreamTextRef.current = '';
+						break;
+					}
+
 					appendMessage(
 						parsed?.role === 'system' ? 'system' : 'assistant',
 						typeof parsed?.text === 'string' ? parsed.text : '',
@@ -650,61 +663,6 @@ const Panel = () => {
 				finishStream();
 				break;
 		}
-	};
-
-	const startTypingMessage = ( content ) => {
-		if ( ! content ) {
-			return;
-		}
-		isTypingRef.current = true;
-		setCurrentStreamText( '' );
-		currentStreamTextRef.current = '';
-		let index = 0;
-		const step = () => {
-			if ( index >= content.length ) {
-				appendMessage( 'assistant', content );
-				setCurrentStreamText( '' );
-				currentStreamTextRef.current = '';
-				isTypingRef.current = false;
-				typingTimerRef.current = null;
-				processEventQueue();
-				return;
-			}
-			const nextChunk = content.slice( index, index + 2 );
-			index += 2;
-			setCurrentStreamText( ( prev ) => {
-				const next = prev + nextChunk;
-				currentStreamTextRef.current = next;
-				return next;
-			} );
-			typingTimerRef.current = setTimeout( step, 30 );
-		};
-		step();
-	};
-
-	const processEventQueue = () => {
-		if ( isTypingRef.current ) {
-			return;
-		}
-		const queue = eventQueueRef.current;
-		if ( ! queue.length ) {
-			return;
-		}
-
-		const { type, payload } = queue.shift();
-		if ( type === 'assistant_message' && payload?.content ) {
-			startTypingMessage( payload.content );
-			return;
-		}
-
-		processStreamEvent( type, payload );
-		processEventQueue();
-	};
-
-	const handleStreamEvent = ( eventType, parsed ) => {
-		setWaitingForResponse( false );
-		eventQueueRef.current.push( { type: eventType, payload: parsed } );
-		processEventQueue();
 	};
 
 	const buildClient = () =>

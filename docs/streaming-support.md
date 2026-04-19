@@ -1,50 +1,38 @@
-# Streaming Support Plan
+# Streaming Support Notes
 
-This document explains how ClawPress will adopt true streaming once the WP AI Client exposes stable streaming APIs.
+This document captures the simplified streaming shape now that ClawPress uses the WordPress streaming client package.
 
 ## Current State
 
-ClawPress already has the runtime layering needed for streaming with minimal core changes:
+ClawPress now streams the main chat panel through:
 
-- Transport contract: `includes/transports/interface-agent-transport.php`
-- Polling transport: `includes/transports/class-polling-transport.php`
-- Null transport: `includes/transports/class-null-transport.php`
-- Loop runtime integration point: `includes/helpers/class-agent-loop-helper.php`
+- `includes/helpers/class-agent-loop-helper.php`
+- `includes/transports/class-agent-event-sink.php`
+- `includes/rest/class-chat-controller.php`
+- `src/panel/services/realClient.js`
 
-Today, `transport_mode=streaming` is accepted but intentionally routed through polling transport in `Agent_Loop_Helper::create_transport()`. This means there is no true live token streaming yet.
+`transport_mode=streaming` now uses a single `Agent_Event_Sink` that can:
+
+- emit live SSE callback events,
+- persist non-delta runtime events for polling/resume flows,
+- keep high-frequency `agent.llm.delta` events out of the event log by default.
 
 ## Why This Is Low-Risk
 
-The execution control plane is already decoupled from delivery transport:
+The execution control plane remains decoupled from delivery details:
 
 - Run/session state machine lives in helpers/stores.
-- Runner logic (claim, pause, retry, complete) is transport-agnostic.
+- Runner logic (claim, pause, retry, complete) is delivery-mode agnostic.
 - Event persistence and polling APIs remain valid as fallback.
 
-As a result, adding streaming should not require redesigning retries, leases, resumability, or DB schemas.
+As a result, streaming support did not require redesigning retries, leases, resumability, or DB schemas.
 
-## Minimal Changes Needed When WP AI Client Adds Streaming
+## Current Design
 
-1. Add `Streaming_Transport` implementation.
-   - New file: `includes/transports/class-streaming-transport.php`
-   - Implement `Agent_Transport` (`emit()`, `close()`).
-   - Emit live deltas to the connected client channel (SSE/WebSocket).
-   - Optionally mirror selected events to `Agent_Event_Helper` for observability and fallback polling.
-
-2. Switch transport selection in loop runtime.
-   - Update `Agent_Loop_Helper::create_transport()` in `includes/helpers/class-agent-loop-helper.php`.
-   - Return `Streaming_Transport` for `transport_mode=streaming`.
-   - Keep polling as default/fallback.
-
-3. Integrate streaming model-call path.
-   - Update model invocation in `includes/helpers/class-agent-loop-helper.php`.
-   - Consume WP AI Client chunk/delta callbacks.
-   - Emit incremental `agent.llm.delta`/`agent.llm.response` style events through transport.
-   - Preserve existing normalized `TurnResult` semantics at stream end.
-
-4. Add/extend delivery adapter endpoint.
-   - Add SSE/WebSocket endpoint in REST/controller layer for clients to subscribe to stream events.
-   - Keep `/agent/runs/{run_id}/events` polling endpoint as backup path.
+1. `Chat_Controller` exposes `/chat/stream` and forwards live runtime events as SSE frames.
+2. `Agent_Loop_Helper` enables provider streaming when `wp_ai_client_stream_prompt()` is available.
+3. `Agent_Event_Sink` handles both immediate callback delivery and persisted run events.
+4. Polling remains the fallback path for `in_progress` continuations and background slices.
 
 ## Components Expected To Stay Unchanged
 
@@ -81,11 +69,10 @@ The final event should include enough metadata for the client to reconcile again
 
 ## Testing Guidance for Future Streaming Work
 
-When implementing true streaming, add tests for:
+Streaming-sensitive tests should cover:
 
-- transport selection (`streaming` -> `Streaming_Transport`);
+- event-sink selection for `transport_mode=streaming`;
 - chunk/delta emission ordering and finalization;
 - fallback behavior when streaming channel disconnects;
 - parity of final `TurnResult` fields between polling and streaming modes;
-- runner/background behavior unaffected by streaming transport.
-
+- runner/background behavior unaffected by streaming delivery.

@@ -4,8 +4,60 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "03149318cc2c29186e7cb96a6484a810",
+    "content-hash": "fa33624e61f29e15ed17d85899b26e65",
     "packages": [
+        {
+            "name": "bradvin/wp-ai-client-streaming",
+            "version": "v0.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/bradvin/wp-ai-client-streaming.git",
+                "reference": "2825b743aef690145236f9a8392fd3b1bcade796"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/bradvin/wp-ai-client-streaming/zipball/2825b743aef690145236f9a8392fd3b1bcade796",
+                "reference": "2825b743aef690145236f9a8392fd3b1bcade796",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4"
+            },
+            "suggest": {
+                "ext-curl": "Required for true incremental streaming; without cURL the package falls back to the stock HTTP client."
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "load.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "bradvin",
+                    "homepage": "https://github.com/bradvin",
+                    "role": "Developer"
+                }
+            ],
+            "description": "WordPress AI streaming adapter package that mirrors WordPress 7 AI integration patterns.",
+            "homepage": "https://github.com/bradvin/wp-ai-client-streaming",
+            "keywords": [
+                "ai",
+                "composer",
+                "streaming",
+                "wordpress",
+                "wp-ai-client"
+            ],
+            "support": {
+                "issues": "https://github.com/bradvin/wp-ai-client-streaming/issues",
+                "source": "https://github.com/bradvin/wp-ai-client-streaming"
+            },
+            "time": "2026-04-18T15:36:28+00:00"
+        },
         {
             "name": "woocommerce/action-scheduler",
             "version": "3.9.3",
