@@ -201,6 +201,13 @@ When writing or refactoring PHPUnit tests:
 - Run the full PHPUnit suite when shared test support files (like `WordPressStubs.php`) are changed.
 - Prefer assertions that verify integration calls and state transitions happened (for example submenu registration/removal and metadata checks).
 
+## Local CI With Agent CI
+
+- Install the `agent-ci` skill one time with `npx skills add redwoodjs/agent-ci --skill agent-ci`.
+- Before completing substantial work, run `npm run ci:agent:ci` or `npm run ci:agent` and fix any failures before reporting the work as done.
+- If Agent CI pauses on a failed step, fix the issue and resume with `npm run ci:agent:retry -- --name <runner-name>`.
+- Keep local Agent CI secrets in `.env.agent-ci`. Never commit that file.
+
 ## Important Notes
 
 - Asset files (`build/scripts/*.asset.php`) are auto-generated - never edit manually

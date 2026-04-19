@@ -12,6 +12,11 @@
     "LICENSE"
   ],
   "scripts": {
+    "agent-ci": "npx @redwoodjs/agent-ci",
+    "ci:agent": "npx @redwoodjs/agent-ci run --quiet --all --pause-on-failure",
+    "ci:agent:ci": "npx @redwoodjs/agent-ci run --quiet --pause-on-failure --workflow .github/workflows/ci.yml",
+    "ci:agent:retry": "npx @redwoodjs/agent-ci retry",
+    "ci:agent:abort": "npx @redwoodjs/agent-ci abort",
     "build": "npm run build:scripts && npm run build:panel && npm run build:pot",
     "build:scripts": "wp-scripts build --config webpack.scripts.config.js",
     "build:panel": "wp-scripts build --config webpack.panel.config.js",
