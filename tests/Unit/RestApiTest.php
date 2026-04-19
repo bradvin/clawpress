@@ -326,14 +326,15 @@ final class RestApiTest extends TestCase {
 			array_filter(
 				WordPress_Stubs::$rest_routes,
 				static function ( array $route ): bool {
-					return in_array( $route['route'], [ '/chat/message', '/chat/history' ], true );
+					return in_array( $route['route'], [ '/chat/message', '/chat/stream', '/chat/history' ], true );
 				}
 			)
 		);
 
-		$this->assertCount( 2, $chat_routes );
+		$this->assertCount( 3, $chat_routes );
 		$this->assertSame( 'clawpress_check_permissions', $chat_routes[0]['args']['permission_callback'] );
 		$this->assertSame( 'clawpress_check_permissions', $chat_routes[1]['args']['permission_callback'] );
+		$this->assertSame( 'clawpress_check_permissions', $chat_routes[2]['args']['permission_callback'] );
 	}
 
 	public function test_chat_send_message_returns_message_and_reply(): void {

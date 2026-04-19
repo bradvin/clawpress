@@ -11,7 +11,7 @@ The runtime spans:
 - `Agent_Run_Controller`: REST API for creating, spawning, enqueueing, and polling runs.
 - `Agent_Run_Helper` + `Agent_Session_Helper`: lifecycle/state helpers.
 - `Agent_Run_Store` + `Agent_Session_Store` + `Agent_Event_Store`: persistence.
-- `Polling_Transport` / `Null_Transport`: event delivery.
+- `Agent_Event_Sink`: runtime event delivery to live callbacks and/or persisted event logs.
 
 Shared runtime utilities:
 
@@ -177,7 +177,7 @@ Invokable object reflection uses `ReflectionMethod(__invoke)` and catches both `
 
 ## Eventing
 
-- `Polling_Transport` appends runtime events via `Agent_Event_Helper`.
+- `Agent_Event_Sink` can append runtime events via `Agent_Event_Helper`.
 - Runner emits operational events (slice started/paused/completed).
 - Polling endpoint returns incremental cursor (`next_cursor`) for client-side streaming.
 
