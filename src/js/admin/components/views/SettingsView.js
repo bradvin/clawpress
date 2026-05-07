@@ -319,6 +319,65 @@ const normalizeModelOptionSummary = ( summary ) => {
 	};
 };
 
+const hasModelOptionSummaryData = ( summary ) =>
+	Boolean(
+		summary &&
+			( summary.supported_options.length > 0 ||
+				summary.unsupported_generation_options.length > 0 ||
+				summary.unsupported_generation_option_labels.length > 0 ||
+				summary.learned_unsupported_options.length > 0 )
+	);
+
+const mergeModelOptionSummaryFields = ( option, fallbackOption ) => {
+	const optionSummary = normalizeModelOptionSummary( option );
+	const fallbackSummary = normalizeModelOptionSummary( fallbackOption );
+
+	if ( ! fallbackSummary || hasModelOptionSummaryData( optionSummary ) ) {
+		return option;
+	}
+
+	return {
+		...option,
+		...fallbackSummary,
+	};
+};
+
+const mergeProviderModelOptionSummaries = (
+	modelsByProvider,
+	provider,
+	options
+) => {
+	const providerId = normalizeProviderId( provider );
+	const nextOptions = normalizeDiscoveredProviderModelOptions( options );
+
+	if ( ! providerId ) {
+		return nextOptions;
+	}
+
+	const currentOptions = Array.isArray( modelsByProvider?.[ providerId ] )
+		? modelsByProvider[ providerId ]
+		: [];
+	const currentOptionsById = new Map(
+		currentOptions.map( ( option ) => [ option.id, option ] )
+	);
+	const nextOptionIds = new Set( nextOptions.map( ( option ) => option.id ) );
+	const currentSummaryOptions = currentOptions.filter(
+		( option ) =>
+			! nextOptionIds.has( option.id ) &&
+			hasModelOptionSummaryData( normalizeModelOptionSummary( option ) )
+	);
+
+	return [
+		...nextOptions.map( ( option ) =>
+			mergeModelOptionSummaryFields(
+				option,
+				currentOptionsById.get( option.id )
+			)
+		),
+		...currentSummaryOptions,
+	];
+};
+
 const mergeSelectedModelOptionSummary = (
 	modelsByProvider,
 	provider,
@@ -668,7 +727,12 @@ export default function SettingsView() {
 				if ( cached.hasValue ) {
 					setDiscoveredModelOptionsByProvider( ( current ) => ( {
 						...current,
-						[ normalizedProviderId ]: cached.options,
+						[ normalizedProviderId ]:
+							mergeProviderModelOptionSummaries(
+								current,
+								normalizedProviderId,
+								cached.options
+							),
 					} ) );
 					return cached.options;
 				}
@@ -684,7 +748,11 @@ export default function SettingsView() {
 					await fetchProviderModelOptions( normalizedProviderId );
 				setDiscoveredModelOptionsByProvider( ( current ) => ( {
 					...current,
-					[ normalizedProviderId ]: refreshedOptions,
+					[ normalizedProviderId ]: mergeProviderModelOptionSummaries(
+						current,
+						normalizedProviderId,
+						refreshedOptions
+					),
 				} ) );
 				setCachedProviderModelOptions(
 					normalizedProviderId,
@@ -809,6 +877,10 @@ export default function SettingsView() {
 		const skippedSettingLabels =
 			selectedProviderModelOption?.unsupported_generation_option_labels ||
 			[];
+		const skippedSettingsValue =
+			skippedSettingLabels.length > 0
+				? skippedSettingLabels.join( ', ' )
+				: __( 'None', 'clawpress' );
 
 		modelDescription = (
 			<span className="clawpress-settings__model-meta">
@@ -827,11 +899,11 @@ export default function SettingsView() {
 						<code>{ modelCost }</code>
 					</>
 				) : null }
-				{ skippedSettingLabels.length > 0 ? (
+				{ selectedProviderModelOption ? (
 					<span className="clawpress-settings__model-skipped">
 						{ ' ' }
 						{ __( 'Skipped Settings :', 'clawpress' ) }{ ' ' }
-						<code>{ skippedSettingLabels.join( ', ' ) }</code>
+						<code>{ skippedSettingsValue }</code>
 					</span>
 				) : null }
 			</span>
