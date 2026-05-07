@@ -85,6 +85,15 @@ final class WordPress_Stubs {
 	/** @var array<string,mixed> */
 	public static array $http_validate_url_results = array();
 
+	/** @var array<int,string> */
+	public static array $ai_registered_provider_ids = array();
+
+	/** @var array<string,string> */
+	public static array $ai_provider_class_names = array();
+
+	/** @var array<string,array<string,mixed>> */
+	public static array $ai_provider_models = array();
+
 	public static int $next_post_id = 1;
 
 	public static bool $can_manage_options = true;
@@ -130,6 +139,9 @@ final class WordPress_Stubs {
 		self::$remote_request_responses = array();
 		self::$validated_urls       = array();
 		self::$http_validate_url_results = array();
+		self::$ai_registered_provider_ids = array();
+		self::$ai_provider_class_names = array();
+		self::$ai_provider_models    = array();
 		self::$next_post_id         = 1;
 		self::$can_manage_options   = true;
 		self::$user_capabilities    = array();

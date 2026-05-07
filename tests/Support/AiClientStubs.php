@@ -338,6 +338,8 @@ namespace WordPress\AiClient\Providers\Models\DTO {
 
 	if ( ! class_exists( __NAMESPACE__ . '\ModelConfig', false ) ) {
 		final class ModelConfig {
+			public const KEY_CUSTOM_OPTIONS = 'customOptions';
+
 			/** @var array<string,mixed> */
 			private array $data;
 
@@ -364,15 +366,62 @@ namespace WordPress\AiClient\Providers\Models\DTO {
 		}
 	}
 
+	if ( ! class_exists( __NAMESPACE__ . '\SupportedOption', false ) ) {
+		final class SupportedOption {
+			/** @var mixed */
+			private $name;
+
+			/** @var array<int,mixed>|null */
+			private ?array $supported_values;
+
+			/**
+			 * @param mixed                 $name Option name.
+			 * @param array<int,mixed>|null $supported_values Supported values.
+			 */
+			public function __construct( $name, ?array $supported_values = null ) {
+				$this->name             = $name;
+				$this->supported_values = $supported_values;
+			}
+
+			/**
+			 * @return mixed
+			 */
+			public function getName() {
+				return $this->name;
+			}
+
+			/**
+			 * @param mixed $value Value to test.
+			 */
+			public function isSupportedValue( $value ): bool {
+				if ( null === $this->supported_values ) {
+					return true;
+				}
+
+				return in_array( $value, $this->supported_values, true );
+			}
+		}
+	}
+
 	if ( ! class_exists( __NAMESPACE__ . '\ModelMetadata', false ) ) {
 		final class ModelMetadata {
 			private string $id;
 
 			private string $name;
 
-			public function __construct( string $id, string $name = '' ) {
-				$this->id   = $id;
-				$this->name = $name;
+			/** @var array<int,mixed> */
+			private array $supported_options;
+
+			/**
+			 * @param array<int,mixed> $supported_capabilities Supported capabilities.
+			 * @param array<int,mixed> $supported_options Supported options.
+			 */
+			public function __construct( string $id, string $name = '', array $supported_capabilities = [], array $supported_options = [] ) {
+				unset( $supported_capabilities );
+
+				$this->id                = $id;
+				$this->name              = $name;
+				$this->supported_options = $supported_options;
 			}
 
 			public function getId(): string {
@@ -381,6 +430,13 @@ namespace WordPress\AiClient\Providers\Models\DTO {
 
 			public function getName(): string {
 				return $this->name;
+			}
+
+			/**
+			 * @return array<int,mixed>
+			 */
+			public function getSupportedOptions(): array {
+				return $this->supported_options;
 			}
 		}
 	}
@@ -444,17 +500,17 @@ namespace WordPress\AiClient\Providers {
 			 * @return array<int,string>
 			 */
 			public function getRegisteredProviderIds(): array {
-				return [];
+				return \ClawPress\Tests\Support\WordPress_Stubs::$ai_registered_provider_ids;
 			}
 
 			public function hasProvider( string $provider ): bool {
-				unset( $provider );
-				return false;
+				return in_array( $provider, \ClawPress\Tests\Support\WordPress_Stubs::$ai_registered_provider_ids, true )
+					|| isset( \ClawPress\Tests\Support\WordPress_Stubs::$ai_provider_class_names[ $provider ] )
+					|| isset( \ClawPress\Tests\Support\WordPress_Stubs::$ai_provider_models[ $provider ] );
 			}
 
 			public function getProviderClassName( string $provider ): string {
-				unset( $provider );
-				return '';
+				return \ClawPress\Tests\Support\WordPress_Stubs::$ai_provider_class_names[ $provider ] ?? '';
 			}
 
 			public function getHttpTransporter(): ?object {
@@ -462,18 +518,23 @@ namespace WordPress\AiClient\Providers {
 			}
 
 			public function getProviderModel( string $provider, string $model, \WordPress\AiClient\Providers\Models\DTO\ModelConfig $config ): object {
-				unset( $provider, $model, $config );
+				unset( $config );
 
-				return new class() {
+				$registered_models = \ClawPress\Tests\Support\WordPress_Stubs::$ai_provider_models[ $provider ] ?? [];
+				$metadata          = $registered_models[ $model ] ?? null;
+				if ( ! $metadata instanceof \WordPress\AiClient\Providers\Models\DTO\ModelMetadata ) {
+					$metadata = new \WordPress\AiClient\Providers\Models\DTO\ModelMetadata( $model, $model );
+				}
+
+				return new class( $metadata ) {
+					private \WordPress\AiClient\Providers\Models\DTO\ModelMetadata $metadata;
+
+					public function __construct( \WordPress\AiClient\Providers\Models\DTO\ModelMetadata $metadata ) {
+						$this->metadata = $metadata;
+					}
+
 					public function metadata(): object {
-						return new class() {
-							/**
-							 * @return array<int,object>
-							 */
-							public function getSupportedOptions(): array {
-								return [];
-							}
-						};
+						return $this->metadata;
 					}
 				};
 			}
