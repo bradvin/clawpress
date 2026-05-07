@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Tests\Unit;
 
 use ClawPress\Abilities\Abilities;
+use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Helpers\Abilities_Helper;
 use ClawPress\Helpers\Web_Fetch_Helper;
 use ClawPress\Tests\Support\TestCase;
@@ -95,6 +96,7 @@ final class WebFetchAbilityTest extends TestCase {
 		parent::setUp();
 		$GLOBALS['wpdb'] = new WebFetchAbilityTestWpdb();
 		CaptureFetcher::$last_request = [];
+		Action_Log_Helper::register_tool_call_logging_hook();
 
 		Web_Fetch_Helper::get_instance()->register_fetcher( new CaptureFetcher() );
 

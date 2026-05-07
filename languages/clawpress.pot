@@ -9,19 +9,19 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-04-19T10:37:13+00:00\n"
+"POT-Creation-Date: 2026-05-07T15:08:28+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: clawpress\n"
 
 #. Plugin Name of the plugin
 #: clawpress.php
-#: includes/class-abilities.php:49
-#: includes/class-admin-page.php:35
-#: includes/class-admin-page.php:36
-#: includes/class-admin-page.php:48
-#: includes/class-admin-page.php:49
-#: includes/class-admin-page.php:102
+#: includes/class-abilities.php:50
+#: includes/class-admin-page.php:45
+#: includes/class-admin-page.php:46
+#: includes/class-admin-page.php:58
+#: includes/class-admin-page.php:59
+#: includes/class-admin-page.php:121
 #: src/panel/components/PanelToggle.jsx:9
 msgid "ClawPress"
 msgstr ""
@@ -203,20 +203,63 @@ msgstr ""
 msgid "Unable to update short-term memory."
 msgstr ""
 
-#: includes/class-abilities.php:50
+#: includes/abilities/class-web-fetch-ability.php:33
+msgid "Web Fetch"
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:34
+msgid "Fetch a remote URL using the configured fetcher."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:42
+msgid "Remote URL to fetch."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:46
+msgid "Fetcher provider slug. Defaults to `wp`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:51
+msgid "Read-only HTTP method. Defaults to `GET`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:55
+msgid "Optional request headers."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:62
+msgid "Request timeout in seconds. Defaults to `15`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:66
+msgid "Maximum redirect count. Defaults to `5`."
+msgstr ""
+
+#: includes/abilities/class-web-fetch-ability.php:70
+msgid "Optional fetcher-specific arguments for future providers."
+msgstr ""
+
+#: includes/class-abilities.php:51
 msgid "Abilities provided by the ClawPress plugin."
 msgstr ""
 
-#: includes/class-admin-page.php:62
+#: includes/class-admin-page.php:68
+#: includes/class-admin-page.php:69
+#: includes/class-admin-page.php:130
+#: src/js/admin/components/views/LogsView.js:524
+msgid "Logs"
+msgstr ""
+
+#: includes/class-admin-page.php:82
 #: includes/class-post-types.php:45
 #: includes/class-post-types.php:55
 #: includes/class-post-types.php:56
-#: includes/commands/handlers/class-setup-command-handler.php:676
-#: src/js/admin/components/App.js:19
+#: includes/commands/handlers/class-setup-command-handler.php:685
+#: src/js/admin/components/App.js:20
 msgid "Agent Files"
 msgstr ""
 
-#: includes/class-admin-page.php:66
+#: includes/class-admin-page.php:86
 #: includes/class-post-types.php:81
 #: includes/class-post-types.php:91
 #: includes/class-post-types.php:92
@@ -243,13 +286,13 @@ msgid "Agent run failed."
 msgstr ""
 
 #: includes/class-agent-runner.php:496
-#: includes/helpers/class-agent-loop-helper.php:337
+#: includes/helpers/class-agent-loop-helper.php:345
 #: src/panel/services/realClient.js:672
 msgid "Action requires confirmation before continuing."
 msgstr ""
 
 #: includes/class-agent-runner.php:497
-#: includes/helpers/class-agent-loop-helper.php:341
+#: includes/helpers/class-agent-loop-helper.php:349
 #: src/panel/services/realClient.js:683
 msgid "I finished the background steps, but I did not receive a final text response. Please tell me to continue and I will pick up from here."
 msgstr ""
@@ -450,7 +493,7 @@ msgid "Create a dedicated contributor user for the agent."
 msgstr ""
 
 #: includes/commands/handlers/class-create-agent-user-command-handler.php:99
-#: includes/commands/handlers/class-setup-command-handler.php:425
+#: includes/commands/handlers/class-setup-command-handler.php:434
 msgid "Could not create agent user."
 msgstr ""
 
@@ -503,7 +546,7 @@ msgid "Agent user is not configured. Set one with `/settings agent_user_id <user
 msgstr ""
 
 #: includes/commands/handlers/class-create-workspace-command-handler.php:123
-#: includes/commands/handlers/class-setup-command-handler.php:512
+#: includes/commands/handlers/class-setup-command-handler.php:521
 msgid "Could not create workspace."
 msgstr ""
 
@@ -633,309 +676,317 @@ msgstr ""
 msgid "Invalid integer value for `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:142
+#: includes/commands/handlers/class-setup-command-handler.php:151
 msgid "Run the setup wizard and manage setup progress."
 msgstr ""
 
 #. translators: %s: expected command usage
-#: includes/commands/handlers/class-setup-command-handler.php:207
+#: includes/commands/handlers/class-setup-command-handler.php:216
 #, php-format
 msgid "Invalid setup action. Expected: `%s`"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:226
+#: includes/commands/handlers/class-setup-command-handler.php:235
 msgid "Setup started."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:233
+#: includes/commands/handlers/class-setup-command-handler.php:242
 msgid "Setup resumed."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:254
+#: includes/commands/handlers/class-setup-command-handler.php:263
 msgid "Setup reset."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:266
+#: includes/commands/handlers/class-setup-command-handler.php:275
 msgid "Already at the first step."
 msgstr ""
 
 #. translators: %s: step key
-#: includes/commands/handlers/class-setup-command-handler.php:275
+#: includes/commands/handlers/class-setup-command-handler.php:284
 #, php-format
 msgid "Moved back to `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:292
+#: includes/commands/handlers/class-setup-command-handler.php:301
 msgid "Selected provider is not available. Refresh providers and try again."
 msgstr ""
 
 #. translators: %s: provider slug
-#: includes/commands/handlers/class-setup-command-handler.php:309
+#: includes/commands/handlers/class-setup-command-handler.php:318
 #, php-format
 msgid "Provider selected: `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:328
+#: includes/commands/handlers/class-setup-command-handler.php:337
 msgid "Select a provider before choosing a model."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:334
+#: includes/commands/handlers/class-setup-command-handler.php:343
 msgid "Selected model is not available for the current provider. Enter a valid model ID and try again."
 msgstr ""
 
 #. translators: %s: model identifier
-#: includes/commands/handlers/class-setup-command-handler.php:350
+#: includes/commands/handlers/class-setup-command-handler.php:359
 #, php-format
 msgid "Model selected: `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:369
+#: includes/commands/handlers/class-setup-command-handler.php:378
 msgid "Select valid provider and model values before testing."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:389
+#: includes/commands/handlers/class-setup-command-handler.php:398
 msgid "Connection test failed: empty provider response."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:395
-#: includes/commands/handlers/class-test-command-handler.php:207
-#: includes/helpers/class-agent-loop-helper.php:267
+#: includes/commands/handlers/class-setup-command-handler.php:404
+#: includes/commands/handlers/class-test-command-handler.php:215
+#: includes/helpers/class-agent-loop-helper.php:275
 #: includes/helpers/class-chat-helper.php:545
 #: includes/helpers/class-chat-helper.php:598
 msgid "Unknown provider error."
 msgstr ""
 
 #. translators: %s: provider error message
-#: includes/commands/handlers/class-setup-command-handler.php:401
-#: includes/commands/handlers/class-test-command-handler.php:213
+#: includes/commands/handlers/class-setup-command-handler.php:410
+#: includes/commands/handlers/class-test-command-handler.php:221
 #, php-format
 msgid "Connection test failed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:414
+#: includes/commands/handlers/class-setup-command-handler.php:423
 msgid "Connection test passed."
 msgstr ""
 
 #. translators: %s: error message
-#: includes/commands/handlers/class-setup-command-handler.php:430
+#: includes/commands/handlers/class-setup-command-handler.php:439
 #, php-format
 msgid "Agent user creation failed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:438
+#: includes/commands/handlers/class-setup-command-handler.php:447
 msgid "Agent user creation returned an invalid user ID."
 msgstr ""
 
 #. translators: %d: user ID
-#: includes/commands/handlers/class-setup-command-handler.php:452
+#: includes/commands/handlers/class-setup-command-handler.php:461
 #, php-format
 msgid "Agent user configured: `%d`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:466
+#: includes/commands/handlers/class-setup-command-handler.php:475
 msgid "Provide a valid user ID for the agent user step."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:471
+#: includes/commands/handlers/class-setup-command-handler.php:480
 msgid "Invalid agent user ID."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:476
+#: includes/commands/handlers/class-setup-command-handler.php:485
 msgid "Agent user does not exist."
 msgstr ""
 
 #. translators: 1: user login, 2: user ID
-#: includes/commands/handlers/class-setup-command-handler.php:490
+#: includes/commands/handlers/class-setup-command-handler.php:499
 #, php-format
 msgid "Using agent user `%1$s` (ID `%2$d`)."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:505
+#: includes/commands/handlers/class-setup-command-handler.php:514
 msgid "Set an agent user before creating a workspace."
 msgstr ""
 
 #. translators: %s: error message
-#: includes/commands/handlers/class-setup-command-handler.php:517
+#: includes/commands/handlers/class-setup-command-handler.php:526
 #, php-format
 msgid "Workspace creation failed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:524
+#: includes/commands/handlers/class-setup-command-handler.php:533
 msgid "Workspace created."
 msgstr ""
 
 #. translators: %d: error count
-#: includes/commands/handlers/class-setup-command-handler.php:538
+#: includes/commands/handlers/class-setup-command-handler.php:547
 #, php-format
 msgid "Agent file bootstrap failed with %d error(s)."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:545
+#: includes/commands/handlers/class-setup-command-handler.php:554
 msgid "Agent files created."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:671
-#: src/js/admin/components/views/SettingsView.js:820
+#: includes/commands/handlers/class-setup-command-handler.php:680
+#: src/js/admin/components/views/SettingsView.js:917
 msgid "Provider"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:672
-#: src/js/admin/components/views/SettingsView.js:837
+#: includes/commands/handlers/class-setup-command-handler.php:681
+#: src/js/admin/components/views/SettingsView.js:934
 msgid "Model"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:673
-#: includes/commands/handlers/class-setup-command-handler.php:798
+#: includes/commands/handlers/class-setup-command-handler.php:682
+#: includes/commands/handlers/class-setup-command-handler.php:807
 msgid "Test Connection"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:674
+#: includes/commands/handlers/class-setup-command-handler.php:683
 msgid "Agent User"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:675
+#: includes/commands/handlers/class-setup-command-handler.php:684
 msgid "Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:677
+#: includes/commands/handlers/class-setup-command-handler.php:686
 msgid "Done"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:705
+#: includes/commands/handlers/class-setup-command-handler.php:714
 #: src/panel/components/cards/SetupCard.jsx:57
 msgid "Setup Wizard"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:724
+#: includes/commands/handlers/class-setup-command-handler.php:733
 msgid "No configured providers found. Open Connectors, configure a provider, then refresh."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:728
-#: includes/commands/handlers/class-setup-command-handler.php:754
+#: includes/commands/handlers/class-setup-command-handler.php:737
+#: includes/commands/handlers/class-setup-command-handler.php:763
 msgid "Open Connectors"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:734
-#: includes/commands/handlers/class-setup-command-handler.php:760
+#: includes/commands/handlers/class-setup-command-handler.php:743
+#: includes/commands/handlers/class-setup-command-handler.php:769
 msgid "Refresh Providers"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:742
+#: includes/commands/handlers/class-setup-command-handler.php:751
 msgid "Choose a configured provider to continue."
 msgstr ""
 
 #. translators: %s: option label
-#: includes/commands/handlers/class-setup-command-handler.php:747
-#: includes/commands/handlers/class-setup-command-handler.php:780
+#: includes/commands/handlers/class-setup-command-handler.php:756
+#: includes/commands/handlers/class-setup-command-handler.php:789
 #, php-format
 msgid "Use %s"
 msgstr ""
 
 #. translators: %s: provider
-#: includes/commands/handlers/class-setup-command-handler.php:772
+#: includes/commands/handlers/class-setup-command-handler.php:781
 #, php-format
 msgid "Choose a model for `%s`."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:787
+#: includes/commands/handlers/class-setup-command-handler.php:796
+#: src/js/admin/components/views/LogsView.js:539
 msgid "Refresh"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:794
+#: includes/commands/handlers/class-setup-command-handler.php:803
 msgid "Run a live test with the selected provider and model."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:804
+#: includes/commands/handlers/class-setup-command-handler.php:813
 #: src/panel/utils/toolDialogHelpers.js:14
 #: src/panel/utils/tools/updatePostsFindReplace.js:90
 msgid "Retry"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:814
+#: includes/commands/handlers/class-setup-command-handler.php:823
 msgid "Select the user account the agent will use. All actions taken by the agent will be performed as this user. A dedicated Contributor user is recommended to start, and more access can be granted later."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:818
+#: includes/commands/handlers/class-setup-command-handler.php:827
 msgid "Create Agent User"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:827
+#: includes/commands/handlers/class-setup-command-handler.php:836
 msgid "Use Current User"
 msgstr ""
 
 #. translators: %s: user login
-#: includes/commands/handlers/class-setup-command-handler.php:846
+#: includes/commands/handlers/class-setup-command-handler.php:855
 #, php-format
 msgid "Use Existing (%s)"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:858
+#: includes/commands/handlers/class-setup-command-handler.php:867
 msgid "Create a secure workspace for the agent to read/write files."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:862
+#: includes/commands/handlers/class-setup-command-handler.php:871
 msgid "Yes"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:863
+#: includes/commands/handlers/class-setup-command-handler.php:872
 msgid "No"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:865
+#: includes/commands/handlers/class-setup-command-handler.php:874
 msgid "Workspace path is not available until an agent user is selected."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:871
+#: includes/commands/handlers/class-setup-command-handler.php:880
 msgid "Use Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:872
+#: includes/commands/handlers/class-setup-command-handler.php:881
 msgid "Create Workspace"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:883
+#: includes/commands/handlers/class-setup-command-handler.php:892
 msgid "Clawpress uses a couple of agent files which you can edit to customize how your ClawPress agent behaves:"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:885
+#: includes/commands/handlers/class-setup-command-handler.php:894
 msgid "AGENTS.md - core agent operating guide for how your agent behaves."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:886
+#: includes/commands/handlers/class-setup-command-handler.php:895
 msgid "SOUL.md - core behavior and boundaries for your agent"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:887
+#: includes/commands/handlers/class-setup-command-handler.php:896
 msgid "USER.md - user profile, working relationship, so your agent knows who it is interacting with"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:888
+#: includes/commands/handlers/class-setup-command-handler.php:897
 msgid "HEARTBEAT.md - list of tasks for your agent to perform proactively on a regular basis"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:894
+#: includes/commands/handlers/class-setup-command-handler.php:903
 msgid "Create Agent Files"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:903
+#: includes/commands/handlers/class-setup-command-handler.php:912
 msgid "Setup is complete. ClawPress is ready to use."
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:907
+#: includes/commands/handlers/class-setup-command-handler.php:916
 msgid "View Settings"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:913
+#: includes/commands/handlers/class-setup-command-handler.php:922
 msgid "View Agent Files"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:919
+#: includes/commands/handlers/class-setup-command-handler.php:928
 msgid "Say Hi to Your Agent"
 msgstr ""
 
-#: includes/commands/handlers/class-setup-command-handler.php:932
+#: includes/commands/handlers/class-setup-command-handler.php:941
 #: src/panel/components/cards/SetupCard.jsx:137
 msgid "Back"
+msgstr ""
+
+#: includes/commands/handlers/class-setup-command-handler.php:1189
+#: includes/commands/handlers/class-test-command-handler.php:291
+#: includes/helpers/class-agent-loop-helper.php:1672
+#: includes/helpers/class-agent-loop-helper.php:1742
+msgid "AI generation failed."
 msgstr ""
 
 #: includes/commands/handlers/class-site-command-handler.php:33
@@ -980,7 +1031,7 @@ msgid "Show plugin, provider, memory, and permissions status."
 msgstr ""
 
 #: includes/commands/handlers/class-status-command-handler.php:82
-#: includes/commands/handlers/class-test-command-handler.php:97
+#: includes/commands/handlers/class-test-command-handler.php:105
 msgid "Invalid usage. No arguments expected."
 msgstr ""
 
@@ -1018,14 +1069,14 @@ msgstr ""
 
 #. translators: %s: provider ID or slug
 #: includes/commands/handlers/class-status-command-handler.php:106
-#: includes/commands/handlers/class-test-command-handler.php:182
+#: includes/commands/handlers/class-test-command-handler.php:190
 #, php-format
 msgid "- Provider: %s"
 msgstr ""
 
 #. translators: %s: model identifier
 #: includes/commands/handlers/class-status-command-handler.php:111
-#: includes/commands/handlers/class-test-command-handler.php:187
+#: includes/commands/handlers/class-test-command-handler.php:195
 #, php-format
 msgid "- Model: %s"
 msgstr ""
@@ -1048,47 +1099,47 @@ msgstr ""
 msgid "- Setup completed: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:65
+#: includes/commands/handlers/class-test-command-handler.php:73
 msgid "Test the saved provider and model connection."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:115
+#: includes/commands/handlers/class-test-command-handler.php:123
 msgid "No provider is saved. Set one with `/settings provider <provider>`."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:126
+#: includes/commands/handlers/class-test-command-handler.php:134
 msgid "No model is saved. Set one with `/settings model <model>`."
 msgstr ""
 
 #. translators: %s: provider slug
-#: includes/commands/handlers/class-test-command-handler.php:139
+#: includes/commands/handlers/class-test-command-handler.php:147
 #, php-format
 msgid "Saved provider `%s` is not configured with valid credentials."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:166
+#: includes/commands/handlers/class-test-command-handler.php:174
 msgid "Connection test failed: empty response from provider."
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:179
+#: includes/commands/handlers/class-test-command-handler.php:187
 msgid "Connection test succeeded."
 msgstr ""
 
 #. translators: %s: short provider reply
-#: includes/commands/handlers/class-test-command-handler.php:192
+#: includes/commands/handlers/class-test-command-handler.php:200
 #, php-format
 msgid "- Reply: %s"
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:342
+#: includes/commands/handlers/class-test-command-handler.php:366
 msgid "- Tool calls: Supported"
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:346
+#: includes/commands/handlers/class-test-command-handler.php:370
 msgid "- Tool calls: Not supported"
 msgstr ""
 
-#: includes/commands/handlers/class-test-command-handler.php:349
+#: includes/commands/handlers/class-test-command-handler.php:373
 msgid "- Tool calls: Unknown (model metadata unavailable)"
 msgstr ""
 
@@ -1118,12 +1169,13 @@ msgstr ""
 msgid "- tool_execution: unavailable (no enabled abilities)"
 msgstr ""
 
-#: includes/functions.php:62
+#. translators: 1: minimum supported WordPress version, 2: current WordPress version.
+#: includes/functions.php:61
 #, php-format
 msgid "ClawPress requires WordPress %1$s or newer. You are currently running WordPress %2$s."
 msgstr ""
 
-#: includes/functions.php:64
+#: includes/functions.php:65
 msgid "an unknown version"
 msgstr ""
 
@@ -1143,66 +1195,106 @@ msgstr ""
 msgid "Tool execution is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:623
+#: includes/helpers/class-abilities-helper.php:624
+msgid "Network access is blocked by runtime policy."
+msgstr ""
+
+#: includes/helpers/class-abilities-helper.php:648
 msgid "Destructive tools are not allowed for this runtime trigger."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:646
+#: includes/helpers/class-abilities-helper.php:672
 msgid "File delete is blocked by runtime policy."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:673
+#: includes/helpers/class-abilities-helper.php:700
 msgid "This destructive action is pending batch confirmation."
 msgstr ""
 
-#: includes/helpers/class-abilities-helper.php:698
+#: includes/helpers/class-abilities-helper.php:725
 msgid "Explicit confirmation is required for this destructive action."
 msgstr ""
 
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:293
+#, php-format
+msgid "Tool %s requires confirmation."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:301
+#, php-format
+msgid "Tool %s completed with degraded output."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:309
+#, php-format
+msgid "Tool %s completed successfully."
+msgstr ""
+
+#. translators: 1: tool name, 2: error message
+#: includes/helpers/class-action-log-helper.php:317
+#, php-format
+msgid "Tool %1$s failed: %2$s"
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:326
+#, php-format
+msgid "Tool %s was blocked by policy."
+msgstr ""
+
+#. translators: %s: tool name
+#: includes/helpers/class-action-log-helper.php:333
+#, php-format
+msgid "Tool %s failed."
+msgstr ""
+
 #. translators: %d: maximum number of tool calls executed per round.
-#: includes/helpers/class-agent-loop-helper.php:922
+#: includes/helpers/class-agent-loop-helper.php:930
 #, php-format
 msgid "Tool call deferred because the per-round limit of %d was reached. Retry this call in the next round."
 msgstr ""
 
 #. translators: 1: tool name, 2: batch ID, 3: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1213
+#: includes/helpers/class-agent-loop-helper.php:1221
 #, php-format
 msgid "Confirm batch `%2$s` to run `%1$s`. This batch expires at %3$s."
 msgstr ""
 
 #. translators: 1: total destructive calls, 2: batch ID, 3: comma-separated tool names, 4: expiry time
-#: includes/helpers/class-agent-loop-helper.php:1221
+#: includes/helpers/class-agent-loop-helper.php:1229
 #, php-format
 msgid "This reply queued %1$d destructive tool calls in batch `%2$s` (%3$s). Use Confirm All to execute the entire batch. This batch expires at %4$s."
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1224
+#: includes/helpers/class-agent-loop-helper.php:1232
 msgid "tools"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1232
+#: includes/helpers/class-agent-loop-helper.php:1240
 #: src/panel/components/cards/UserConfirmationCard.jsx:8
 msgid "User Confirmation Required"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1233
+#: includes/helpers/class-agent-loop-helper.php:1241
 msgid "Destructive batch pending"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1239
+#: includes/helpers/class-agent-loop-helper.php:1247
 msgid "Confirm All"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1240
+#: includes/helpers/class-agent-loop-helper.php:1248
 msgid "Confirm Action"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1246
+#: includes/helpers/class-agent-loop-helper.php:1254
 msgid "Decline"
 msgstr ""
 
-#: includes/helpers/class-agent-loop-helper.php:1579
+#: includes/helpers/class-agent-loop-helper.php:1587
 msgid "AI client did not return a generative result."
 msgstr ""
 
@@ -1261,8 +1353,63 @@ msgstr ""
 msgid "Provider error"
 msgstr ""
 
+#: includes/helpers/class-model-option-helper.php:320
+#: src/js/admin/components/views/SettingsView.js:942
+msgid "Temperature"
+msgstr ""
+
+#: includes/helpers/class-model-option-helper.php:322
+#: src/js/admin/components/views/SettingsView.js:951
+msgid "Top P"
+msgstr ""
+
+#: includes/helpers/class-model-option-helper.php:324
+#: src/js/admin/components/views/SettingsView.js:960
+msgid "Max Output Tokens"
+msgstr ""
+
+#: includes/helpers/class-model-option-helper.php:326
+#: src/js/admin/components/views/SettingsView.js:969
+msgid "Frequency Penalty"
+msgstr ""
+
+#: includes/helpers/class-model-option-helper.php:328
+#: src/js/admin/components/views/SettingsView.js:978
+msgid "Presence Penalty"
+msgstr ""
+
 #: includes/helpers/class-settings-helper.php:142
 msgid "No settings provided"
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL, 3: HTTP status code.
+#: includes/helpers/class-web-fetch-helper.php:130
+#, php-format
+msgid "Web fetch %1$s %2$s completed with status %3$d."
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL, 3: error message.
+#: includes/helpers/class-web-fetch-helper.php:138
+#, php-format
+msgid "Web fetch %1$s %2$s failed: %3$s"
+msgstr ""
+
+#. translators: 1: HTTP method, 2: URL.
+#: includes/helpers/class-web-fetch-helper.php:146
+#, php-format
+msgid "Web fetch %1$s %2$s was blocked."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:221
+msgid "The requested `fetcher` is not registered."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:247
+msgid "A valid `url` is required."
+msgstr ""
+
+#: includes/helpers/class-web-fetch-helper.php:260
+msgid "The provided `method` is not supported."
 msgstr ""
 
 #: includes/helpers/class-workspace-helper.php:72
@@ -1327,12 +1474,16 @@ msgstr ""
 msgid "Chat request failed."
 msgstr ""
 
-#: src/js/admin/components/App.js:24
-#: src/js/admin/components/views/SettingsView.js:966
+#: includes/rest/class-logs-controller.php:187
+msgid "A run ID or session ID is required."
+msgstr ""
+
+#: src/js/admin/components/App.js:25
+#: src/js/admin/components/views/SettingsView.js:1063
 msgid "Settings"
 msgstr ""
 
-#: src/js/admin/components/App.js:29
+#: src/js/admin/components/App.js:30
 #: src/js/admin/components/views/AbilitiesView.js:211
 msgid "Abilities"
 msgstr ""
@@ -1380,7 +1531,7 @@ msgid "Reset to Defaults"
 msgstr ""
 
 #: src/js/admin/components/views/AbilitiesView.js:274
-#: src/js/admin/components/views/SettingsView.js:1037
+#: src/js/admin/components/views/SettingsView.js:1134
 msgid "Saving…"
 msgstr ""
 
@@ -1410,143 +1561,313 @@ msgstr ""
 msgid "This ability is not currently registered."
 msgstr ""
 
+#: src/js/admin/components/views/LogsView.js:27
+msgid "All"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:31
+#: src/js/admin/components/views/LogsView.js:44
+msgid "Tool Calls"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:35
+#: src/js/admin/components/views/LogsView.js:45
+msgid "Commands"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:39
+#: src/js/admin/components/views/LogsView.js:46
+msgid "Messages"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:47
+msgid "Events"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:127
+msgid "Unknown"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:152
+msgid "Unable to render log details."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:222
+msgid "Linked Events"
+msgstr ""
+
+#. translators: %d: run ID
+#: src/js/admin/components/views/LogsView.js:228
+#, js-format
+msgid "Linked Events for Run %d"
+msgstr ""
+
+#. translators: %d: session ID
+#: src/js/admin/components/views/LogsView.js:235
+#, js-format
+msgid "Linked Events for Session %d"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:258
+msgid "Request"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:264
+msgid "Response"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:271
+msgid "Metadata"
+msgstr ""
+
+#. translators: 1: log tab label, 2: log count
+#: src/js/admin/components/views/LogsView.js:319
+#: src/js/admin/components/views/LogsView.js:330
+#, js-format
+msgid "%1$s (%2$d)"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:371
+msgid "Unable to load logs."
+msgstr ""
+
+#. translators: %d: number of cleared logs
+#: src/js/admin/components/views/LogsView.js:434
+#, js-format
+msgid "%d log cleared."
+msgid_plural "%d logs cleared."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/js/admin/components/views/LogsView.js:444
+msgid "Logs cleared."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:455
+msgid "Unable to clear logs."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:498
+msgid "Unable to load linked events."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:526
+msgid "Review ClawPress activity, including tool calls, commands, and chat log entries."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:547
+msgid "Clear All Logs"
+msgstr ""
+
+#. translators: %d: total logs in current tab
+#: src/js/admin/components/views/LogsView.js:582
+#, js-format
+msgid "%d logs in this view."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:594
+msgid "Timestamp"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:600
+msgid "Type"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:606
+msgid "Action"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:612
+#: src/js/admin/config/itemConfig.js:31
+msgid "Status"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:618
+msgid "Message"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:624
+msgid "Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:636
+msgid "No logs found for this tab."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:687
+msgid "info"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:711
+msgid "Hide Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:715
+msgid "View Details"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:730
+msgid "View Events"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:768
+msgid "Load More"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:783
+msgid "Clear all logs?"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:791
+msgid "This removes every action log entry, including tool calls, commands, and messages."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:802
+#: src/js/admin/config/itemConfig.js:138
+#: src/panel/components/ToolDialogForm.jsx:164
+#: src/panel/utils/toolDialogHelpers.js:98
+#: src/panel/utils/tools/updatePostsFindReplace.js:97
+#: src/panel/utils/tools/updatePostsFindReplace.js:200
+msgid "Cancel"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:811
+msgid "Clear Logs"
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:836
+msgid "No linked events were found for this log entry."
+msgstr ""
+
+#: src/js/admin/components/views/LogsView.js:876
+msgid "Load More Events"
+msgstr ""
+
 #: src/js/admin/components/views/PagesView.js:27
 msgid "Showing ClawPress Agent Files."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:103
+#: src/js/admin/components/views/SettingsView.js:124
 msgid "OpenAI"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:107
+#: src/js/admin/components/views/SettingsView.js:128
 msgid "Anthropic"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:111
+#: src/js/admin/components/views/SettingsView.js:132
 msgid "Google"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:577
+#: src/js/admin/components/views/SettingsView.js:641
 msgid "Unable to load settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:643
+#: src/js/admin/components/views/SettingsView.js:707
 msgid "Settings saved."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:646
+#: src/js/admin/components/views/SettingsView.js:710
 msgid "Unable to save settings."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:692
+#: src/js/admin/components/views/SettingsView.js:765
 msgid "Unable to refresh models for the selected provider."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:765
+#: src/js/admin/components/views/SettingsView.js:848
 msgid "Select a model"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:801
-msgid "Context Size :"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:808
-msgid "Cost :"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:821
-msgid "Choose which AI service ClawPress should use."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:828
-msgid "Select a provider"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:845
-msgid "Temperature"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:846
-msgid "Lower values make replies more focused and consistent. Higher values make replies more creative and varied."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:854
-msgid "Top P"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:855
-msgid "Lower values keep replies more predictable. Higher values allow more variety in wording and ideas."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:863
-msgid "Max Output Tokens"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:864
-msgid "Sets the maximum reply length. Higher values allow longer answers; lower values keep answers shorter."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:872
-msgid "Frequency Penalty"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:873
-msgid "Higher values reduce repeated words and phrases. Lower values allow more repetition."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:881
-msgid "Presence Penalty"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:882
-msgid "Higher values encourage fresh ideas. Lower values keep replies closer to what has already been said."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:890
-msgid "Request Timeout (seconds)"
+#: src/js/admin/components/views/SettingsView.js:883
+msgid "None"
 msgstr ""
 
 #: src/js/admin/components/views/SettingsView.js:891
-msgid "How long ClawPress waits for a reply before stopping the request."
+msgid "Context Size :"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:899
-msgid "Agent User ID"
+#: src/js/admin/components/views/SettingsView.js:898
+msgid "Cost :"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:900
-msgid "Use 0 if this is not configured yet."
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:908
-msgid "Enable Memory"
-msgstr ""
-
-#: src/js/admin/components/views/SettingsView.js:909
-msgid "When enabled, ClawPress can remember useful details from earlier chats."
+#: src/js/admin/components/views/SettingsView.js:905
+msgid "Skipped Settings :"
 msgstr ""
 
 #: src/js/admin/components/views/SettingsView.js:918
+msgid "Choose which AI service ClawPress should use."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:925
+msgid "Select a provider"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:943
+msgid "Lower values make replies more focused and consistent. Higher values make replies more creative and varied."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:952
+msgid "Lower values keep replies more predictable. Higher values allow more variety in wording and ideas."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:961
+msgid "Sets the maximum reply length. Higher values allow longer answers; lower values keep answers shorter."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:970
+msgid "Higher values reduce repeated words and phrases. Lower values allow more repetition."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:979
+msgid "Higher values encourage fresh ideas. Lower values keep replies closer to what has already been said."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:987
+msgid "Request Timeout (seconds)"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:988
+msgid "How long ClawPress waits for a reply before stopping the request."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:996
+msgid "Agent User ID"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:997
+msgid "Use 0 if this is not configured yet."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:1005
+msgid "Enable Memory"
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:1006
+msgid "When enabled, ClawPress can remember useful details from earlier chats."
+msgstr ""
+
+#: src/js/admin/components/views/SettingsView.js:1015
 msgid "Setup Completed"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:919
+#: src/js/admin/components/views/SettingsView.js:1016
 msgid "Turn this on after you finish the initial setup."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:941
+#: src/js/admin/components/views/SettingsView.js:1038
 msgid "LLM Reply Settings"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:942
+#: src/js/admin/components/views/SettingsView.js:1039
 msgid "Not all settings are supported by every provider or model. Unsupported settings are skipped automatically."
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:1038
+#: src/js/admin/components/views/SettingsView.js:1135
 msgid "Save Settings"
 msgstr ""
 
-#: src/js/admin/components/views/SettingsView.js:1052
+#: src/js/admin/components/views/SettingsView.js:1149
 msgid "Refresh Models"
 msgstr ""
 
@@ -1556,10 +1877,6 @@ msgstr ""
 
 #: src/js/admin/config/itemConfig.js:25
 msgid "(no title)"
-msgstr ""
-
-#: src/js/admin/config/itemConfig.js:31
-msgid "Status"
 msgstr ""
 
 #: src/js/admin/config/itemConfig.js:38
@@ -1613,14 +1930,6 @@ msgstr ""
 #: src/js/admin/config/itemConfig.js:129
 #, js-format
 msgid "Move %d agent files to trash?"
-msgstr ""
-
-#: src/js/admin/config/itemConfig.js:138
-#: src/panel/components/ToolDialogForm.jsx:164
-#: src/panel/utils/toolDialogHelpers.js:98
-#: src/panel/utils/tools/updatePostsFindReplace.js:97
-#: src/panel/utils/tools/updatePostsFindReplace.js:200
-msgid "Cancel"
 msgstr ""
 
 #: src/js/admin/utils/requestJson.js:43

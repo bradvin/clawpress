@@ -195,6 +195,94 @@ final class Action_Log_Store {
 	}
 
 	/**
+	 * Fetch grouped event-type counts.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function get_log_counts_by_type(): array {
+		global $wpdb;
+
+		if ( ! $this->is_wpdb_ready( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_results' ) ) {
+			return [];
+		}
+
+		$prepared_query = $wpdb->prepare(
+			"SELECT event_type, COUNT(*) AS total
+				FROM %i
+				GROUP BY event_type
+				ORDER BY event_type ASC",
+			$this->get_table_name()
+		);
+
+		if ( ! is_string( $prepared_query ) || '' === $prepared_query ) {
+			return [];
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- grouped log counts are bounded and intentionally uncached.
+		$rows = $wpdb->get_results( $prepared_query, 'ARRAY_A' );
+		return is_array( $rows ) ? array_values( $rows ) : [];
+	}
+
+	/**
+	 * Fetch total count for one event type or all logs.
+	 *
+	 * @param string $event_type Optional event type filter.
+	 */
+	public function get_log_count( string $event_type = '' ): int {
+		global $wpdb;
+
+		if ( ! $this->is_wpdb_ready( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_results' ) ) {
+			return 0;
+		}
+
+		$prepared_query = $wpdb->prepare(
+			"SELECT COUNT(*) AS total
+				FROM %i
+				WHERE (%s = '' OR event_type = %s)",
+			$this->get_table_name(),
+			$event_type,
+			$event_type
+		);
+
+		if ( ! is_string( $prepared_query ) || '' === $prepared_query ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- total log count query is bounded and intentional.
+		$rows = $wpdb->get_results( $prepared_query, 'ARRAY_A' );
+		if ( ! is_array( $rows ) || empty( $rows[0]['total'] ) ) {
+			return 0;
+		}
+
+		return max( 0, (int) $rows[0]['total'] );
+	}
+
+	/**
+	 * Delete all action logs.
+	 */
+	public function delete_all_logs(): int {
+		global $wpdb;
+
+		if ( ! $this->is_wpdb_ready( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'query' ) ) {
+			return 0;
+		}
+
+		$prepared_query = $wpdb->prepare(
+			'DELETE FROM %i',
+			$this->get_table_name()
+		);
+
+		if ( ! is_string( $prepared_query ) || '' === $prepared_query ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- explicit destructive admin action to clear the action log table.
+		$result = $wpdb->query( $prepared_query );
+
+		return false === $result ? 0 : max( 0, (int) $result );
+	}
+
+	/**
 	 * Check whether a usable `$wpdb` object is present.
 	 *
 	 * @param mixed $wpdb Candidate wpdb object.
