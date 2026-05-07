@@ -495,7 +495,8 @@ final class Chat_Controller implements Route_Controller {
 			@ob_implicit_flush( true );
 		}
 
-		echo esc_html( ':' . str_repeat( ' ', 4096 ) . "\n\n" );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE padding is fixed protocol framing and must remain raw text/event-stream content.
+		echo ':' . str_repeat( ' ', 4096 ) . "\n\n";
 		flush();
 	}
 
@@ -518,10 +519,12 @@ final class Chat_Controller implements Route_Controller {
 			return;
 		}
 
-		echo esc_html( "event: {$type}\n" );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Event type is sanitized and SSE framing must remain raw text/event-stream content.
+		echo "event: {$type}\n";
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE data is JSON encoded and must remain raw text/event-stream content.
 		echo 'data: ' . $frame . "\n\n";
-		echo esc_html( ':' . str_repeat( ' ', 2048 ) . "\n\n" );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE padding is fixed protocol framing and must remain raw text/event-stream content.
+		echo ':' . str_repeat( ' ', 2048 ) . "\n\n";
 
 		if ( function_exists( 'ob_flush' ) ) {
 			@ob_flush();
