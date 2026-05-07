@@ -40,6 +40,8 @@ if ( file_exists( CLAWPRESS_DIR . 'vendor/autoload.php' ) ) {
 	require_once CLAWPRESS_DIR . 'vendor/autoload.php';
 }
 
+require_once CLAWPRESS_DIR . 'includes/autoload.php';
+
 if ( function_exists( 'register_activation_hook' ) ) {
 	register_activation_hook( CLAWPRESS_FILE, [ Plugin::class, 'activate' ] );
 }
