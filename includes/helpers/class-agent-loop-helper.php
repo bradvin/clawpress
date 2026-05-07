@@ -76,6 +76,13 @@ final class Agent_Loop_Helper {
 	private Provider_Helper $provider_helper;
 
 	/**
+	 * Model option helper.
+	 *
+	 * @var Model_Option_Helper
+	 */
+	private Model_Option_Helper $model_option_helper;
+
+	/**
 	 * Context helper.
 	 *
 	 * @var Context_Helper
@@ -109,6 +116,7 @@ final class Agent_Loop_Helper {
 	private function __construct() {
 		$this->settings_helper    = Settings_Helper::get_instance();
 		$this->provider_helper    = Provider_Helper::get_instance();
+		$this->model_option_helper = Model_Option_Helper::get_instance();
 		$this->context_helper     = Context_Helper::get_instance();
 		$this->abilities_helper   = Abilities_Helper::get_instance();
 		$this->confirmation_store = new Command_Confirmation_Store();
@@ -1572,11 +1580,11 @@ final class Agent_Loop_Helper {
 	private function generate_result_from_streaming_builder( object $builder ): GenerativeAiResult {
 		$result = $builder->generate_result();
 		if ( is_wp_error( $result ) ) {
-			throw new \RuntimeException( $result->get_error_message() );
+			throw new \RuntimeException( esc_html( $result->get_error_message() ) );
 		}
 
 		if ( ! $result instanceof GenerativeAiResult ) {
-			throw new \RuntimeException( __( 'AI client did not return a generative result.', 'clawpress' ) );
+			throw new \RuntimeException( esc_html__( 'AI client did not return a generative result.', 'clawpress' ) );
 		}
 
 		return $result;
@@ -1617,25 +1625,12 @@ final class Agent_Loop_Helper {
 			);
 		}
 
-		$builder = $this->build_prompt_builder_for_round(
-			$conversation,
-			$provider,
-			$model,
-			$system_prompt,
-			$request_timeout,
-			$generation_settings,
-			$tool_declarations,
-			false
-		);
+		$use_explicit_model          = false;
+		$retried_unsupported_options = [];
+		$last_throwable              = null;
 
-		try {
-			return $builder->generateResult();
-		} catch ( Throwable $throwable ) {
-			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
-				throw $throwable;
-			}
-
-			$fallback_builder = $this->build_prompt_builder_for_round(
+		for ( $attempt = 0; $attempt < 8; $attempt++ ) {
+			$builder = $this->build_prompt_builder_for_round(
 				$conversation,
 				$provider,
 				$model,
@@ -1643,11 +1638,38 @@ final class Agent_Loop_Helper {
 				$request_timeout,
 				$generation_settings,
 				$tool_declarations,
-				true
+				$use_explicit_model
 			);
 
-			return $fallback_builder->generateResult();
+			try {
+				return $builder->generateResult();
+			} catch ( Throwable $throwable ) {
+				$last_throwable      = $throwable;
+				$unsupported_option = $this->model_option_helper->record_unsupported_parameter_from_error(
+					$provider,
+					$model,
+					$throwable
+				);
+
+				if ( null !== $unsupported_option && ! in_array( $unsupported_option, $retried_unsupported_options, true ) ) {
+					$retried_unsupported_options[] = $unsupported_option;
+					continue;
+				}
+
+				if ( ! $use_explicit_model && $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+					$use_explicit_model = true;
+					continue;
+				}
+
+				throw $throwable;
+			}
 		}
+
+		if ( $last_throwable instanceof Throwable ) {
+			throw $last_throwable;
+		}
+
+		throw new \RuntimeException( esc_html__( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**
@@ -1672,26 +1694,12 @@ final class Agent_Loop_Helper {
 		array $tool_declarations,
 		array $stream_generation_args
 	): GenerativeAiResult {
-		$builder = $this->build_streaming_prompt_builder_for_round(
-			$conversation,
-			$provider,
-			$model,
-			$system_prompt,
-			$request_timeout,
-			$generation_settings,
-			$tool_declarations,
-			false,
-			$stream_generation_args
-		);
+		$use_explicit_model          = false;
+		$retried_unsupported_options = [];
+		$last_throwable              = null;
 
-		try {
-			return $this->generate_result_from_streaming_builder( $builder );
-		} catch ( Throwable $throwable ) {
-			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
-				throw $throwable;
-			}
-
-			$fallback_builder = $this->build_streaming_prompt_builder_for_round(
+		for ( $attempt = 0; $attempt < 8; $attempt++ ) {
+			$builder = $this->build_streaming_prompt_builder_for_round(
 				$conversation,
 				$provider,
 				$model,
@@ -1699,12 +1707,39 @@ final class Agent_Loop_Helper {
 				$request_timeout,
 				$generation_settings,
 				$tool_declarations,
-				true,
+				$use_explicit_model,
 				$stream_generation_args
 			);
 
-			return $this->generate_result_from_streaming_builder( $fallback_builder );
+			try {
+				return $this->generate_result_from_streaming_builder( $builder );
+			} catch ( Throwable $throwable ) {
+				$last_throwable      = $throwable;
+				$unsupported_option = $this->model_option_helper->record_unsupported_parameter_from_error(
+					$provider,
+					$model,
+					$throwable
+				);
+
+				if ( null !== $unsupported_option && ! in_array( $unsupported_option, $retried_unsupported_options, true ) ) {
+					$retried_unsupported_options[] = $unsupported_option;
+					continue;
+				}
+
+				if ( ! $use_explicit_model && $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+					$use_explicit_model = true;
+					continue;
+				}
+
+				throw $throwable;
+			}
 		}
+
+		if ( $last_throwable instanceof Throwable ) {
+			throw $last_throwable;
+		}
+
+		throw new \RuntimeException( esc_html__( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**
@@ -1963,16 +1998,8 @@ final class Agent_Loop_Helper {
 	 * @param string        $model Model identifier.
 	 */
 	private function apply_max_output_tokens_to_prompt_builder( PromptBuilder $builder, int $max_output_tokens, string $provider, string $model ): PromptBuilder {
-		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) ) {
-			$model_config = ModelConfig::fromArray(
-				[
-					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_output_tokens' => $max_output_tokens,
-					],
-				]
-			);
-
-			return $builder->usingModelConfig( $model_config );
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'max_output_tokens', $max_output_tokens ) ) {
+			return $builder;
 		}
 
 		return $builder->usingMaxTokens( $max_output_tokens );
@@ -1985,16 +2012,8 @@ final class Agent_Loop_Helper {
 	 * @return object
 	 */
 	private function apply_max_output_tokens_to_streaming_prompt_builder( object $builder, int $max_output_tokens, string $provider, string $model ): object {
-		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) ) {
-			$model_config = ModelConfig::fromArray(
-				[
-					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_output_tokens' => $max_output_tokens,
-					],
-				]
-			);
-
-			return $builder->using_model_config( $model_config );
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'max_output_tokens', $max_output_tokens ) ) {
+			return $builder;
 		}
 
 		return $builder->using_max_tokens( $max_output_tokens );
@@ -2009,7 +2028,7 @@ final class Agent_Loop_Helper {
 	 * @param string        $model Model identifier.
 	 */
 	private function apply_temperature_to_prompt_builder( PromptBuilder $builder, float $temperature, string $provider, string $model ): PromptBuilder {
-		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'temperature', $temperature ) ) {
 			return $builder;
 		}
 
@@ -2023,7 +2042,7 @@ final class Agent_Loop_Helper {
 	 * @return object
 	 */
 	private function apply_temperature_to_streaming_prompt_builder( object $builder, float $temperature, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'temperature', $temperature ) ) {
 			return $builder;
 		}
 
@@ -2039,7 +2058,7 @@ final class Agent_Loop_Helper {
 	 * @param string        $model Model identifier.
 	 */
 	private function apply_top_p_to_prompt_builder( PromptBuilder $builder, float $top_p, string $provider, string $model ): PromptBuilder {
-		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'top_p', $top_p ) ) {
 			return $builder;
 		}
 
@@ -2053,7 +2072,7 @@ final class Agent_Loop_Helper {
 	 * @return object
 	 */
 	private function apply_top_p_to_streaming_prompt_builder( object $builder, float $top_p, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'top_p', $top_p ) ) {
 			return $builder;
 		}
 
@@ -2069,7 +2088,7 @@ final class Agent_Loop_Helper {
 	 * @param string        $model Model identifier.
 	 */
 	private function apply_frequency_penalty_to_prompt_builder( PromptBuilder $builder, float $frequency_penalty, string $provider, string $model ): PromptBuilder {
-		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'frequency_penalty', $frequency_penalty ) ) {
 			return $builder;
 		}
 
@@ -2083,7 +2102,7 @@ final class Agent_Loop_Helper {
 	 * @return object
 	 */
 	private function apply_frequency_penalty_to_streaming_prompt_builder( object $builder, float $frequency_penalty, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'frequency_penalty', $frequency_penalty ) ) {
 			return $builder;
 		}
 
@@ -2099,7 +2118,7 @@ final class Agent_Loop_Helper {
 	 * @param string        $model Model identifier.
 	 */
 	private function apply_presence_penalty_to_prompt_builder( PromptBuilder $builder, float $presence_penalty, string $provider, string $model ): PromptBuilder {
-		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'presence_penalty', $presence_penalty ) ) {
 			return $builder;
 		}
 
@@ -2113,7 +2132,7 @@ final class Agent_Loop_Helper {
 	 * @return object
 	 */
 	private function apply_presence_penalty_to_streaming_prompt_builder( object $builder, float $presence_penalty, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'presence_penalty', $presence_penalty ) ) {
 			return $builder;
 		}
 
@@ -2179,6 +2198,10 @@ final class Agent_Loop_Helper {
 			if ( false !== strpos( $message, $pattern ) ) {
 				return 'timeout';
 			}
+		}
+
+		if ( null !== $this->model_option_helper->extract_unsupported_generation_option( $message ) ) {
+			return 'unsupported_parameter';
 		}
 
 		return 'provider';

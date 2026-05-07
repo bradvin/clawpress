@@ -276,7 +276,7 @@ final class Action_Log_Store {
 			return 0;
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- explicit destructive admin action to clear the action log table.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- explicit destructive admin action to clear the action log table.
 		$result = $wpdb->query( $prepared_query );
 
 		return false === $result ? 0 : max( 0, (int) $result );

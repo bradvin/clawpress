@@ -104,9 +104,18 @@ final class Model_Helper {
 	private static ?self $instance = null;
 
 	/**
+	 * Model option helper.
+	 *
+	 * @var Model_Option_Helper
+	 */
+	private Model_Option_Helper $model_option_helper;
+
+	/**
 	 * Constructor.
 	 */
-	private function __construct() {}
+	private function __construct() {
+		$this->model_option_helper = Model_Option_Helper::get_instance();
+	}
 
 	/**
 	 * Get singleton instance.
@@ -123,7 +132,7 @@ final class Model_Helper {
 	 * Get model options for a provider.
 	 *
 	 * @param string $provider Provider ID.
-	 * @return array<int,array{id:string,label:string}>
+	 * @return array<int,array<string,mixed>>
 	 */
 	public function get_options_for_provider( string $provider ): array {
 		$provider = clawpress_sanitize_provider( $provider );
@@ -141,11 +150,13 @@ final class Model_Helper {
 		}
 
 		return array_map(
-			static function ( array $option ): array {
+			function ( array $option ) use ( $provider ): array {
+				$model_id = (string) $option['id'];
+
 				return [
-					'id'    => (string) $option['id'],
+					'id'    => $model_id,
 					'label' => (string) $option['label'],
-				];
+				] + $this->model_option_helper->get_generation_option_summary( $provider, $model_id );
 			},
 			self::MODEL_CATALOG[ $provider ]
 		);
@@ -154,7 +165,7 @@ final class Model_Helper {
 	/**
 	 * Get model options for all supported providers.
 	 *
-	 * @return array<string,array<int,array{id:string,label:string}>>
+	 * @return array<string,array<int,array<string,mixed>>>
 	 */
 	public function get_all_options(): array {
 		$options = [];
@@ -169,7 +180,7 @@ final class Model_Helper {
 	/**
 	 * Get discovered model options from registered providers only.
 	 *
-	 * @return array<string,array<int,array{id:string,label:string}>>
+	 * @return array<string,array<int,array<string,mixed>>>
 	 */
 	public function get_all_discovered_options(): array {
 		$options = [];
@@ -224,7 +235,7 @@ final class Model_Helper {
 	 * Resolve text-generation models registered for a provider via the AI client registry.
 	 *
 	 * @param string $provider Provider ID.
-	 * @return array<int,array{id:string,label:string}>
+	 * @return array<int,array<string,mixed>>
 	 */
 	private function get_registry_options_for_provider( string $provider ): array {
 		try {
@@ -272,7 +283,11 @@ final class Model_Helper {
 				$options[ $model_id ] = [
 					'id'    => $model_id,
 					'label' => $model_label,
-				];
+				] + $this->model_option_helper->get_generation_option_summary_from_metadata(
+					$provider,
+					$model_id,
+					$model
+				);
 			}
 
 			return array_values( $options );

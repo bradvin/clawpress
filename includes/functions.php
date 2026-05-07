@@ -303,18 +303,7 @@ if ( ! function_exists( 'clawpress_sanitize_provider' ) ) {
 	 */
 	function clawpress_sanitize_provider( $value ): string {
 		$provider = strtolower( sanitize_key( sanitize_text_field( (string) $value ) ) );
-		if ( '' === $provider ) {
-			return '';
-		}
-
-		try {
-			return \ClawPress\Helpers\Provider_Helper::get_instance()->supports_provider_id( $provider )
-				? $provider
-				: '';
-		} catch ( \Throwable $throwable ) {
-			unset( $throwable );
-			return '';
-		}
+		return '' !== $provider ? $provider : '';
 	}
 }
 

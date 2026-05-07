@@ -39,6 +39,15 @@ const normalizeModelKey = ( value ) =>
 				.replace( /[^a-z0-9]/g, '' )
 		: '';
 
+const normalizeStringArray = ( value ) =>
+	Array.isArray( value )
+		? value
+				.map( ( item ) =>
+					typeof item === 'string' ? item.trim() : ''
+				)
+				.filter( Boolean )
+		: [];
+
 const normalizeDiscoveredProviderModelOptions = ( options ) => {
 	if ( ! Array.isArray( options ) ) {
 		return [];
@@ -60,6 +69,18 @@ const normalizeDiscoveredProviderModelOptions = ( options ) => {
 			return {
 				id,
 				label: label || id,
+				supported_options: normalizeStringArray(
+					option?.supported_options
+				),
+				unsupported_generation_options: normalizeStringArray(
+					option?.unsupported_generation_options
+				),
+				unsupported_generation_option_labels: normalizeStringArray(
+					option?.unsupported_generation_option_labels
+				),
+				learned_unsupported_options: normalizeStringArray(
+					option?.learned_unsupported_options
+				),
 			};
 		} )
 		.filter( Boolean );
@@ -112,90 +133,14 @@ const getDefaultProviderOptions = () => [
 	},
 ];
 
-const requestWpAiJson = async ( path ) => {
-	const restBase =
-		typeof window !== 'undefined' &&
-		typeof window.CLAWPRESS_ADMIN?.restBase === 'string'
-			? window.CLAWPRESS_ADMIN.restBase
-			: '/wp-json/clawpress/v1';
-	const nonce =
-		typeof window !== 'undefined' &&
-		typeof window.CLAWPRESS_ADMIN?.nonce === 'string'
-			? window.CLAWPRESS_ADMIN.nonce
-			: '';
-	const wpAiBase = restBase.replace( /\/clawpress\/v1\/?$/, '/wp-ai/v1' );
-	const url = `${ wpAiBase }/${ path.replace( /^\//, '' ) }`;
-
-	const response = await fetch( url, {
-		method: 'GET',
-		credentials: 'same-origin',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-WP-Nonce': nonce,
-		},
-	} );
-
-	const text = await response.text();
-	let payload = [];
-
-	if ( text ) {
-		try {
-			payload = JSON.parse( text );
-		} catch {
-			payload = [];
-		}
-	}
-
-	if ( ! response.ok ) {
-		throw new Error( 'wp_ai_request_failed' );
-	}
-
-	return payload;
-};
-
-const loadWpAiProviders = async () => {
-	let providers = [];
-
-	try {
-		providers = await requestWpAiJson( 'providers' );
-	} catch {
-		return null;
-	}
-
-	if ( ! Array.isArray( providers ) || providers.length === 0 ) {
-		return null;
-	}
-
-	const providerOptions = providers
-		.map( ( provider ) => {
-			const providerId = normalizeProviderId( provider?.id );
-			const providerLabel =
-				typeof provider?.name === 'string'
-					? provider.name.trim()
-					: providerId;
-
-			if ( ! providerId ) {
-				return null;
-			}
-
-			return {
-				value: providerId,
-				label: providerLabel || providerId,
-			};
-		} )
-		.filter( Boolean );
-
-	return providerOptions.length > 0 ? providerOptions : null;
-};
-
-const loadWpAiProviderModels = async ( providerId ) => {
+const fetchProviderModelOptions = async ( providerId ) => {
 	const normalizedProviderId = normalizeProviderId( providerId );
 
 	if ( ! normalizedProviderId ) {
 		return [];
 	}
 
-	const providerModels = await requestWpAiJson(
+	const providerModels = await requestJson(
 		`providers/${ encodeURIComponent( normalizedProviderId ) }/models`
 	);
 
@@ -349,6 +294,127 @@ const normalizeModelOptions = ( models ) => {
 		},
 		{}
 	);
+};
+
+const normalizeModelOptionSummary = ( summary ) => {
+	if (
+		! summary ||
+		typeof summary !== 'object' ||
+		Array.isArray( summary )
+	) {
+		return null;
+	}
+
+	return {
+		supported_options: normalizeStringArray( summary.supported_options ),
+		unsupported_generation_options: normalizeStringArray(
+			summary.unsupported_generation_options
+		),
+		unsupported_generation_option_labels: normalizeStringArray(
+			summary.unsupported_generation_option_labels
+		),
+		learned_unsupported_options: normalizeStringArray(
+			summary.learned_unsupported_options
+		),
+	};
+};
+
+const hasModelOptionSummaryData = ( summary ) =>
+	Boolean(
+		summary &&
+			( summary.supported_options.length > 0 ||
+				summary.unsupported_generation_options.length > 0 ||
+				summary.unsupported_generation_option_labels.length > 0 ||
+				summary.learned_unsupported_options.length > 0 )
+	);
+
+const mergeModelOptionSummaryFields = ( option, fallbackOption ) => {
+	const optionSummary = normalizeModelOptionSummary( option );
+	const fallbackSummary = normalizeModelOptionSummary( fallbackOption );
+
+	if ( ! fallbackSummary || hasModelOptionSummaryData( optionSummary ) ) {
+		return option;
+	}
+
+	return {
+		...option,
+		...fallbackSummary,
+	};
+};
+
+const mergeProviderModelOptionSummaries = (
+	modelsByProvider,
+	provider,
+	options
+) => {
+	const providerId = normalizeProviderId( provider );
+	const nextOptions = normalizeDiscoveredProviderModelOptions( options );
+
+	if ( ! providerId ) {
+		return nextOptions;
+	}
+
+	const currentOptions = Array.isArray( modelsByProvider?.[ providerId ] )
+		? modelsByProvider[ providerId ]
+		: [];
+	const currentOptionsById = new Map(
+		currentOptions.map( ( option ) => [ option.id, option ] )
+	);
+	const nextOptionIds = new Set( nextOptions.map( ( option ) => option.id ) );
+	const currentSummaryOptions = currentOptions.filter(
+		( option ) =>
+			! nextOptionIds.has( option.id ) &&
+			hasModelOptionSummaryData( normalizeModelOptionSummary( option ) )
+	);
+
+	return [
+		...nextOptions.map( ( option ) =>
+			mergeModelOptionSummaryFields(
+				option,
+				currentOptionsById.get( option.id )
+			)
+		),
+		...currentSummaryOptions,
+	];
+};
+
+const mergeSelectedModelOptionSummary = (
+	modelsByProvider,
+	provider,
+	model,
+	summary
+) => {
+	const providerId = normalizeProviderId( provider );
+	const modelId = typeof model === 'string' ? model.trim() : '';
+	const normalizedSummary = normalizeModelOptionSummary( summary );
+
+	if ( ! providerId || ! modelId || ! normalizedSummary ) {
+		return modelsByProvider;
+	}
+
+	const providerModels = Array.isArray( modelsByProvider?.[ providerId ] )
+		? modelsByProvider[ providerId ]
+		: [];
+	const existingIndex = providerModels.findIndex(
+		( option ) => option.id === modelId
+	);
+	const nextOption = {
+		...( existingIndex >= 0
+			? providerModels[ existingIndex ]
+			: { id: modelId, label: modelId } ),
+		...normalizedSummary,
+	};
+	const nextProviderModels =
+		existingIndex >= 0
+			? providerModels.map( ( option, index ) =>
+					index === existingIndex ? nextOption : option
+			  )
+			: [ nextOption, ...providerModels ];
+
+	return {
+		...modelsByProvider,
+		[ providerId ]: nextProviderModels,
+	};
 };
 
 const normalizeModelCatalog = ( modelCatalog ) => {
@@ -557,18 +623,16 @@ export default function SettingsView() {
 					normalizeProviderOptions( data?.providers || [] )
 				);
 				setDiscoveredModelOptionsByProvider(
-					normalizeModelOptions( data?.models || {} )
+					mergeSelectedModelOptionSummary(
+						normalizeModelOptions( data?.models || {} ),
+						data?.settings?.provider,
+						data?.settings?.model,
+						data?.model_option_summary
+					)
 				);
 				setModelCatalogByProvider(
 					normalizeModelCatalog( data?.model_catalog || {} )
 				);
-
-				const wpAiProviders = await loadWpAiProviders();
-				if ( ! mounted || ! wpAiProviders ) {
-					return;
-				}
-
-				setProviderOptions( normalizeProviderOptions( wpAiProviders ) );
 			} catch ( e ) {
 				if ( ! mounted ) {
 					return;
@@ -663,7 +727,12 @@ export default function SettingsView() {
 				if ( cached.hasValue ) {
 					setDiscoveredModelOptionsByProvider( ( current ) => ( {
 						...current,
-						[ normalizedProviderId ]: cached.options,
+						[ normalizedProviderId ]:
+							mergeProviderModelOptionSummaries(
+								current,
+								normalizedProviderId,
+								cached.options
+							),
 					} ) );
 					return cached.options;
 				}
@@ -676,10 +745,14 @@ export default function SettingsView() {
 
 			try {
 				const refreshedOptions =
-					await loadWpAiProviderModels( normalizedProviderId );
+					await fetchProviderModelOptions( normalizedProviderId );
 				setDiscoveredModelOptionsByProvider( ( current ) => ( {
 					...current,
-					[ normalizedProviderId ]: refreshedOptions,
+					[ normalizedProviderId ]: mergeProviderModelOptionSummaries(
+						current,
+						normalizedProviderId,
+						refreshedOptions
+					),
 				} ) );
 				setCachedProviderModelOptions(
 					normalizedProviderId,
@@ -720,6 +793,20 @@ export default function SettingsView() {
 
 		return discoveredModelOptionsByProvider[ selectedProviderId ];
 	}, [ selectedProviderId, discoveredModelOptionsByProvider ] );
+	const selectedProviderModelOption = useMemo( () => {
+		const selectedModelId =
+			typeof settings.model === 'string' ? settings.model.trim() : '';
+
+		if ( ! selectedModelId ) {
+			return null;
+		}
+
+		return (
+			providerModelOptions.find(
+				( option ) => option.id === selectedModelId
+			) || null
+		);
+	}, [ providerModelOptions, settings.model ] );
 	const selectedModelOption = useMemo( () => {
 		const selectedModelId =
 			typeof settings.model === 'string' ? settings.model.trim() : '';
@@ -728,11 +815,7 @@ export default function SettingsView() {
 			return null;
 		}
 
-		if (
-			providerModelOptions.some(
-				( option ) => option.id === selectedModelId
-			)
-		) {
+		if ( selectedProviderModelOption ) {
 			return null;
 		}
 
@@ -740,7 +823,7 @@ export default function SettingsView() {
 			id: selectedModelId,
 			label: selectedModelId,
 		};
-	}, [ providerModelOptions, settings.model ] );
+	}, [ selectedProviderModelOption, settings.model ] );
 
 	useEffect( () => {
 		if ( ! selectedProviderId ) {
@@ -791,6 +874,13 @@ export default function SettingsView() {
 	if ( modelDescriptionState.modelId ) {
 		const modelContext = modelDescriptionState.selectedEntry?.context || '';
 		const modelCost = modelDescriptionState.selectedEntry?.cost || '';
+		const skippedSettingLabels =
+			selectedProviderModelOption?.unsupported_generation_option_labels ||
+			[];
+		const skippedSettingsValue =
+			skippedSettingLabels.length > 0
+				? skippedSettingLabels.join( ', ' )
+				: __( 'None', 'clawpress' );
 
 		modelDescription = (
 			<span className="clawpress-settings__model-meta">
@@ -808,6 +898,13 @@ export default function SettingsView() {
 						{ __( 'Cost :', 'clawpress' ) }{ ' ' }
 						<code>{ modelCost }</code>
 					</>
+				) : null }
+				{ selectedProviderModelOption ? (
+					<span className="clawpress-settings__model-skipped">
+						{ ' ' }
+						{ __( 'Skipped Settings :', 'clawpress' ) }{ ' ' }
+						<code>{ skippedSettingsValue }</code>
+					</span>
 				) : null }
 			</span>
 		);

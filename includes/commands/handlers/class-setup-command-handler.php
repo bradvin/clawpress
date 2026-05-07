@@ -14,6 +14,7 @@ use ClawPress\Commands\Command_Request;
 use ClawPress\Commands\Command_Response;
 use ClawPress\Helpers\Agent_File_Helper;
 use ClawPress\Helpers\Model_Helper;
+use ClawPress\Helpers\Model_Option_Helper;
 use ClawPress\Helpers\Provider_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use ClawPress\Helpers\User_Helper;
@@ -82,6 +83,13 @@ final class Setup_Command_Handler implements Command_Handler {
 	private Model_Helper $model_helper;
 
 	/**
+	 * Model option helper.
+	 *
+	 * @var Model_Option_Helper
+	 */
+	private Model_Option_Helper $model_option_helper;
+
+	/**
 	 * User helper.
 	 *
 	 * @var User_Helper
@@ -123,6 +131,7 @@ final class Setup_Command_Handler implements Command_Handler {
 		$this->settings_helper   = $settings_helper;
 		$this->provider_helper   = $provider_helper;
 		$this->model_helper      = $model_helper;
+		$this->model_option_helper = Model_Option_Helper::get_instance();
 		$this->user_helper       = $user_helper;
 		$this->workspace_helper  = $workspace_helper;
 		$this->agent_file_helper = $agent_file_helper;
@@ -1135,33 +1144,49 @@ final class Setup_Command_Handler implements Command_Handler {
 		RequestOptions $request_options,
 		array $generation_settings
 	): string {
-		$builder = $this->build_prompt_builder(
-			$prompt,
-			$provider,
-			$model,
-			$request_options,
-			$generation_settings,
-			false
-		);
+		$use_explicit_model          = false;
+		$retried_unsupported_options = [];
+		$last_throwable              = null;
 
-		try {
-			return $builder->generateText();
-		} catch ( Throwable $throwable ) {
-			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
-				throw $throwable;
-			}
-
-			$fallback_builder = $this->build_prompt_builder(
+		for ( $attempt = 0; $attempt < 8; $attempt++ ) {
+			$builder = $this->build_prompt_builder(
 				$prompt,
 				$provider,
 				$model,
 				$request_options,
 				$generation_settings,
-				true
+				$use_explicit_model
 			);
 
-			return $fallback_builder->generateText();
+			try {
+				return $builder->generateText();
+			} catch ( Throwable $throwable ) {
+				$last_throwable      = $throwable;
+				$unsupported_option = $this->model_option_helper->record_unsupported_parameter_from_error(
+					$provider,
+					$model,
+					$throwable
+				);
+
+				if ( null !== $unsupported_option && ! in_array( $unsupported_option, $retried_unsupported_options, true ) ) {
+					$retried_unsupported_options[] = $unsupported_option;
+					continue;
+				}
+
+				if ( ! $use_explicit_model && $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+					$use_explicit_model = true;
+					continue;
+				}
+
+				throw $throwable;
+			}
 		}
+
+		if ( $last_throwable instanceof Throwable ) {
+			throw $last_throwable;
+		}
+
+		throw new \RuntimeException( esc_html__( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**
@@ -1259,9 +1284,6 @@ final class Setup_Command_Handler implements Command_Handler {
 	/**
 	 * Apply max output token setting to prompt builder.
 	 *
-	 * Uses `max_output_tokens` for OpenAI model families that reject
-	 * legacy `max_tokens` in the Responses API.
-	 *
 	 * @param object $builder Prompt builder instance.
 	 * @param int    $max_output_tokens Max output tokens.
 	 * @param string $provider Provider identifier.
@@ -1269,16 +1291,8 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_max_output_tokens( object $builder, int $max_output_tokens, string $provider, string $model ): object {
-		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
-			$model_config = ModelConfig::fromArray(
-				[
-					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_output_tokens' => $max_output_tokens,
-					],
-				]
-			);
-
-			return $builder->usingModelConfig( $model_config );
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'max_output_tokens', $max_output_tokens ) ) {
+			return $builder;
 		}
 
 		return $builder->usingMaxTokens( $max_output_tokens );
@@ -1294,7 +1308,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_temperature( object $builder, float $temperature, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'temperature', $temperature ) ) {
 			return $builder;
 		}
 
@@ -1311,7 +1325,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_top_p( object $builder, float $top_p, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'top_p', $top_p ) ) {
 			return $builder;
 		}
 
@@ -1328,7 +1342,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_frequency_penalty( object $builder, float $frequency_penalty, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'frequency_penalty', $frequency_penalty ) ) {
 			return $builder;
 		}
 
@@ -1345,7 +1359,7 @@ final class Setup_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_presence_penalty( object $builder, float $presence_penalty, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'presence_penalty', $presence_penalty ) ) {
 			return $builder;
 		}
 

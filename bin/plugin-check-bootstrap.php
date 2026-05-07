@@ -45,7 +45,24 @@ if ( ! file_exists( $autoload ) ) {
 	\WP_CLI::error( 'Plugin Check engine autoloader not found: ' . $autoload );
 }
 
-require_once $autoload;
+if ( ! function_exists( 'clawpress_plugin_check_disable_engine_ai_client_autoload' ) ) {
+	/**
+	 * Prevent Plugin Check's bundled AI client from shadowing WordPress core's scoped AI client.
+	 *
+	 * @param mixed $loader Composer loader returned by the standalone engine.
+	 */
+	function clawpress_plugin_check_disable_engine_ai_client_autoload( $loader ): void {
+		if ( ! is_object( $loader ) || ! method_exists( $loader, 'setPsr4' ) ) {
+			return;
+		}
+
+		$loader->setPsr4( 'WordPress\\AiClient\\', array() );
+		$loader->setPsr4( 'WordPress\\AI_Client\\', array() );
+	}
+}
+
+$engine_loader = require_once $autoload;
+clawpress_plugin_check_disable_engine_ai_client_autoload( $engine_loader );
 
 if ( ! class_exists( '\WordPress\Plugin_Check\CLI\Plugin_Check_Command' ) ) {
 	\WP_CLI::error( 'Plugin Check command class could not be loaded from standalone engine.' );
@@ -108,7 +125,24 @@ function plugin_check_initialize_runner(): void {
 		return;
 	}
 
-	require_once $autoload;
+	if ( ! function_exists( 'clawpress_plugin_check_disable_engine_ai_client_autoload' ) ) {
+		/**
+		 * Prevent Plugin Check's bundled AI client from shadowing WordPress core's scoped AI client.
+		 *
+		 * @param mixed $loader Composer loader returned by the standalone engine.
+		 */
+		function clawpress_plugin_check_disable_engine_ai_client_autoload( $loader ): void {
+			if ( ! is_object( $loader ) || ! method_exists( $loader, 'setPsr4' ) ) {
+				return;
+			}
+
+			$loader->setPsr4( 'WordPress\\AiClient\\', array() );
+			$loader->setPsr4( 'WordPress\\AI_Client\\', array() );
+		}
+	}
+
+	$engine_loader = require_once $autoload;
+	clawpress_plugin_check_disable_engine_ai_client_autoload( $engine_loader );
 
 	if ( class_exists( '\WordPress\Plugin_Check\Utilities\Plugin_Request_Utility' ) ) {
 		\WordPress\Plugin_Check\Utilities\Plugin_Request_Utility::initialize_runner();
