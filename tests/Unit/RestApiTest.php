@@ -38,9 +38,10 @@ final class RestApiTest extends TestCase {
 			WordPress_Stubs::$rest_routes
 		);
 
-		$this->assertCount( 14, WordPress_Stubs::$rest_routes );
+		$this->assertCount( 15, WordPress_Stubs::$rest_routes );
 		$this->assertContains( '/settings:GET', $routes );
 		$this->assertContains( '/settings:POST', $routes );
+		$this->assertContains( '/providers/(?P<provider>[a-z0-9_-]+)/models:GET', $routes );
 		$this->assertContains( '/settings/abilites:GET', $routes );
 		$this->assertContains( '/settings/abilites:POST', $routes );
 		$this->assertContains( '/status:GET', $routes );
@@ -93,6 +94,23 @@ final class RestApiTest extends TestCase {
 		$this->assertSame( 'clawpress_check_permissions', $settings_routes[1]['args']['permission_callback'] );
 	}
 
+	public function test_provider_models_route_uses_global_manage_options_permission_callback(): void {
+		$settings_controller = new Settings_Controller();
+		$settings_controller->register_routes();
+
+		$model_routes = array_values(
+			array_filter(
+				WordPress_Stubs::$rest_routes,
+				static function ( array $route ): bool {
+					return '/providers/(?P<provider>[a-z0-9_-]+)/models' === $route['route'];
+				}
+			)
+		);
+
+		$this->assertCount( 1, $model_routes );
+		$this->assertSame( 'clawpress_check_permissions', $model_routes[0]['args']['permission_callback'] );
+	}
+
 	public function test_get_settings_returns_current_option_value(): void {
 		$settings_controller                        = new Settings_Controller();
 		WordPress_Stubs::$options['clawpress_settings'] = array(
@@ -121,6 +139,23 @@ final class RestApiTest extends TestCase {
 			),
 			$data['settings']
 		);
+	}
+
+	public function test_get_provider_models_returns_provider_options(): void {
+		$settings_controller = new Settings_Controller();
+		$response            = $settings_controller->get_provider_models(
+			new \WP_REST_Request(
+				array(
+					'provider' => 'openai',
+				)
+			)
+		);
+		$data                = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertNotEmpty( $data );
+		$this->assertSame( 'gpt-5.2-codex', $data[0]['id'] );
+		$this->assertSame( 'GPT-5.2 Codex', $data[0]['label'] );
 	}
 
 	public function test_get_settings_backfills_new_generation_defaults_for_existing_settings(): void {

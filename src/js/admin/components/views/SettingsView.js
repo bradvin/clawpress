@@ -112,90 +112,14 @@ const getDefaultProviderOptions = () => [
 	},
 ];
 
-const requestWpAiJson = async ( path ) => {
-	const restBase =
-		typeof window !== 'undefined' &&
-		typeof window.CLAWPRESS_ADMIN?.restBase === 'string'
-			? window.CLAWPRESS_ADMIN.restBase
-			: '/wp-json/clawpress/v1';
-	const nonce =
-		typeof window !== 'undefined' &&
-		typeof window.CLAWPRESS_ADMIN?.nonce === 'string'
-			? window.CLAWPRESS_ADMIN.nonce
-			: '';
-	const wpAiBase = restBase.replace( /\/clawpress\/v1\/?$/, '/wp-ai/v1' );
-	const url = `${ wpAiBase }/${ path.replace( /^\//, '' ) }`;
-
-	const response = await fetch( url, {
-		method: 'GET',
-		credentials: 'same-origin',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-WP-Nonce': nonce,
-		},
-	} );
-
-	const text = await response.text();
-	let payload = [];
-
-	if ( text ) {
-		try {
-			payload = JSON.parse( text );
-		} catch {
-			payload = [];
-		}
-	}
-
-	if ( ! response.ok ) {
-		throw new Error( 'wp_ai_request_failed' );
-	}
-
-	return payload;
-};
-
-const loadWpAiProviders = async () => {
-	let providers = [];
-
-	try {
-		providers = await requestWpAiJson( 'providers' );
-	} catch {
-		return null;
-	}
-
-	if ( ! Array.isArray( providers ) || providers.length === 0 ) {
-		return null;
-	}
-
-	const providerOptions = providers
-		.map( ( provider ) => {
-			const providerId = normalizeProviderId( provider?.id );
-			const providerLabel =
-				typeof provider?.name === 'string'
-					? provider.name.trim()
-					: providerId;
-
-			if ( ! providerId ) {
-				return null;
-			}
-
-			return {
-				value: providerId,
-				label: providerLabel || providerId,
-			};
-		} )
-		.filter( Boolean );
-
-	return providerOptions.length > 0 ? providerOptions : null;
-};
-
-const loadWpAiProviderModels = async ( providerId ) => {
+const fetchProviderModelOptions = async ( providerId ) => {
 	const normalizedProviderId = normalizeProviderId( providerId );
 
 	if ( ! normalizedProviderId ) {
 		return [];
 	}
 
-	const providerModels = await requestWpAiJson(
+	const providerModels = await requestJson(
 		`providers/${ encodeURIComponent( normalizedProviderId ) }/models`
 	);
 
@@ -562,13 +486,6 @@ export default function SettingsView() {
 				setModelCatalogByProvider(
 					normalizeModelCatalog( data?.model_catalog || {} )
 				);
-
-				const wpAiProviders = await loadWpAiProviders();
-				if ( ! mounted || ! wpAiProviders ) {
-					return;
-				}
-
-				setProviderOptions( normalizeProviderOptions( wpAiProviders ) );
 			} catch ( e ) {
 				if ( ! mounted ) {
 					return;
@@ -676,7 +593,7 @@ export default function SettingsView() {
 
 			try {
 				const refreshedOptions =
-					await loadWpAiProviderModels( normalizedProviderId );
+					await fetchProviderModelOptions( normalizedProviderId );
 				setDiscoveredModelOptionsByProvider( ( current ) => ( {
 					...current,
 					[ normalizedProviderId ]: refreshedOptions,

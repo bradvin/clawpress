@@ -125,6 +125,25 @@ final class Settings_Controller implements Route_Controller {
 				],
 			]
 		);
+
+		register_rest_route(
+			'clawpress/v1',
+			'/providers/(?P<provider>[a-z0-9_-]+)/models',
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_provider_models' ],
+				'permission_callback' => 'clawpress_check_permissions',
+				'args'                => [
+					'provider' => [
+						'required'          => true,
+						'sanitize_callback' => 'clawpress_sanitize_provider',
+						'validate_callback' => static function ( $value ): bool {
+							return '' !== clawpress_sanitize_provider( $value );
+						},
+					],
+				],
+			]
+		);
 	}
 
 	/**
@@ -140,6 +159,20 @@ final class Settings_Controller implements Route_Controller {
 				'models'        => $this->model_helper->get_all_discovered_options(),
 				'model_catalog' => $this->model_helper->get_model_catalog(),
 			],
+			200
+		);
+	}
+
+	/**
+	 * Get model options for a provider.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 */
+	public function get_provider_models( \WP_REST_Request $request ): \WP_REST_Response {
+		$provider = clawpress_sanitize_provider( $request->get_param( 'provider' ) );
+
+		return new \WP_REST_Response(
+			$this->model_helper->get_options_for_provider( $provider ),
 			200
 		);
 	}
