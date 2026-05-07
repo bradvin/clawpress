@@ -523,7 +523,7 @@ namespace WordPress\AiClient\Providers {
 				$registered_models = \ClawPress\Tests\Support\WordPress_Stubs::$ai_provider_models[ $provider ] ?? [];
 				$metadata          = $registered_models[ $model ] ?? null;
 				if ( ! $metadata instanceof \WordPress\AiClient\Providers\Models\DTO\ModelMetadata ) {
-					$metadata = new \WordPress\AiClient\Providers\Models\DTO\ModelMetadata( $model, $model );
+					throw new \RuntimeException( 'Model metadata is not registered.' );
 				}
 
 				return new class( $metadata ) {

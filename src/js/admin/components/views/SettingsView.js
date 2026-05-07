@@ -39,6 +39,15 @@ const normalizeModelKey = ( value ) =>
 				.replace( /[^a-z0-9]/g, '' )
 		: '';
 
+const normalizeStringArray = ( value ) =>
+	Array.isArray( value )
+		? value
+				.map( ( item ) =>
+					typeof item === 'string' ? item.trim() : ''
+				)
+				.filter( Boolean )
+		: [];
+
 const normalizeDiscoveredProviderModelOptions = ( options ) => {
 	if ( ! Array.isArray( options ) ) {
 		return [];
@@ -60,6 +69,18 @@ const normalizeDiscoveredProviderModelOptions = ( options ) => {
 			return {
 				id,
 				label: label || id,
+				supported_options: normalizeStringArray(
+					option?.supported_options
+				),
+				unsupported_generation_options: normalizeStringArray(
+					option?.unsupported_generation_options
+				),
+				unsupported_generation_option_labels: normalizeStringArray(
+					option?.unsupported_generation_option_labels
+				),
+				learned_unsupported_options: normalizeStringArray(
+					option?.learned_unsupported_options
+				),
 			};
 		} )
 		.filter( Boolean );
@@ -275,6 +296,68 @@ const normalizeModelOptions = ( models ) => {
 	);
 };
 
+const normalizeModelOptionSummary = ( summary ) => {
+	if (
+		! summary ||
+		typeof summary !== 'object' ||
+		Array.isArray( summary )
+	) {
+		return null;
+	}
+
+	return {
+		supported_options: normalizeStringArray( summary.supported_options ),
+		unsupported_generation_options: normalizeStringArray(
+			summary.unsupported_generation_options
+		),
+		unsupported_generation_option_labels: normalizeStringArray(
+			summary.unsupported_generation_option_labels
+		),
+		learned_unsupported_options: normalizeStringArray(
+			summary.learned_unsupported_options
+		),
+	};
+};
+
+const mergeSelectedModelOptionSummary = (
+	modelsByProvider,
+	provider,
+	model,
+	summary
+) => {
+	const providerId = normalizeProviderId( provider );
+	const modelId = typeof model === 'string' ? model.trim() : '';
+	const normalizedSummary = normalizeModelOptionSummary( summary );
+
+	if ( ! providerId || ! modelId || ! normalizedSummary ) {
+		return modelsByProvider;
+	}
+
+	const providerModels = Array.isArray( modelsByProvider?.[ providerId ] )
+		? modelsByProvider[ providerId ]
+		: [];
+	const existingIndex = providerModels.findIndex(
+		( option ) => option.id === modelId
+	);
+	const nextOption = {
+		...( existingIndex >= 0
+			? providerModels[ existingIndex ]
+			: { id: modelId, label: modelId } ),
+		...normalizedSummary,
+	};
+	const nextProviderModels =
+		existingIndex >= 0
+			? providerModels.map( ( option, index ) =>
+					index === existingIndex ? nextOption : option
+			  )
+			: [ nextOption, ...providerModels ];
+
+	return {
+		...modelsByProvider,
+		[ providerId ]: nextProviderModels,
+	};
+};
+
 const normalizeModelCatalog = ( modelCatalog ) => {
 	if (
 		! modelCatalog ||
@@ -481,7 +564,12 @@ export default function SettingsView() {
 					normalizeProviderOptions( data?.providers || [] )
 				);
 				setDiscoveredModelOptionsByProvider(
-					normalizeModelOptions( data?.models || {} )
+					mergeSelectedModelOptionSummary(
+						normalizeModelOptions( data?.models || {} ),
+						data?.settings?.provider,
+						data?.settings?.model,
+						data?.model_option_summary
+					)
 				);
 				setModelCatalogByProvider(
 					normalizeModelCatalog( data?.model_catalog || {} )
@@ -637,6 +725,20 @@ export default function SettingsView() {
 
 		return discoveredModelOptionsByProvider[ selectedProviderId ];
 	}, [ selectedProviderId, discoveredModelOptionsByProvider ] );
+	const selectedProviderModelOption = useMemo( () => {
+		const selectedModelId =
+			typeof settings.model === 'string' ? settings.model.trim() : '';
+
+		if ( ! selectedModelId ) {
+			return null;
+		}
+
+		return (
+			providerModelOptions.find(
+				( option ) => option.id === selectedModelId
+			) || null
+		);
+	}, [ providerModelOptions, settings.model ] );
 	const selectedModelOption = useMemo( () => {
 		const selectedModelId =
 			typeof settings.model === 'string' ? settings.model.trim() : '';
@@ -645,11 +747,7 @@ export default function SettingsView() {
 			return null;
 		}
 
-		if (
-			providerModelOptions.some(
-				( option ) => option.id === selectedModelId
-			)
-		) {
+		if ( selectedProviderModelOption ) {
 			return null;
 		}
 
@@ -657,7 +755,7 @@ export default function SettingsView() {
 			id: selectedModelId,
 			label: selectedModelId,
 		};
-	}, [ providerModelOptions, settings.model ] );
+	}, [ selectedProviderModelOption, settings.model ] );
 
 	useEffect( () => {
 		if ( ! selectedProviderId ) {
@@ -708,6 +806,9 @@ export default function SettingsView() {
 	if ( modelDescriptionState.modelId ) {
 		const modelContext = modelDescriptionState.selectedEntry?.context || '';
 		const modelCost = modelDescriptionState.selectedEntry?.cost || '';
+		const skippedSettingLabels =
+			selectedProviderModelOption?.unsupported_generation_option_labels ||
+			[];
 
 		modelDescription = (
 			<span className="clawpress-settings__model-meta">
@@ -725,6 +826,13 @@ export default function SettingsView() {
 						{ __( 'Cost :', 'clawpress' ) }{ ' ' }
 						<code>{ modelCost }</code>
 					</>
+				) : null }
+				{ skippedSettingLabels.length > 0 ? (
+					<span className="clawpress-settings__model-skipped">
+						{ ' ' }
+						{ __( 'Skipped Settings :', 'clawpress' ) }{ ' ' }
+						<code>{ skippedSettingLabels.join( ', ' ) }</code>
+					</span>
 				) : null }
 			</span>
 		);

@@ -138,30 +138,7 @@ final class Model_Option_Helper {
 			return null;
 		}
 
-		$supported_options = $metadata->getSupportedOptions();
-		if ( ! is_array( $supported_options ) ) {
-			return null;
-		}
-
-		$normalized_target = $this->normalize_metadata_option_name( $option_name );
-		foreach ( $supported_options as $supported_option ) {
-			if ( ! is_object( $supported_option ) || ! method_exists( $supported_option, 'getName' ) ) {
-				continue;
-			}
-
-			$supported_name = $this->normalize_metadata_option_name( $supported_option->getName() );
-			if ( $normalized_target !== $supported_name ) {
-				continue;
-			}
-
-			if ( null !== $value && method_exists( $supported_option, 'isSupportedValue' ) ) {
-				return (bool) $supported_option->isSupportedValue( $value );
-			}
-
-			return true;
-		}
-
-		return false;
+		return $this->metadata_object_supports_option( $metadata, $option_name, $value );
 	}
 
 	/**
@@ -176,28 +153,8 @@ final class Model_Option_Helper {
 			clawpress_sanitize_provider( $provider ),
 			trim( sanitize_text_field( $model ) )
 		);
-		if ( null === $metadata || ! method_exists( $metadata, 'getSupportedOptions' ) ) {
-			return [];
-		}
 
-		$supported_options = $metadata->getSupportedOptions();
-		if ( ! is_array( $supported_options ) ) {
-			return [];
-		}
-
-		$option_names = [];
-		foreach ( $supported_options as $supported_option ) {
-			if ( ! is_object( $supported_option ) || ! method_exists( $supported_option, 'getName' ) ) {
-				continue;
-			}
-
-			$option_name = $this->get_metadata_option_value( $supported_option->getName() );
-			if ( '' !== $option_name ) {
-				$option_names[] = $option_name;
-			}
-		}
-
-		return array_values( array_unique( $option_names ) );
+		return null !== $metadata ? $this->get_supported_option_names_from_metadata( $metadata ) : [];
 	}
 
 	/**
@@ -208,6 +165,23 @@ final class Model_Option_Helper {
 	 * @return array{supported_options:array<int,string>,unsupported_generation_options:array<int,string>,unsupported_generation_option_labels:array<int,string>,learned_unsupported_options:array<int,string>}
 	 */
 	public function get_generation_option_summary( string $provider, string $model ): array {
+		$metadata = $this->resolve_model_metadata(
+			clawpress_sanitize_provider( $provider ),
+			trim( sanitize_text_field( $model ) )
+		);
+
+		return $this->get_generation_option_summary_from_metadata( $provider, $model, $metadata );
+	}
+
+	/**
+	 * Get unsupported generation option metadata from an existing metadata object.
+	 *
+	 * @param string  $provider Provider identifier.
+	 * @param string  $model Model identifier.
+	 * @param ?object $metadata Model metadata.
+	 * @return array{supported_options:array<int,string>,unsupported_generation_options:array<int,string>,unsupported_generation_option_labels:array<int,string>,learned_unsupported_options:array<int,string>}
+	 */
+	public function get_generation_option_summary_from_metadata( string $provider, string $model, ?object $metadata ): array {
 		$unsupported = [];
 		$learned     = [];
 
@@ -218,11 +192,9 @@ final class Model_Option_Helper {
 				continue;
 			}
 
-			$metadata_support = $this->metadata_supports_option(
-				$provider,
-				$model,
-				self::GENERATION_OPTION_NAMES[ $option_key ]
-			);
+			$metadata_support = null !== $metadata
+				? $this->metadata_object_supports_option( $metadata, self::GENERATION_OPTION_NAMES[ $option_key ] )
+				: null;
 			if ( false === $metadata_support ) {
 				$unsupported[] = $option_key;
 			}
@@ -231,7 +203,7 @@ final class Model_Option_Helper {
 		$unsupported = array_values( array_unique( $unsupported ) );
 
 		return [
-			'supported_options'                    => $this->get_supported_option_names( $provider, $model ),
+			'supported_options'                    => null !== $metadata ? $this->get_supported_option_names_from_metadata( $metadata ) : [],
 			'unsupported_generation_options'      => $unsupported,
 			'unsupported_generation_option_labels' => array_map(
 				[ $this, 'get_generation_option_label' ],
@@ -458,5 +430,74 @@ final class Model_Option_Helper {
 	private function get_learned_unsupported_options(): array {
 		$options = get_option( self::UNSUPPORTED_OPTIONS_OPTION, [] );
 		return is_array( $options ) ? $options : [];
+	}
+
+	/**
+	 * Check whether a metadata object supports an option.
+	 *
+	 * @param object $metadata Model metadata.
+	 * @param string $option_name AI client metadata option name.
+	 * @param mixed  $value Optional value to validate.
+	 */
+	private function metadata_object_supports_option( object $metadata, string $option_name, $value = null ): ?bool {
+		if ( ! method_exists( $metadata, 'getSupportedOptions' ) ) {
+			return null;
+		}
+
+		$supported_options = $metadata->getSupportedOptions();
+		if ( ! is_array( $supported_options ) ) {
+			return null;
+		}
+
+		$normalized_target = $this->normalize_metadata_option_name( $option_name );
+		foreach ( $supported_options as $supported_option ) {
+			if ( ! is_object( $supported_option ) || ! method_exists( $supported_option, 'getName' ) ) {
+				continue;
+			}
+
+			$supported_name = $this->normalize_metadata_option_name( $supported_option->getName() );
+			if ( $normalized_target !== $supported_name ) {
+				continue;
+			}
+
+			if ( null !== $value && method_exists( $supported_option, 'isSupportedValue' ) ) {
+				return (bool) $supported_option->isSupportedValue( $value );
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get supported option names from a metadata object.
+	 *
+	 * @param object $metadata Model metadata.
+	 * @return array<int,string>
+	 */
+	private function get_supported_option_names_from_metadata( object $metadata ): array {
+		if ( ! method_exists( $metadata, 'getSupportedOptions' ) ) {
+			return [];
+		}
+
+		$supported_options = $metadata->getSupportedOptions();
+		if ( ! is_array( $supported_options ) ) {
+			return [];
+		}
+
+		$option_names = [];
+		foreach ( $supported_options as $supported_option ) {
+			if ( ! is_object( $supported_option ) || ! method_exists( $supported_option, 'getName' ) ) {
+				continue;
+			}
+
+			$option_name = $this->get_metadata_option_value( $supported_option->getName() );
+			if ( '' !== $option_name ) {
+				$option_names[] = $option_name;
+			}
+		}
+
+		return array_values( array_unique( $option_names ) );
 	}
 }
