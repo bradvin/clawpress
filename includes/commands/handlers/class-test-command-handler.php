@@ -12,13 +12,13 @@ namespace ClawPress\Commands\Handlers;
 use ClawPress\Commands\Command_Handler;
 use ClawPress\Commands\Command_Request;
 use ClawPress\Commands\Command_Response;
+use ClawPress\Helpers\Model_Option_Helper;
 use ClawPress\Helpers\Provider_Helper;
 use ClawPress\Helpers\Settings_Helper;
 use Throwable;
 use WordPress\AiClient\AiClient;
 use WordPress\AiClient\Providers\Http\DTO\RequestOptions;
 use WordPress\AiClient\Providers\Models\DTO\ModelConfig;
-use WordPress\AiClient\Providers\Models\Enums\OptionEnum;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,14 +41,22 @@ final class Test_Command_Handler implements Command_Handler {
 	private Provider_Helper $provider_helper;
 
 	/**
+	 * Model option helper.
+	 *
+	 * @var Model_Option_Helper
+	 */
+	private Model_Option_Helper $model_option_helper;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Settings_Helper $settings_helper Settings helper.
 	 * @param Provider_Helper $provider_helper Provider helper.
 	 */
 	public function __construct( Settings_Helper $settings_helper, Provider_Helper $provider_helper ) {
-		$this->settings_helper = $settings_helper;
-		$this->provider_helper = $provider_helper;
+		$this->settings_helper     = $settings_helper;
+		$this->provider_helper     = $provider_helper;
+		$this->model_option_helper = Model_Option_Helper::get_instance();
 	}
 
 	/**
@@ -238,33 +246,49 @@ final class Test_Command_Handler implements Command_Handler {
 		RequestOptions $request_options,
 		array $generation_settings
 	): string {
-		$builder = $this->build_prompt_builder(
-			$prompt,
-			$provider,
-			$model,
-			$request_options,
-			$generation_settings,
-			false
-		);
+		$use_explicit_model          = false;
+		$retried_unsupported_options = [];
+		$last_throwable              = null;
 
-		try {
-			return $builder->generateText();
-		} catch ( Throwable $throwable ) {
-			if ( ! $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
-				throw $throwable;
-			}
-
-			$fallback_builder = $this->build_prompt_builder(
+		for ( $attempt = 0; $attempt < 8; $attempt++ ) {
+			$builder = $this->build_prompt_builder(
 				$prompt,
 				$provider,
 				$model,
 				$request_options,
 				$generation_settings,
-				true
+				$use_explicit_model
 			);
 
-			return $fallback_builder->generateText();
+			try {
+				return $builder->generateText();
+			} catch ( Throwable $throwable ) {
+				$last_throwable      = $throwable;
+				$unsupported_option = $this->model_option_helper->record_unsupported_parameter_from_error(
+					$provider,
+					$model,
+					$throwable
+				);
+
+				if ( null !== $unsupported_option && ! in_array( $unsupported_option, $retried_unsupported_options, true ) ) {
+					$retried_unsupported_options[] = $unsupported_option;
+					continue;
+				}
+
+				if ( ! $use_explicit_model && $this->should_retry_with_explicit_model( $throwable, $provider, $model ) ) {
+					$use_explicit_model = true;
+					continue;
+				}
+
+				throw $throwable;
+			}
 		}
+
+		if ( $last_throwable instanceof Throwable ) {
+			throw $last_throwable;
+		}
+
+		throw new \RuntimeException( __( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**
@@ -358,53 +382,12 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @param string $model Model identifier.
 	 */
 	private function detect_tool_call_support( string $provider, string $model ): ?bool {
-		if ( '' === $provider || '' === $model ) {
-			return null;
-		}
-
-		try {
-			$selected_model = AiClient::defaultRegistry()->getProviderModel(
-				$provider,
-				$model,
-				ModelConfig::fromArray( [] )
-			);
-		} catch ( Throwable $throwable ) {
-			unset( $throwable );
-			return null;
-		}
-
-		if ( ! is_object( $selected_model ) || ! method_exists( $selected_model, 'metadata' ) ) {
-			return null;
-		}
-
-		$metadata = $selected_model->metadata();
-		if ( ! is_object( $metadata ) || ! method_exists( $metadata, 'getSupportedOptions' ) ) {
-			return null;
-		}
-
-		$supported_options = $metadata->getSupportedOptions();
-		if ( ! is_array( $supported_options ) ) {
-			return null;
-		}
-
-		foreach ( $supported_options as $supported_option ) {
-			if ( ! is_object( $supported_option ) || ! method_exists( $supported_option, 'getName' ) ) {
-				continue;
-			}
-
-			$option_name = $supported_option->getName();
-			if ( ! $option_name instanceof OptionEnum || ! $option_name->isFunctionDeclarations() ) {
-				continue;
-			}
-
-			if ( method_exists( $supported_option, 'isSupportedValue' ) ) {
-				return (bool) $supported_option->isSupportedValue( true );
-			}
-
-			return true;
-		}
-
-		return false;
+		return $this->model_option_helper->metadata_supports_option(
+			$provider,
+			$model,
+			'functionDeclarations',
+			true
+		);
 	}
 
 	/**
@@ -440,9 +423,6 @@ final class Test_Command_Handler implements Command_Handler {
 	/**
 	 * Apply max output token setting to prompt builder.
 	 *
-	 * Uses `max_output_tokens` for OpenAI model families that reject
-	 * legacy `max_tokens` in the Responses API.
-	 *
 	 * @param object $builder Prompt builder instance.
 	 * @param int    $max_output_tokens Max output tokens.
 	 * @param string $provider Provider identifier.
@@ -450,16 +430,8 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_max_output_tokens( object $builder, int $max_output_tokens, string $provider, string $model ): object {
-		if ( $this->provider_helper->should_use_max_output_tokens( $provider, $model ) && method_exists( $builder, 'usingModelConfig' ) ) {
-			$model_config = ModelConfig::fromArray(
-				[
-					ModelConfig::KEY_CUSTOM_OPTIONS => [
-						'max_output_tokens' => $max_output_tokens,
-					],
-				]
-			);
-
-			return $builder->usingModelConfig( $model_config );
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'max_output_tokens', $max_output_tokens ) ) {
+			return $builder;
 		}
 
 		return $builder->usingMaxTokens( $max_output_tokens );
@@ -475,7 +447,7 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_temperature( object $builder, float $temperature, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_temperature( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'temperature', $temperature ) ) {
 			return $builder;
 		}
 
@@ -492,7 +464,7 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_top_p( object $builder, float $top_p, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_top_p( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'top_p', $top_p ) ) {
 			return $builder;
 		}
 
@@ -509,7 +481,7 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_frequency_penalty( object $builder, float $frequency_penalty, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_frequency_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'frequency_penalty', $frequency_penalty ) ) {
 			return $builder;
 		}
 
@@ -526,7 +498,7 @@ final class Test_Command_Handler implements Command_Handler {
 	 * @return object
 	 */
 	private function apply_presence_penalty( object $builder, float $presence_penalty, string $provider, string $model ): object {
-		if ( ! $this->provider_helper->should_use_presence_penalty( $provider, $model ) ) {
+		if ( ! $this->model_option_helper->supports_generation_option( $provider, $model, 'presence_penalty', $presence_penalty ) ) {
 			return $builder;
 		}
 
