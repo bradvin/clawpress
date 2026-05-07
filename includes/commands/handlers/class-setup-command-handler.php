@@ -1186,7 +1186,7 @@ final class Setup_Command_Handler implements Command_Handler {
 			throw $last_throwable;
 		}
 
-		throw new \RuntimeException( __( 'AI generation failed.', 'clawpress' ) );
+		throw new \RuntimeException( esc_html__( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**

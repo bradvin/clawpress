@@ -1580,11 +1580,11 @@ final class Agent_Loop_Helper {
 	private function generate_result_from_streaming_builder( object $builder ): GenerativeAiResult {
 		$result = $builder->generate_result();
 		if ( is_wp_error( $result ) ) {
-			throw new \RuntimeException( $result->get_error_message() );
+			throw new \RuntimeException( esc_html( $result->get_error_message() ) );
 		}
 
 		if ( ! $result instanceof GenerativeAiResult ) {
-			throw new \RuntimeException( __( 'AI client did not return a generative result.', 'clawpress' ) );
+			throw new \RuntimeException( esc_html__( 'AI client did not return a generative result.', 'clawpress' ) );
 		}
 
 		return $result;
@@ -1669,7 +1669,7 @@ final class Agent_Loop_Helper {
 			throw $last_throwable;
 		}
 
-		throw new \RuntimeException( __( 'AI generation failed.', 'clawpress' ) );
+		throw new \RuntimeException( esc_html__( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**
@@ -1739,7 +1739,7 @@ final class Agent_Loop_Helper {
 			throw $last_throwable;
 		}
 
-		throw new \RuntimeException( __( 'AI generation failed.', 'clawpress' ) );
+		throw new \RuntimeException( esc_html__( 'AI generation failed.', 'clawpress' ) );
 	}
 
 	/**

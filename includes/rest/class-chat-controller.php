@@ -462,6 +462,7 @@ final class Chat_Controller implements Route_Controller {
 	 */
 	private function start_stream_response(): void {
 		ignore_user_abort( true );
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- SSE responses may need to outlive the default request timeout.
 		set_time_limit( 0 );
 
 		while ( ob_get_level() ) {
@@ -476,9 +477,13 @@ final class Chat_Controller implements Route_Controller {
 		header( 'Content-Encoding: identity' );
 		header( 'X-Content-Type-Options: nosniff' );
 
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- SSE responses need server-side compression disabled.
 		@ini_set( 'zlib.output_compression', '0' );
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- SSE responses need server-side buffering disabled.
 		@ini_set( 'output_buffering', '0' );
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- SSE responses need immediate flushing.
 		@ini_set( 'implicit_flush', '1' );
+		// phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- SSE responses should avoid configured output handlers.
 		@ini_set( 'output_handler', '' );
 
 		if ( function_exists( 'apache_setenv' ) ) {
@@ -490,7 +495,7 @@ final class Chat_Controller implements Route_Controller {
 			@ob_implicit_flush( true );
 		}
 
-		echo ':' . str_repeat( ' ', 4096 ) . "\n\n";
+		echo esc_html( ':' . str_repeat( ' ', 4096 ) . "\n\n" );
 		flush();
 	}
 
@@ -501,6 +506,7 @@ final class Chat_Controller implements Route_Controller {
 	 * @param array<string,mixed>  $payload Event payload.
 	 */
 	private static function send_stream_frame( string $type, array $payload ): void {
+		$type  = self::sanitize_stream_event_type( $type );
 		$frame = wp_json_encode(
 			[
 				'type'    => $type,
@@ -512,15 +518,30 @@ final class Chat_Controller implements Route_Controller {
 			return;
 		}
 
-		echo "event: {$type}\n";
+		echo esc_html( "event: {$type}\n" );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SSE data is JSON encoded and must remain raw text/event-stream content.
 		echo 'data: ' . $frame . "\n\n";
-		echo ':' . str_repeat( ' ', 2048 ) . "\n\n";
+		echo esc_html( ':' . str_repeat( ' ', 2048 ) . "\n\n" );
 
 		if ( function_exists( 'ob_flush' ) ) {
 			@ob_flush();
 		}
 
 		flush();
+	}
+
+	/**
+	 * Sanitize an SSE event type.
+	 *
+	 * @param string $type Event type.
+	 */
+	private static function sanitize_stream_event_type( string $type ): string {
+		$sanitized = preg_replace( '/[^A-Za-z0-9_.-]/', '', $type );
+		if ( is_string( $sanitized ) && '' !== $sanitized ) {
+			return $sanitized;
+		}
+
+		return 'message';
 	}
 
 	/**
