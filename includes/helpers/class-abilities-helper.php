@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use AgentsAPI\AI\Tools\WP_Agent_Tool_Execution_Core;
+use ClawPress\AgentsAPI\Ability_Tool_Executor;
+use ClawPress\AgentsAPI\Ability_Tool_Source;
 use ClawPress\Security\Security;
 use WordPress\AiClient\Tools\DTO\FunctionDeclaration;
 
@@ -491,6 +494,39 @@ final class Abilities_Helper {
 	 * @return array<string,mixed>
 	 */
 	public function execute_tool_call( string $tool_name, $raw_args = null, array $execution_context = [] ): array {
+		if ( class_exists( WP_Agent_Tool_Execution_Core::class ) ) {
+			$normalized_tool_name = strtolower( trim( $tool_name ) );
+			$args                 = $this->normalize_tool_args( $raw_args );
+			$tools                = ( new Ability_Tool_Source( $this ) )->gather( $execution_context );
+
+			if ( isset( $tools[ $normalized_tool_name ] ) ) {
+				$result = ( new WP_Agent_Tool_Execution_Core() )->executeTool(
+					$normalized_tool_name,
+					$args,
+					$tools,
+					new Ability_Tool_Executor( $this ),
+					$execution_context
+				);
+
+				return $this->unwrap_agents_api_tool_result( $result, $normalized_tool_name );
+			}
+		}
+
+		return $this->execute_clawpress_tool_call( $tool_name, $raw_args, $execution_context );
+	}
+
+	/**
+	 * Execute a ClawPress ability tool call after Agents API mediation.
+	 *
+	 * This remains the product-specific adapter behind
+	 * WP_Agent_Tool_Execution_Core.
+	 *
+	 * @param string              $tool_name Tool name.
+	 * @param mixed               $raw_args Tool arguments.
+	 * @param array<string,mixed> $execution_context Optional execution context.
+	 * @return array<string,mixed>
+	 */
+	public function execute_clawpress_tool_call( string $tool_name, $raw_args = null, array $execution_context = [] ): array {
 		$normalized_tool_name        = strtolower( trim( $tool_name ) );
 		$ability_name                = $this->resolve_ability_name_from_tool_name( $normalized_tool_name );
 		$args                        = $this->normalize_tool_args( $raw_args );
@@ -768,6 +804,36 @@ final class Abilities_Helper {
 		$this->log_tool_call( $normalized_tool_name, $ability_name, $requesting_user_id, $execution_user_id, 'success', $args_hash, $args, $payload, $event_context );
 
 		return $payload;
+	}
+
+	/**
+	 * Convert a normalized Agents API tool result back to the existing ClawPress payload shape.
+	 *
+	 * @param array<string,mixed> $result Normalized Agents API result.
+	 * @param string              $tool_name Requested tool name.
+	 * @return array<string,mixed>
+	 */
+	private function unwrap_agents_api_tool_result( array $result, string $tool_name ): array {
+		if ( isset( $result['metadata']['clawpress_payload'] ) && is_array( $result['metadata']['clawpress_payload'] ) ) {
+			return $result['metadata']['clawpress_payload'];
+		}
+
+		if ( ! empty( $result['success'] ) ) {
+			return [
+				'success' => true,
+				'tool'    => $tool_name,
+				'result'  => $result['result'] ?? [],
+			];
+		}
+
+		return [
+			'success' => false,
+			'error'   => [
+				'code'    => isset( $result['metadata']['error_type'] ) ? (string) $result['metadata']['error_type'] : 'clawpress_tool_execution_failed',
+				'message' => isset( $result['error'] ) ? (string) $result['error'] : __( 'Tool execution failed.', 'clawpress' ),
+			],
+			'tool'    => $tool_name,
+		];
 	}
 
 	/**

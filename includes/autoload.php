@@ -22,6 +22,7 @@ if ( ! function_exists( __NAMESPACE__ . '\clawpress_autoload_slug' ) ) {
 
 		$directory_map = [
 			'adminpage' => 'admin-page',
+			'agentsapi' => 'agents-api',
 			'builtin'   => 'built-in',
 			'posttypes' => 'post-types',
 			'restapi'   => 'rest',

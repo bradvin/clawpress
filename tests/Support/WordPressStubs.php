@@ -243,6 +243,13 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'esc_html__' ) ) {
+		function esc_html__( string $text, ?string $domain = null ): string {
+			unset( $domain );
+			return $text;
+		}
+	}
+
 	if ( ! function_exists( 'sanitize_text_field' ) ) {
 		function sanitize_text_field( $text ): string {
 			return trim( (string) $text );

@@ -11,6 +11,7 @@ namespace ClawPress;
 
 use ClawPress\Abilities\Abilities;
 use ClawPress\AdminPage\Admin_Page;
+use ClawPress\AgentsAPI\Agents_API;
 use ClawPress\Heartbeat\Heartbeat;
 use ClawPress\Helpers\Action_Log_Helper;
 use ClawPress\Helpers\Panel_Helper;
@@ -42,6 +43,7 @@ final class Plugin {
 	private function __construct() {
 		Action_Log_Helper::register_tool_call_logging_hook();
 
+		new Agents_API();
 		new Post_Types();
 		new Abilities();
 		new Rest_API();

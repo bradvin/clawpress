@@ -145,6 +145,20 @@ final class Context_Helper {
 	}
 
 	/**
+	 * Build context from bootstrap agent files.
+	 */
+	public function build_agent_files_context(): string {
+		return $this->load_bootstrap_files();
+	}
+
+	/**
+	 * Build memory context text.
+	 */
+	public function build_memory_context(): string {
+		return $this->get_memory_context();
+	}
+
+	/**
 	 * Build normalized prompt messages with system prompt + history + current message.
 	 *
 	 * @param array<int,array<string,mixed>> $history Previous history messages.

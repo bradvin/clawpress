@@ -72,6 +72,78 @@ if ( ! function_exists( 'clawpress_render_minimum_wp_version_notice' ) ) {
 	}
 }
 
+if ( ! function_exists( 'clawpress_is_agents_api_available' ) ) {
+	/**
+	 * Check whether the Agents API substrate is loaded.
+	 */
+	function clawpress_is_agents_api_available(): bool {
+		return defined( 'AGENTS_API_LOADED' )
+			&& function_exists( 'wp_register_agent' )
+			&& class_exists( '\AgentsAPI\AI\WP_Agent_Conversation_Loop' );
+	}
+}
+
+if ( ! function_exists( 'clawpress_get_agents_api_candidates' ) ) {
+	/**
+	 * Return local Agents API bootstrap candidates.
+	 *
+	 * @return array<int,string>
+	 */
+	function clawpress_get_agents_api_candidates(): array {
+		$candidates = [
+			CLAWPRESS_DIR . 'vendor/automattic/agents-api/agents-api.php',
+			dirname( CLAWPRESS_DIR ) . '/agents-api/agents-api.php',
+		];
+
+		/**
+		 * Filters local Agents API bootstrap candidates.
+		 *
+		 * @param array<int,string> $candidates Candidate absolute file paths.
+		 */
+		$filtered = apply_filters( 'clawpress_agents_api_bootstrap_candidates', $candidates );
+
+		return is_array( $filtered )
+			? array_values( array_filter( array_map( 'strval', $filtered ) ) )
+			: $candidates;
+	}
+}
+
+if ( ! function_exists( 'clawpress_load_agents_api' ) ) {
+	/**
+	 * Load the Agents API substrate when it is installed alongside ClawPress.
+	 */
+	function clawpress_load_agents_api(): bool {
+		if ( clawpress_is_agents_api_available() ) {
+			return true;
+		}
+
+		foreach ( clawpress_get_agents_api_candidates() as $candidate ) {
+			if ( is_readable( $candidate ) ) {
+				require_once $candidate;
+				break;
+			}
+		}
+
+		return clawpress_is_agents_api_available();
+	}
+}
+
+if ( ! function_exists( 'clawpress_render_agents_api_missing_notice' ) ) {
+	/**
+	 * Render an admin notice when Agents API is unavailable.
+	 */
+	function clawpress_render_agents_api_missing_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-error"><p>%s</p></div>',
+			esc_html__( 'ClawPress requires the Agents API plugin to be installed and active.', 'clawpress' )
+		);
+	}
+}
+
 if ( ! function_exists( 'clawpress_sanitize_int' ) ) {
 	/**
 	 * Sanitize an integer value.

@@ -5,6 +5,7 @@
  * Version: 0.0.3
  * Requires PHP: 8.1
  * Requires at least: 7.0
+ * Requires Plugins: agents-api
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: clawpress
@@ -28,6 +29,11 @@ require_once CLAWPRESS_DIR . 'includes/functions.php';
 
 if ( ! clawpress_is_supported_wp_version() ) {
 	add_action( 'admin_notices', 'clawpress_render_minimum_wp_version_notice' );
+	return;
+}
+
+if ( ! clawpress_load_agents_api() ) {
+	add_action( 'admin_notices', 'clawpress_render_agents_api_missing_notice' );
 	return;
 }
 
