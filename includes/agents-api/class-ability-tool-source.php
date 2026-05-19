@@ -40,8 +40,6 @@ final class Ability_Tool_Source {
 	 * @return array<string,array<string,mixed>>
 	 */
 	public function gather( array $context = [] ): array {
-		unset( $context );
-
 		$state = $this->abilities_helper->get_ability_settings_state();
 		if ( ! isset( $state['abilities'] ) || ! is_array( $state['abilities'] ) ) {
 			return [];
@@ -63,7 +61,7 @@ final class Ability_Tool_Source {
 				continue;
 			}
 
-			$declaration = $this->build_tool_declaration( $ability_name, $ability, $ability_state );
+			$declaration            = $this->build_tool_declaration( $ability_name, $ability, $ability_state, $context );
 			$tools[ $ability_name ] = $declaration;
 
 			$tool_alias = isset( $ability_state['tool_name'] ) ? strtolower( trim( (string) $ability_state['tool_name'] ) ) : '';
@@ -73,7 +71,7 @@ final class Ability_Tool_Source {
 			}
 		}
 
-		return $tools;
+		return $this->apply_tool_policy( $tools, $context );
 	}
 
 	/**
@@ -82,9 +80,10 @@ final class Ability_Tool_Source {
 	 * @param string              $ability_name Ability ID.
 	 * @param \WP_Ability         $ability Ability object.
 	 * @param array<string,mixed> $ability_state UI/settings state.
+	 * @param array<string,mixed> $context Runtime context.
 	 * @return array<string,mixed>
 	 */
-	private function build_tool_declaration( string $ability_name, \WP_Ability $ability, array $ability_state ): array {
+	private function build_tool_declaration( string $ability_name, \WP_Ability $ability, array $ability_state, array $context ): array {
 		$annotations  = isset( $ability_state['annotations'] ) && is_array( $ability_state['annotations'] ) ? $ability_state['annotations'] : [];
 		$safety_class = isset( $ability_state['safety_class'] ) ? (string) $ability_state['safety_class'] : 'write';
 		$category     = isset( $ability_state['category']['slug'] ) ? (string) $ability_state['category']['slug'] : 'clawpress';
@@ -98,22 +97,89 @@ final class Ability_Tool_Source {
 						$safety_class,
 						! empty( $annotations['readonly'] ) ? 'read' : '',
 						! empty( $annotations['destructive'] ) ? 'destructive' : '',
+						! empty( $annotations['network'] ) ? 'network' : '',
 					]
 				)
 			)
 		);
 
-		return [
+		$declaration = [
 			'name'          => $ability_name,
 			'source'        => 'clawpress',
 			'description'   => (string) $ability->get_description(),
 			'parameters'    => $this->normalize_parameters( $ability->get_input_schema() ),
 			'ability'       => $ability_name,
 			'categories'    => $categories,
+			'safety_class'  => $safety_class,
 			'modes'         => [ 'chat', 'pipeline', 'system' ],
 			'action_policy' => 'destructive' === $safety_class ? 'preview' : 'direct',
 			'annotations'   => $annotations,
 		];
+
+		$declaration['action_policy'] = $this->resolve_action_policy( $ability_name, $declaration, $context );
+
+		return $declaration;
+	}
+
+	/**
+	 * Apply Agents API tool visibility policy to gathered tools.
+	 *
+	 * @param array<string,array<string,mixed>> $tools Tool declarations.
+	 * @param array<string,mixed>               $context Runtime context.
+	 * @return array<string,array<string,mixed>>
+	 */
+	private function apply_tool_policy( array $tools, array $context ): array {
+		if (
+			[] === $tools
+			|| ! class_exists( '\WP_Agent_Tool_Policy' )
+			|| ! interface_exists( '\WP_Agent_Tool_Access_Policy' )
+			|| ! interface_exists( '\WP_Agent_Action_Policy_Provider' )
+		) {
+			return $tools;
+		}
+
+		$context['tool_policy_providers'] = $this->append_policy_provider(
+			isset( $context['tool_policy_providers'] ) && is_array( $context['tool_policy_providers'] )
+				? $context['tool_policy_providers']
+				: []
+		);
+
+		return ( new \WP_Agent_Tool_Policy() )->resolve( $tools, $context );
+	}
+
+	/**
+	 * Resolve the canonical Agents API action policy for one declaration.
+	 *
+	 * @param string              $tool_name Tool name.
+	 * @param array<string,mixed> $declaration Tool declaration.
+	 * @param array<string,mixed> $context Runtime context.
+	 */
+	private function resolve_action_policy( string $tool_name, array $declaration, array $context ): string {
+		if ( ! class_exists( '\WP_Agent_Action_Policy_Resolver' ) || ! interface_exists( '\WP_Agent_Action_Policy_Provider' ) ) {
+			return isset( $declaration['action_policy'] ) ? (string) $declaration['action_policy'] : 'direct';
+		}
+
+		$context['tool_name']               = $tool_name;
+		$context['tool_def']                = $declaration;
+		$context['action_policy_providers'] = $this->append_policy_provider(
+			isset( $context['action_policy_providers'] ) && is_array( $context['action_policy_providers'] )
+				? $context['action_policy_providers']
+				: []
+		);
+
+		$resolved = ( new \WP_Agent_Action_Policy_Resolver() )->resolve_for_tool( $context );
+		return is_string( $resolved ) && '' !== trim( $resolved ) ? $resolved : 'direct';
+	}
+
+	/**
+	 * Append the ClawPress runtime policy provider when the contract is available.
+	 *
+	 * @param array<int,mixed> $providers Existing providers.
+	 * @return array<int,mixed>
+	 */
+	private function append_policy_provider( array $providers ): array {
+		$providers[] = new Runtime_Tool_Policy();
+		return $providers;
 	}
 
 	/**

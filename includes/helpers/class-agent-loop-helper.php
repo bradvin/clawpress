@@ -412,7 +412,6 @@ final class Agent_Loop_Helper {
 					$request_timeout,
 					$generation_settings,
 					$history_messages,
-					$tool_declarations,
 					$provider,
 					$model,
 					$runtime_policy,
@@ -724,7 +723,6 @@ final class Agent_Loop_Helper {
 	 * @param int                            $request_timeout Request timeout in seconds.
 	 * @param array<string,mixed>            $generation_settings Generation settings.
 	 * @param array<int,Message>             $history_messages Prior conversation messages.
-	 * @param array<int,FunctionDeclaration> $tool_declarations Provider-facing tool declarations.
 	 * @param string                         $provider Provider identifier.
 	 * @param string                         $model Model identifier.
 	 * @param array<string,mixed>            $runtime_policy Runtime policy.
@@ -743,7 +741,6 @@ final class Agent_Loop_Helper {
 		int $request_timeout,
 		array $generation_settings,
 		array $history_messages,
-		array $tool_declarations,
 		string $provider,
 		string $model,
 		array $runtime_policy,
@@ -776,6 +773,7 @@ final class Agent_Loop_Helper {
 				'confirmation_scope'  => 'batch',
 			]
 		);
+		$provider_tool_declarations = $this->build_function_declarations_from_agents_api_tools( $agents_api_tools );
 		$synced_tool_call_ids    = [];
 		$latest_assistant_text   = '';
 		$latest_context_usage    = null;
@@ -791,7 +789,7 @@ final class Agent_Loop_Helper {
 			$system_prompt,
 			$request_timeout,
 			$generation_settings,
-			$tool_declarations,
+			$provider_tool_declarations,
 			$stream_generation_args,
 			$event_sink
 		): array {
@@ -1788,6 +1786,34 @@ final class Agent_Loop_Helper {
 			if ( $declaration instanceof FunctionDeclaration ) {
 				$declarations[] = $this->abilities_helper->normalize_function_declaration( $declaration );
 			}
+		}
+
+		return $declarations;
+	}
+
+	/**
+	 * Build provider-facing function declarations from Agents API tools.
+	 *
+	 * @param array<string,array<string,mixed>> $tools Agents API tool declarations.
+	 * @return array<int,FunctionDeclaration>
+	 */
+	private function build_function_declarations_from_agents_api_tools( array $tools ): array {
+		$declarations = [];
+
+		foreach ( $tools as $tool_name => $tool_definition ) {
+			if ( ! is_string( $tool_name ) || '' === trim( $tool_name ) || false !== strpos( $tool_name, '/' ) || ! is_array( $tool_definition ) ) {
+				continue;
+			}
+
+			$declarations[] = $this->abilities_helper->normalize_function_declaration(
+				new FunctionDeclaration(
+					strtolower( trim( $tool_name ) ),
+					isset( $tool_definition['description'] ) ? (string) $tool_definition['description'] : '',
+					isset( $tool_definition['parameters'] ) && is_array( $tool_definition['parameters'] )
+						? $tool_definition['parameters']
+						: null
+				)
+			);
 		}
 
 		return $declarations;

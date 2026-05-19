@@ -1041,6 +1041,7 @@ final class Abilities_Helper {
 			'readonly'    => true === ( $annotations['readonly'] ?? false ),
 			'destructive' => true === ( $annotations['destructive'] ?? false ),
 			'idempotent'  => true === ( $annotations['idempotent'] ?? false ),
+			'network'     => true === ( $annotations['network'] ?? false ),
 		];
 	}
 
