@@ -49,6 +49,13 @@ final class Agents_API {
 	private ?Memory_Store $memory_store = null;
 
 	/**
+	 * Canonical agents/chat handler adapter.
+	 *
+	 * @var ?Chat_Handler
+	 */
+	private ?Chat_Handler $chat_handler = null;
+
+	/**
 	 * Register integration hooks.
 	 */
 	public function __construct() {
@@ -63,6 +70,7 @@ final class Agents_API {
 		add_filter( 'agents_api_tool_sources', [ $this, 'register_tool_sources' ], 10, 3 );
 		add_filter( 'wp_agent_conversation_store', [ $this, 'resolve_conversation_store' ], 10, 2 );
 		add_filter( 'wp_agent_memory_store', [ $this, 'resolve_memory_store' ], 10, 2 );
+		add_filter( 'wp_agent_chat_handler', [ $this, 'resolve_chat_handler' ], 10, 2 );
 	}
 
 	/**
@@ -271,6 +279,26 @@ final class Agents_API {
 	}
 
 	/**
+	 * Resolve the canonical agents/chat handler for the bundled ClawPress agent.
+	 *
+	 * @param mixed               $handler Existing handler.
+	 * @param array<string,mixed> $input Canonical agents/chat input.
+	 * @return mixed
+	 */
+	public function resolve_chat_handler( $handler, array $input ) {
+		if ( is_callable( $handler ) ) {
+			return $handler;
+		}
+
+		$agent = isset( $input['agent'] ) ? sanitize_key( (string) $input['agent'] ) : '';
+		if ( self::AGENT_SLUG !== $agent ) {
+			return $handler;
+		}
+
+		return [ $this->get_chat_handler(), 'handle' ];
+	}
+
+	/**
 	 * Get the ability tool source adapter.
 	 */
 	private function get_tool_source(): Ability_Tool_Source {
@@ -301,5 +329,16 @@ final class Agents_API {
 		}
 
 		return $this->memory_store;
+	}
+
+	/**
+	 * Get the canonical agents/chat handler adapter.
+	 */
+	private function get_chat_handler(): Chat_Handler {
+		if ( null === $this->chat_handler ) {
+			$this->chat_handler = new Chat_Handler();
+		}
+
+		return $this->chat_handler;
 	}
 }

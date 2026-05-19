@@ -289,6 +289,14 @@ final class Chat_Helper {
 				'suggestions' => $this->get_online_suggestions( $reply, $provider, $model ),
 			];
 
+			if ( $run_id > 0 ) {
+				$payload['run_id'] = $run_id;
+			}
+
+			if ( $session_id > 0 ) {
+				$payload['session_id'] = $session_id;
+			}
+
 			if ( null !== $card ) {
 				$payload['card'] = $card;
 			}
