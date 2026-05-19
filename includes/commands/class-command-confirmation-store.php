@@ -31,6 +31,11 @@ final class Command_Confirmation_Store {
 	private const TOOL_BATCH_PENDING_ACTION_KIND = 'clawpress.tool_batch';
 
 	/**
+	 * Agents API pending-action kind for command confirmation tokens.
+	 */
+	private const COMMAND_PENDING_ACTION_KIND = 'clawpress.command_confirmation';
+
+	/**
 	 * Confirmation token TTL in seconds.
 	 */
 	private const TOKEN_TTL = 300;
@@ -49,6 +54,15 @@ final class Command_Confirmation_Store {
 			'expires_at' => time() + self::TOKEN_TTL,
 		];
 
+		$this->clear_confirmation( $user_id );
+
+		if ( $this->store_command_confirmation_pending_action( $record, $user_id ) ) {
+			return [
+				'token'      => $record['token'],
+				'expires_at' => $record['expires_at'],
+			];
+		}
+
 		update_option( $this->get_option_key( $user_id ), $record );
 
 		return [
@@ -65,34 +79,21 @@ final class Command_Confirmation_Store {
 	 * @param int|null    $user_id User ID.
 	 */
 	public function consume_confirmation( string $action, ?string $token, ?int $user_id = null ): bool {
-		$record = get_option( $this->get_option_key( $user_id ), [] );
+		$pending_action_result = $this->consume_command_confirmation_pending_action( $action, $token, $user_id );
+		if ( null !== $pending_action_result ) {
+			return $pending_action_result;
+		}
+
+		$record = $this->normalize_confirmation_record(
+			get_option( $this->get_option_key( $user_id ), [] )
+		);
 		$this->clear_confirmation( $user_id );
 
-		if ( ! is_array( $record ) ) {
+		if ( null === $record ) {
 			return false;
 		}
 
-		if ( ! isset( $record['action'], $record['token'], $record['expires_at'] ) ) {
-			return false;
-		}
-
-		if ( ! is_string( $record['action'] ) || ! is_string( $record['token'] ) || ! is_numeric( $record['expires_at'] ) ) {
-			return false;
-		}
-
-		if ( $action !== $record['action'] ) {
-			return false;
-		}
-
-		if ( (int) $record['expires_at'] < time() ) {
-			return false;
-		}
-
-		if ( null === $token || '' === trim( $token ) ) {
-			return false;
-		}
-
-		return hash_equals( $record['token'], trim( $token ) );
+		return $this->is_confirmation_record_valid( $record, $action, $token );
 	}
 
 	/**
@@ -199,6 +200,14 @@ final class Command_Confirmation_Store {
 	 * @param int|null $user_id User ID.
 	 */
 	private function clear_confirmation( ?int $user_id = null ): void {
+		$pending_action_record = $this->get_command_confirmation_from_pending_action_store( $user_id );
+		if ( null !== $pending_action_record ) {
+			$store = $this->get_pending_action_store();
+			if ( is_object( $store ) ) {
+				$store->delete( $pending_action_record['token'] );
+			}
+		}
+
 		update_option( $this->get_option_key( $user_id ), [] );
 	}
 
@@ -220,6 +229,172 @@ final class Command_Confirmation_Store {
 	private function get_tool_batch_option_key( ?int $user_id = null ): string {
 		$resolved_user_id = null === $user_id ? get_current_user_id() : $user_id;
 		return self::TOOL_BATCH_OPTION_PREFIX . (int) $resolved_user_id;
+	}
+
+	/**
+	 * Store a command confirmation token through Agents API pending actions when available.
+	 *
+	 * @param array{action:string,token:string,expires_at:int} $record Confirmation record.
+	 * @param int|null $user_id User ID.
+	 */
+	private function store_command_confirmation_pending_action( array $record, ?int $user_id = null ): bool {
+		$store = $this->get_pending_action_store();
+		if ( ! is_object( $store ) || ! class_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action' ) ) {
+			return false;
+		}
+
+		try {
+			$action = \AgentsAPI\AI\Approvals\WP_Agent_Pending_Action::from_array(
+				[
+					'action_id'   => $record['token'],
+					'kind'        => self::COMMAND_PENDING_ACTION_KIND,
+					'summary'     => sprintf(
+						/* translators: %s: command/action identifier requiring confirmation. */
+						__( 'Confirm destructive command action: %s', 'clawpress' ),
+						$record['action']
+					),
+					'preview'     => [
+						'action' => $record['action'],
+					],
+					'apply_input' => $record,
+					'agent'       => 'clawpress',
+					'creator'     => $this->get_pending_action_creator( $user_id ),
+					'created_at'  => gmdate( 'c' ),
+					'expires_at'  => gmdate( 'c', $record['expires_at'] ),
+					'metadata'    => [
+						'source'  => 'clawpress_command_confirmation',
+						'user_id' => $this->resolve_user_id( $user_id ),
+					],
+				]
+			);
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+
+		return (bool) $store->store( $action );
+	}
+
+	/**
+	 * Consume a command confirmation token through Agents API pending actions.
+	 *
+	 * @param string      $action Action identifier.
+	 * @param string|null $token Token value.
+	 * @param int|null    $user_id User ID.
+	 */
+	private function consume_command_confirmation_pending_action( string $action, ?string $token, ?int $user_id = null ): ?bool {
+		$record = $this->get_command_confirmation_from_pending_action_store( $user_id );
+		if ( null === $record ) {
+			return null;
+		}
+
+		$is_valid = $this->is_confirmation_record_valid( $record, $action, $token );
+		if ( ! $this->record_command_confirmation_resolution( $record, $is_valid, $user_id ) ) {
+			$this->clear_confirmation( $user_id );
+		} else {
+			update_option( $this->get_option_key( $user_id ), [] );
+		}
+
+		return $is_valid;
+	}
+
+	/**
+	 * Resolve active command confirmation through Agents API pending actions.
+	 *
+	 * @param int|null $user_id User ID.
+	 * @return array{action:string,token:string,expires_at:int}|null
+	 */
+	private function get_command_confirmation_from_pending_action_store( ?int $user_id = null ): ?array {
+		$store = $this->get_pending_action_store();
+		if ( ! is_object( $store ) ) {
+			return null;
+		}
+
+		$store->expire();
+
+		$actions = $store->list(
+			[
+				'status'  => 'pending',
+				'kind'    => self::COMMAND_PENDING_ACTION_KIND,
+				'agent'   => 'clawpress',
+				'creator' => $this->get_pending_action_creator( $user_id ),
+				'limit'   => 1,
+			]
+		);
+
+		foreach ( $actions as $pending_action ) {
+			if ( ! is_object( $pending_action ) || ! method_exists( $pending_action, 'to_array' ) ) {
+				continue;
+			}
+
+			$record = $this->normalize_confirmation_record_from_pending_action( $pending_action->to_array() );
+			if ( null !== $record ) {
+				return $record;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Convert one pending action into a command confirmation record.
+	 *
+	 * @param array<string,mixed> $action Pending action payload.
+	 * @return array{action:string,token:string,expires_at:int}|null
+	 */
+	private function normalize_confirmation_record_from_pending_action( array $action ): ?array {
+		$apply_input = isset( $action['apply_input'] ) && is_array( $action['apply_input'] )
+			? $action['apply_input']
+			: [];
+
+		$record = $this->normalize_confirmation_record( $apply_input );
+		if ( null === $record ) {
+			return null;
+		}
+
+		if ( isset( $action['action_id'] ) && is_string( $action['action_id'] ) && '' !== trim( $action['action_id'] ) ) {
+			$record['token'] = trim( sanitize_text_field( $action['action_id'] ) );
+		}
+
+		if ( isset( $action['expires_at'] ) && is_string( $action['expires_at'] ) ) {
+			$expires_at = strtotime( $action['expires_at'] );
+			if ( false !== $expires_at ) {
+				$record['expires_at'] = $expires_at;
+			}
+		}
+
+		return $record;
+	}
+
+	/**
+	 * Record a command confirmation pending-action resolution.
+	 *
+	 * @param array{action:string,token:string,expires_at:int} $record Confirmation record.
+	 * @param bool                                             $accepted Whether the token was accepted.
+	 * @param int|null                                         $user_id User ID.
+	 */
+	private function record_command_confirmation_resolution( array $record, bool $accepted, ?int $user_id = null ): bool {
+		$store = $this->get_pending_action_store();
+		if ( ! is_object( $store ) || ! class_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Approval_Decision' ) ) {
+			return false;
+		}
+
+		$decision = $accepted
+			? \AgentsAPI\AI\Approvals\WP_Agent_Approval_Decision::accepted()
+			: \AgentsAPI\AI\Approvals\WP_Agent_Approval_Decision::rejected();
+
+		return (bool) $store->record_resolution(
+			$record['token'],
+			$decision,
+			$this->get_pending_action_creator( $user_id ),
+			[
+				'action' => $record['action'],
+			],
+			null,
+			[
+				'source' => 'clawpress_command_confirmation',
+			]
+		);
 	}
 
 	/**
@@ -440,6 +615,55 @@ final class Command_Confirmation_Store {
 			'expires_at' => $expires_at,
 			'calls'      => $calls,
 		];
+	}
+
+	/**
+	 * Normalize raw command confirmation record payload.
+	 *
+	 * @param mixed $record Raw record.
+	 * @return array{action:string,token:string,expires_at:int}|null
+	 */
+	private function normalize_confirmation_record( $record ): ?array {
+		if ( ! is_array( $record ) ) {
+			return null;
+		}
+
+		$action     = isset( $record['action'] ) && is_string( $record['action'] ) ? trim( $record['action'] ) : '';
+		$token      = isset( $record['token'] ) && is_string( $record['token'] ) ? trim( $record['token'] ) : '';
+		$expires_at = isset( $record['expires_at'] ) && is_numeric( $record['expires_at'] ) ? (int) $record['expires_at'] : 0;
+
+		if ( '' === $action || '' === $token || $expires_at <= 0 ) {
+			return null;
+		}
+
+		return [
+			'action'     => $action,
+			'token'      => $token,
+			'expires_at' => $expires_at,
+		];
+	}
+
+	/**
+	 * Validate a command confirmation record against a submitted token.
+	 *
+	 * @param array{action:string,token:string,expires_at:int} $record Confirmation record.
+	 * @param string                                           $action Action identifier.
+	 * @param string|null                                      $token Token value.
+	 */
+	private function is_confirmation_record_valid( array $record, string $action, ?string $token ): bool {
+		if ( $action !== $record['action'] ) {
+			return false;
+		}
+
+		if ( $record['expires_at'] < time() ) {
+			return false;
+		}
+
+		if ( null === $token || '' === trim( $token ) ) {
+			return false;
+		}
+
+		return hash_equals( $record['token'], trim( $token ) );
 	}
 
 	/**
