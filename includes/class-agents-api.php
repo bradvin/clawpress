@@ -63,6 +63,13 @@ final class Agents_API {
 	private ?Access_Store $access_store = null;
 
 	/**
+	 * Pending action store/resolver adapter.
+	 *
+	 * @var ?Pending_Action_Store
+	 */
+	private ?Pending_Action_Store $pending_action_store = null;
+
+	/**
 	 * Register integration hooks.
 	 */
 	public function __construct() {
@@ -79,6 +86,8 @@ final class Agents_API {
 		add_filter( 'wp_agent_memory_store', [ $this, 'resolve_memory_store' ], 10, 2 );
 		add_filter( 'wp_agent_chat_handler', [ $this, 'resolve_chat_handler' ], 10, 2 );
 		add_filter( 'wp_agent_access_store', [ $this, 'resolve_access_store' ], 10, 2 );
+		add_filter( 'wp_agent_pending_action_store', [ $this, 'resolve_pending_action_store' ], 10, 2 );
+		add_filter( 'wp_agent_pending_action_resolver', [ $this, 'resolve_pending_action_resolver' ], 10, 2 );
 	}
 
 	/**
@@ -327,6 +336,46 @@ final class Agents_API {
 	}
 
 	/**
+	 * Resolve a pending-action store for Agents API approval helpers.
+	 *
+	 * @param mixed               $store Existing store.
+	 * @param array<string,mixed> $context Request context.
+	 */
+	public function resolve_pending_action_store( $store, array $context ) {
+		if ( interface_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action_Store' ) && $store instanceof \AgentsAPI\AI\Approvals\WP_Agent_Pending_Action_Store ) {
+			return $store;
+		}
+
+		unset( $context );
+
+		if ( ! interface_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action_Store' ) || ! class_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action' ) ) {
+			return $store;
+		}
+
+		return $this->get_pending_action_store();
+	}
+
+	/**
+	 * Resolve a pending-action resolver for Agents API approval helpers.
+	 *
+	 * @param mixed               $resolver Existing resolver.
+	 * @param array<string,mixed> $context Request context.
+	 */
+	public function resolve_pending_action_resolver( $resolver, array $context ) {
+		if ( interface_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action_Resolver' ) && $resolver instanceof \AgentsAPI\AI\Approvals\WP_Agent_Pending_Action_Resolver ) {
+			return $resolver;
+		}
+
+		unset( $context );
+
+		if ( ! interface_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action_Resolver' ) || ! class_exists( '\AgentsAPI\AI\Approvals\WP_Agent_Pending_Action' ) ) {
+			return $resolver;
+		}
+
+		return $this->get_pending_action_store();
+	}
+
+	/**
 	 * Get the ability tool source adapter.
 	 */
 	private function get_tool_source(): Ability_Tool_Source {
@@ -379,5 +428,16 @@ final class Agents_API {
 		}
 
 		return $this->access_store;
+	}
+
+	/**
+	 * Get the pending-action store/resolver adapter.
+	 */
+	private function get_pending_action_store(): Pending_Action_Store {
+		if ( null === $this->pending_action_store ) {
+			$this->pending_action_store = new Pending_Action_Store();
+		}
+
+		return $this->pending_action_store;
 	}
 }
