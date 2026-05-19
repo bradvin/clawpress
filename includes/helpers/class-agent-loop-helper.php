@@ -9,6 +9,11 @@ declare( strict_types=1 );
 
 namespace ClawPress\Helpers;
 
+use AgentsAPI\AI\WP_Agent_Conversation_Loop;
+use AgentsAPI\AI\WP_Agent_Message;
+use ClawPress\AgentsAPI\Ability_Tool_Executor;
+use ClawPress\AgentsAPI\Ability_Tool_Source;
+use ClawPress\AgentsAPI\Confirmation_Completion_Policy;
 use ClawPress\Commands\Command_Confirmation_Store;
 use ClawPress\Transports\Agent_Event_Sink;
 use Throwable;
@@ -391,14 +396,40 @@ final class Agent_Loop_Helper {
 		$max_steps_per_slice = $is_slice ? max( 1, (int) ( $turn_request['max_steps_per_slice'] ?? 1 ) ) : PHP_INT_MAX;
 		$resume_state        = $this->normalize_resume_cursor( $turn_request['resume_cursor'] ?? null );
 		$event_sink             = $event_sink ?? new Agent_Event_Sink();
-		$stream_generation_args = $this->build_stream_generation_args( $turn_request, $event_sink );
+			$stream_generation_args = $this->build_stream_generation_args( $turn_request, $event_sink );
 
-		$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
+			$this->confirmation_store->clear_tool_batch( $requesting_user_id > 0 ? $requesting_user_id : null );
 
-		$conversation = [];
-		if ( isset( $resume_state['conversation'] ) && is_array( $resume_state['conversation'] ) ) {
-			$conversation = $this->restore_conversation( $resume_state['conversation'] );
-		}
+			if (
+				! $is_slice
+				&& class_exists( WP_Agent_Conversation_Loop::class )
+				&& class_exists( WP_Agent_Message::class )
+				&& class_exists( Confirmation_Completion_Policy::class )
+			) {
+				return $this->generate_agents_api_online_reply(
+					$current_message,
+					$system_prompt,
+					$request_timeout,
+					$generation_settings,
+					$history_messages,
+					$tool_declarations,
+					$provider,
+					$model,
+					$runtime_policy,
+					$run_id,
+					$session_id,
+					$requesting_user_id,
+					$execution_user_id,
+					$trigger_type,
+					$event_sink,
+					$stream_generation_args
+				);
+			}
+
+			$conversation = [];
+			if ( isset( $resume_state['conversation'] ) && is_array( $resume_state['conversation'] ) ) {
+				$conversation = $this->restore_conversation( $resume_state['conversation'] );
+			}
 
 		if ( [] === $conversation ) {
 			$conversation = $history_messages;
@@ -683,6 +714,443 @@ final class Agent_Loop_Helper {
 			'context'     => $latest_context_usage,
 			'tool_calls'  => $tool_call_trace,
 		];
+	}
+
+	/**
+	 * Generate an online reply through the shared Agents API conversation loop.
+	 *
+	 * @param string                         $current_message Current user message.
+	 * @param string                         $system_prompt System prompt.
+	 * @param int                            $request_timeout Request timeout in seconds.
+	 * @param array<string,mixed>            $generation_settings Generation settings.
+	 * @param array<int,Message>             $history_messages Prior conversation messages.
+	 * @param array<int,FunctionDeclaration> $tool_declarations Provider-facing tool declarations.
+	 * @param string                         $provider Provider identifier.
+	 * @param string                         $model Model identifier.
+	 * @param array<string,mixed>            $runtime_policy Runtime policy.
+	 * @param int                            $run_id Runtime run ID.
+	 * @param int                            $session_id Runtime session ID.
+	 * @param int                            $requesting_user_id Requesting user ID.
+	 * @param int                            $execution_user_id Execution user ID.
+	 * @param string                         $trigger_type Trigger type.
+	 * @param Agent_Event_Sink               $event_sink Event sink.
+	 * @param array<string,mixed>            $stream_generation_args Streaming generation args.
+	 * @return array<string,mixed>
+	 */
+	private function generate_agents_api_online_reply(
+		string $current_message,
+		string $system_prompt,
+		int $request_timeout,
+		array $generation_settings,
+		array $history_messages,
+		array $tool_declarations,
+		string $provider,
+		string $model,
+		array $runtime_policy,
+		int $run_id,
+		int $session_id,
+		int $requesting_user_id,
+		int $execution_user_id,
+		string $trigger_type,
+		Agent_Event_Sink $event_sink,
+		array $stream_generation_args
+	): array {
+		$conversation = $history_messages;
+		if ( '' !== $current_message ) {
+			$conversation[] = ( new MessageBuilder( $current_message ) )
+				->usingUserRole()
+				->get();
+		}
+
+		$agent_messages          = $this->build_agents_api_messages_from_conversation( $conversation );
+		$tool_source             = new Ability_Tool_Source( $this->abilities_helper );
+		$agents_api_tools        = $tool_source->gather(
+			[
+				'mode'                => 'chat',
+				'run_id'              => $run_id,
+				'session_id'          => $session_id,
+				'requesting_user_id'  => $requesting_user_id,
+				'execution_user_id'   => $execution_user_id,
+				'trigger_type'        => $trigger_type,
+				'runtime_policy'      => $runtime_policy,
+				'confirmation_scope'  => 'batch',
+			]
+		);
+		$synced_tool_call_ids    = [];
+		$latest_assistant_text   = '';
+		$latest_context_usage    = null;
+		$max_tool_rounds         = max( 1, (int) ( $runtime_policy['max_tool_rounds'] ?? 1 ) );
+		$max_tool_call_budget    = $max_tool_rounds * max( 1, (int) ( $runtime_policy['max_tool_calls_per_round'] ?? 1 ) );
+		$turn_runner            = function ( array $messages, array $turn_context ) use (
+			&$conversation,
+			&$synced_tool_call_ids,
+			&$latest_assistant_text,
+			&$latest_context_usage,
+			$provider,
+			$model,
+			$system_prompt,
+			$request_timeout,
+			$generation_settings,
+			$tool_declarations,
+			$stream_generation_args,
+			$event_sink
+		): array {
+			$this->append_agents_api_tool_results_to_conversation( $messages, $conversation, $synced_tool_call_ids );
+
+			$result                = $this->generate_result_with_explicit_model_fallback(
+				$conversation,
+				$provider,
+				$model,
+				$system_prompt,
+				$request_timeout,
+				$generation_settings,
+				$tool_declarations,
+				$stream_generation_args
+			);
+			$assistant_message     = $result->toMessage();
+			$conversation[]        = $assistant_message;
+			$latest_assistant_text = $this->extract_text_from_message( $assistant_message );
+			$latest_context_usage  = $this->extract_context_usage_from_result( $result, $provider, $model );
+			$function_calls        = $this->extract_function_calls( $assistant_message );
+			$turn                  = isset( $turn_context['turn'] ) ? max( 1, (int) $turn_context['turn'] ) : 1;
+
+			$event_sink->emit(
+				[
+					'type'    => 'agent.llm.response',
+					'payload' => [
+						'round'             => $turn,
+						'tool_call_count'   => count( $function_calls ),
+						'assistant_excerpt' => '' !== $latest_assistant_text ? mb_substr( $latest_assistant_text, 0, 300 ) : '',
+					],
+				]
+			);
+
+			return [
+				'messages'   => $messages,
+				'content'    => $latest_assistant_text,
+				'tool_calls' => $this->convert_function_calls_to_agents_api_tool_calls( $function_calls, $turn ),
+				'usage'      => $this->extract_usage_from_result( $result ),
+			];
+		};
+
+		$loop_result = WP_Agent_Conversation_Loop::run(
+			$agent_messages,
+			$turn_runner,
+			[
+				'max_turns'         => $max_tool_rounds,
+				'tool_executor'     => new Ability_Tool_Executor( $this->abilities_helper ),
+				'tool_declarations' => $agents_api_tools,
+				'completion_policy' => new Confirmation_Completion_Policy(),
+				'context'           => [
+					'run_id'             => $run_id,
+					'session_id'         => $session_id,
+					'requesting_user_id' => $requesting_user_id,
+					'execution_user_id'  => $execution_user_id,
+					'confirmation_scope' => 'batch',
+					'trigger_type'       => $trigger_type,
+					'runtime_policy'     => $runtime_policy,
+				],
+				'budgets'           => [
+					'tool_calls' => new \AgentsAPI\AI\WP_Agent_Iteration_Budget( 'tool_calls', $max_tool_call_budget ),
+				],
+				'on_event'          => function ( string $event, array $payload ) use ( $event_sink ): void {
+					$this->emit_agents_api_loop_event( $event, $payload, $event_sink );
+				},
+			]
+		);
+
+		$tool_call_trace    = $this->build_tool_call_trace_from_agents_api_result( $loop_result );
+		$confirmation_batch = $this->build_confirmation_batch_from_tool_trace( $tool_call_trace );
+
+		if ( [] !== $confirmation_batch ) {
+			$issued_batch = $this->confirmation_store->issue_tool_batch(
+				$confirmation_batch,
+				$requesting_user_id > 0 ? $requesting_user_id : null
+			);
+
+			$event_sink->emit(
+				[
+					'type'    => 'agent.confirmation.required',
+					'payload' => [
+						'round'      => count( $loop_result['messages'] ?? [] ),
+						'tool_count' => count( $confirmation_batch ),
+					],
+				]
+			);
+
+			return [
+				'status'      => 'requires_confirmation',
+				'next_action' => 'stop',
+				'reply'       => $latest_assistant_text,
+				'card'        => $this->build_tool_confirmation_card( $issued_batch ),
+				'context'     => $latest_context_usage,
+				'tool_calls'  => $tool_call_trace,
+			];
+		}
+
+		return [
+			'status'      => 'success',
+			'next_action' => 'stop',
+			'reply'       => $latest_assistant_text,
+			'card'        => null,
+			'context'     => $latest_context_usage,
+			'tool_calls'  => $tool_call_trace,
+		];
+	}
+
+	/**
+	 * Build Agents API message envelopes from WP AI Client messages.
+	 *
+	 * @param array<int,Message> $conversation Conversation messages.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function build_agents_api_messages_from_conversation( array $conversation ): array {
+		$messages = [];
+
+		foreach ( $conversation as $message ) {
+			if ( ! $message instanceof Message ) {
+				continue;
+			}
+
+			$content = $this->extract_text_from_message( $message );
+			if ( '' === $content ) {
+				continue;
+			}
+
+			$messages[] = WP_Agent_Message::text( $this->get_agents_api_role_from_message( $message ), $content );
+		}
+
+		return $messages;
+	}
+
+	/**
+	 * Resolve Agents API text role from a WP AI Client message.
+	 */
+	private function get_agents_api_role_from_message( Message $message ): string {
+		$role = strtolower( (string) $message->getRole()->value );
+
+		if ( 'model' === $role ) {
+			return 'assistant';
+		}
+
+		if ( in_array( $role, [ 'system', 'assistant', 'user' ], true ) ) {
+			return $role;
+		}
+
+		return 'user';
+	}
+
+	/**
+	 * Append new Agents API tool results to the provider-facing conversation.
+	 *
+	 * @param array<int,array<string,mixed>> $messages Agents API messages.
+	 * @param array<int,Message>             $conversation Provider-facing conversation.
+	 * @param array<string,bool>             $synced_tool_call_ids Synced tool call IDs.
+	 */
+	private function append_agents_api_tool_results_to_conversation( array $messages, array &$conversation, array &$synced_tool_call_ids ): void {
+		foreach ( $messages as $message ) {
+			if ( ! is_array( $message ) || 'tool_result' !== ( $message['type'] ?? '' ) ) {
+				continue;
+			}
+
+			$payload   = isset( $message['payload'] ) && is_array( $message['payload'] ) ? $message['payload'] : [];
+			$metadata  = isset( $message['metadata'] ) && is_array( $message['metadata'] ) ? $message['metadata'] : [];
+			$tool_name = isset( $payload['tool_name'] ) ? trim( (string) $payload['tool_name'] ) : '';
+			if ( '' === $tool_name ) {
+				continue;
+			}
+
+			$tool_call_id = isset( $payload['tool_call_id'] ) ? trim( (string) $payload['tool_call_id'] ) : '';
+			if ( '' === $tool_call_id && isset( $metadata['tool_call_id'] ) ) {
+				$tool_call_id = trim( (string) $metadata['tool_call_id'] );
+			}
+
+			if ( '' === $tool_call_id ) {
+				$encoded      = wp_json_encode( [ $tool_name, $payload ] );
+				$tool_call_id = 'tool-call-' . md5( false === $encoded ? $tool_name : (string) $encoded );
+			}
+
+			if ( isset( $synced_tool_call_ids[ $tool_call_id ] ) ) {
+				continue;
+			}
+
+			$tool_response_message_builder = new MessageBuilder();
+			$tool_response_message_builder->usingUserRole();
+			$tool_response_message_builder->withFunctionResponse(
+				new FunctionResponse(
+					$tool_call_id,
+					$tool_name,
+					$this->extract_clawpress_payload_from_agents_api_tool_result( $payload )
+				)
+			);
+			$conversation[]                         = $tool_response_message_builder->get();
+			$synced_tool_call_ids[ $tool_call_id ] = true;
+		}
+	}
+
+	/**
+	 * Convert provider function calls to Agents API tool calls.
+	 *
+	 * @param array<int,FunctionCall> $function_calls Function calls.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function convert_function_calls_to_agents_api_tool_calls( array $function_calls, int $turn ): array {
+		$tool_calls = [];
+
+		foreach ( $function_calls as $index => $function_call ) {
+			if ( ! $function_call instanceof FunctionCall ) {
+				continue;
+			}
+
+			$tool_name = trim( (string) $function_call->getName() );
+			if ( '' === $tool_name ) {
+				$tool_name = 'unknown_tool';
+			}
+
+			$tool_call_id = trim( (string) $function_call->getId() );
+			if ( '' === $tool_call_id ) {
+				$tool_call_id = sprintf( 'tool-call-%d-%d', max( 1, $turn ), $index + 1 );
+			}
+
+			$tool_calls[] = [
+				'id'         => $tool_call_id,
+				'name'       => $tool_name,
+				'parameters' => $function_call->getArgs(),
+			];
+		}
+
+		return $tool_calls;
+	}
+
+	/**
+	 * Extract token usage from a model result for Agents API loop observability.
+	 *
+	 * @return array<string,int>
+	 */
+	private function extract_usage_from_result( GenerativeAiResult $result ): array {
+		$token_usage = $result->getTokenUsage();
+
+		return [
+			'prompt_tokens'     => max( 0, (int) $token_usage->getPromptTokens() ),
+			'completion_tokens' => max( 0, (int) $token_usage->getCompletionTokens() ),
+			'total_tokens'      => max( 0, (int) $token_usage->getTotalTokens() ),
+		];
+	}
+
+	/**
+	 * Mirror selected Agents API loop events to the ClawPress event stream.
+	 */
+	private function emit_agents_api_loop_event( string $event, array $payload, Agent_Event_Sink $event_sink ): void {
+		if ( 'tool_result' !== $event ) {
+			return;
+		}
+
+		$event_sink->emit(
+			[
+				'type'    => 'agent.tool_call',
+				'payload' => [
+					'round'     => isset( $payload['turn'] ) ? max( 1, (int) $payload['turn'] ) : 1,
+					'tool_name' => isset( $payload['tool_name'] ) ? strtolower( trim( (string) $payload['tool_name'] ) ) : '',
+					'status'    => ! empty( $payload['success'] ) ? 'success' : 'error',
+				],
+			]
+		);
+	}
+
+	/**
+	 * Build ClawPress tool-call trace rows from Agents API loop results.
+	 *
+	 * @param array<string,mixed> $loop_result Agents API loop result.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function build_tool_call_trace_from_agents_api_result( array $loop_result ): array {
+		$tool_execution_results = isset( $loop_result['tool_execution_results'] ) && is_array( $loop_result['tool_execution_results'] )
+			? $loop_result['tool_execution_results']
+			: [];
+		$trace                  = [];
+		$sequence_by_round      = [];
+
+		foreach ( $tool_execution_results as $index => $tool_execution_result ) {
+			if ( ! is_array( $tool_execution_result ) ) {
+				continue;
+			}
+
+			$tool_name = isset( $tool_execution_result['tool_name'] ) ? (string) $tool_execution_result['tool_name'] : '';
+			$round     = isset( $tool_execution_result['turn_count'] ) ? max( 1, (int) $tool_execution_result['turn_count'] ) : 1;
+			$sequence_by_round[ $round ] = isset( $sequence_by_round[ $round ] ) ? $sequence_by_round[ $round ] + 1 : 1;
+			$tool_result = isset( $tool_execution_result['result'] ) && is_array( $tool_execution_result['result'] )
+				? $this->extract_clawpress_payload_from_agents_api_tool_result( $tool_execution_result['result'] )
+				: $this->extract_clawpress_payload_from_agents_api_tool_result( [] );
+			$args        = isset( $tool_execution_result['parameters'] ) ? $tool_execution_result['parameters'] : [];
+
+			$trace[] = $this->build_tool_call_trace_entry(
+				$tool_name,
+				$args,
+				$tool_result,
+				$round,
+				$sequence_by_round[ $round ] > 0 ? $sequence_by_round[ $round ] : $index + 1
+			);
+		}
+
+		return $trace;
+	}
+
+	/**
+	 * Extract the ClawPress tool payload nested inside an Agents API result.
+	 *
+	 * @param array<string,mixed> $tool_result Agents API tool result.
+	 * @return array<string,mixed>
+	 */
+	private function extract_clawpress_payload_from_agents_api_tool_result( array $tool_result ): array {
+		if ( isset( $tool_result['metadata']['clawpress_payload'] ) && is_array( $tool_result['metadata']['clawpress_payload'] ) ) {
+			return $tool_result['metadata']['clawpress_payload'];
+		}
+
+		if ( ! empty( $tool_result['success'] ) && isset( $tool_result['result'] ) && is_array( $tool_result['result'] ) ) {
+			return $tool_result['result'];
+		}
+
+		$error_message = isset( $tool_result['error'] ) ? trim( (string) $tool_result['error'] ) : '';
+
+		return [
+			'success'               => false,
+			'requires_confirmation' => false,
+			'ability'               => '',
+			'result'                => [],
+			'error'                 => [
+				'code'    => 'agents_api_tool_error',
+				'message' => '' !== $error_message ? $error_message : __( 'Tool execution failed.', 'clawpress' ),
+			],
+		];
+	}
+
+	/**
+	 * Build confirmation store rows from trace entries.
+	 *
+	 * @param array<int,array<string,mixed>> $tool_call_trace Tool call trace rows.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function build_confirmation_batch_from_tool_trace( array $tool_call_trace ): array {
+		$batch = [];
+
+		foreach ( $tool_call_trace as $trace ) {
+			if ( empty( $trace['requires_confirmation'] ) ) {
+				continue;
+			}
+
+			$tool_name = isset( $trace['name'] ) ? strtolower( trim( (string) $trace['name'] ) ) : '';
+			if ( '' === $tool_name ) {
+				continue;
+			}
+
+			$batch[] = [
+				'tool_name'    => $tool_name,
+				'ability_name' => isset( $trace['ability'] ) ? (string) $trace['ability'] : '',
+				'args'         => isset( $trace['args'] ) ? $this->normalize_tool_args_for_prompt( $trace['args'] ) : [],
+			];
+		}
+
+		return $batch;
 	}
 
 	/**
