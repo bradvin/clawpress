@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\AgentsAPI;
 
+use AgentsAPI\Core\Database\Chat\WP_Agent_Conversation_Lock;
 use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Session_Reader;
 use AgentsAPI\Core\Workspace\WP_Agent_Workspace_Scope;
 
@@ -17,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Option-backed transcript store for Agents API generic conversation sessions.
  */
-final class Conversation_Store implements WP_Agent_Principal_Conversation_Session_Reader {
+final class Conversation_Store implements WP_Agent_Principal_Conversation_Session_Reader, WP_Agent_Conversation_Lock {
 	/**
 	 * Option key used for generic Agents API transcripts.
 	 */
@@ -73,6 +74,8 @@ final class Conversation_Store implements WP_Agent_Principal_Conversation_Sessio
 			'updated_at'           => $now,
 			'last_read_at'         => null,
 			'expires_at'           => null,
+			'lock_token'           => null,
+			'lock_expires_at'      => null,
 		];
 
 		$this->write_sessions( $sessions );
@@ -197,6 +200,55 @@ final class Conversation_Store implements WP_Agent_Principal_Conversation_Sessio
 		$sessions[ $session_id ]['model']                = sanitize_text_field( $model );
 		$sessions[ $session_id ]['provider_response_id'] = null === $provider_response_id ? null : sanitize_text_field( $provider_response_id );
 		$sessions[ $session_id ]['updated_at']           = $this->now();
+
+		$this->write_sessions( $sessions );
+
+		return true;
+	}
+
+	/**
+	 * Acquire an advisory single-writer lock for a transcript session.
+	 */
+	public function acquire_session_lock( string $session_id, int $ttl_seconds = 300 ): ?string {
+		$sessions = $this->read_sessions();
+		if ( ! isset( $sessions[ $session_id ] ) || ! is_array( $sessions[ $session_id ] ) ) {
+			return null;
+		}
+
+		$now             = time();
+		$current_token   = isset( $sessions[ $session_id ]['lock_token'] ) ? trim( (string) $sessions[ $session_id ]['lock_token'] ) : '';
+		$current_expires = isset( $sessions[ $session_id ]['lock_expires_at'] )
+			? strtotime( (string) $sessions[ $session_id ]['lock_expires_at'] )
+			: false;
+
+		if ( '' !== $current_token && false !== $current_expires && $current_expires > $now ) {
+			return null;
+		}
+
+		$lock_token                                 = hash( 'sha256', uniqid( $session_id . ':', true ) );
+		$sessions[ $session_id ]['lock_token']      = $lock_token;
+		$sessions[ $session_id ]['lock_expires_at'] = gmdate( 'c', $now + max( 1, $ttl_seconds ) );
+
+		$this->write_sessions( $sessions );
+
+		return $lock_token;
+	}
+
+	/**
+	 * Release a previously acquired transcript lock.
+	 */
+	public function release_session_lock( string $session_id, string $lock_token ): bool {
+		$sessions = $this->read_sessions();
+		if ( ! isset( $sessions[ $session_id ] ) || ! is_array( $sessions[ $session_id ] ) ) {
+			return false;
+		}
+
+		if ( trim( (string) ( $sessions[ $session_id ]['lock_token'] ?? '' ) ) !== trim( $lock_token ) ) {
+			return false;
+		}
+
+		$sessions[ $session_id ]['lock_token']      = null;
+		$sessions[ $session_id ]['lock_expires_at'] = null;
 
 		$this->write_sessions( $sessions );
 

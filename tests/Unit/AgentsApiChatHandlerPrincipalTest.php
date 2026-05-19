@@ -114,6 +114,14 @@ namespace AgentsAPI\Core\Database\Chat {
 		}
 	}
 
+	if ( ! interface_exists( WP_Agent_Conversation_Lock::class ) ) {
+		interface WP_Agent_Conversation_Lock {
+			public function acquire_session_lock( string $session_id, int $ttl_seconds = 300 ): ?string;
+
+			public function release_session_lock( string $session_id, string $lock_token ): bool;
+		}
+	}
+
 	if ( ! class_exists( WP_Agent_Conversation_Sessions::class ) ) {
 		final class WP_Agent_Conversation_Sessions {
 			/** @var object|null */

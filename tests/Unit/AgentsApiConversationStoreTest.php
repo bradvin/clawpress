@@ -58,10 +58,19 @@ namespace AgentsAPI\Core\Database\Chat {
 			public function get_session_for_owner( WP_Agent_Workspace_Scope $workspace, array $owner, string $session_id ): ?array;
 		}
 	}
+
+	if ( ! interface_exists( WP_Agent_Conversation_Lock::class ) ) {
+		interface WP_Agent_Conversation_Lock {
+			public function acquire_session_lock( string $session_id, int $ttl_seconds = 300 ): ?string;
+
+			public function release_session_lock( string $session_id, string $lock_token ): bool;
+		}
+	}
 }
 
 namespace ClawPress\Tests\Unit {
 
+use AgentsAPI\Core\Database\Chat\WP_Agent_Conversation_Lock;
 use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Session_Reader;
 use AgentsAPI\Core\Workspace\WP_Agent_Workspace_Scope;
 use ClawPress\AgentsAPI\Conversation_Store;
@@ -78,6 +87,7 @@ final class AgentsApiConversationStoreTest extends TestCase {
 		];
 
 		$this->assertInstanceOf( WP_Agent_Principal_Conversation_Session_Reader::class, $store );
+		$this->assertInstanceOf( WP_Agent_Conversation_Lock::class, $store );
 
 		$session_id = $store->create_session_for_owner(
 			$workspace,
@@ -234,6 +244,37 @@ final class AgentsApiConversationStoreTest extends TestCase {
 		$this->assertIsArray( $pending );
 		$this->assertSame( $session_id, $pending['session_id'] );
 		$this->assertNull( $store->get_recent_pending_session_for_owner( $workspace, $owner, 600, 'chat', 999 ) );
+	}
+
+	public function test_session_lock_prevents_concurrent_updates_until_released(): void {
+		$store      = new Conversation_Store();
+		$workspace  = WP_Agent_Workspace_Scope::from_parts( 'site', 'example.test' );
+		$session_id = $store->create_session( $workspace, 7 );
+
+		$lock_token = $store->acquire_session_lock( $session_id, 300 );
+
+		$this->assertIsString( $lock_token );
+		$this->assertNotSame( '', $lock_token );
+		$this->assertNull( $store->acquire_session_lock( $session_id, 300 ) );
+		$this->assertFalse( $store->release_session_lock( $session_id, 'wrong-token' ) );
+		$this->assertTrue( $store->release_session_lock( $session_id, (string) $lock_token ) );
+		$this->assertIsString( $store->acquire_session_lock( $session_id, 300 ) );
+	}
+
+	public function test_expired_session_lock_can_be_reclaimed(): void {
+		$store      = new Conversation_Store();
+		$workspace  = WP_Agent_Workspace_Scope::from_parts( 'site', 'example.test' );
+		$session_id = $store->create_session( $workspace, 7 );
+
+		WordPress_Stubs::$options['clawpress_agents_api_conversations'][ $session_id ]['lock_token']      = 'expired-token';
+		WordPress_Stubs::$options['clawpress_agents_api_conversations'][ $session_id ]['lock_expires_at'] = '2000-01-01T00:00:00+00:00';
+
+		$lock_token = $store->acquire_session_lock( $session_id, 300 );
+
+		$this->assertIsString( $lock_token );
+		$this->assertNotSame( 'expired-token', $lock_token );
+		$this->assertFalse( $store->release_session_lock( $session_id, 'expired-token' ) );
+		$this->assertTrue( $store->release_session_lock( $session_id, (string) $lock_token ) );
 	}
 }
 }

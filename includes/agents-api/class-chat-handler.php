@@ -11,6 +11,7 @@ namespace ClawPress\AgentsAPI;
 
 use AgentsAPI\AI\WP_Agent_Execution_Principal;
 use AgentsAPI\AI\WP_Agent_Message;
+use AgentsAPI\Core\Database\Chat\WP_Agent_Conversation_Lock;
 use AgentsAPI\Core\Database\Chat\WP_Agent_Conversation_Sessions;
 use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Session_Reader;
 use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Store;
@@ -208,42 +209,91 @@ final class Chat_Handler {
 			return '';
 		}
 
-		$messages   = isset( $session['messages'] ) && is_array( $session['messages'] ) ? $session['messages'] : [];
-		$messages[] = $this->build_message(
-			'user',
-			$message,
-			[
-				'source' => 'agents_chat',
-			]
-		);
-		$messages[] = $this->build_message(
-			'assistant',
-			$reply,
-			array_merge(
+		$lock_token = $this->acquire_store_session_lock( $store, $session_id );
+		if ( null === $lock_token ) {
+			return '';
+		}
+
+		try {
+			if ( '' !== $lock_token ) {
+				$session = $this->get_store_session( $store, $workspace, $owner, $session_id );
+				if ( ! is_array( $session ) ) {
+					return '';
+				}
+			}
+
+			$messages   = isset( $session['messages'] ) && is_array( $session['messages'] ) ? $session['messages'] : [];
+			$messages[] = $this->build_message(
+				'user',
+				$message,
 				[
-					'source' => 'clawpress',
-				],
-				$metadata
-			)
-		);
+					'source' => 'agents_chat',
+				]
+			);
+			$messages[] = $this->build_message(
+				'assistant',
+				$reply,
+				array_merge(
+					[
+						'source' => 'clawpress',
+					],
+					$metadata
+				)
+			);
 
-		$session_metadata = isset( $session['metadata'] ) && is_array( $session['metadata'] ) ? $session['metadata'] : [];
-		$session_metadata = array_merge(
-			$session_metadata,
-			[
-				'source'        => 'clawpress_agents_chat',
-				'status'        => $completed ? 'complete' : 'pending',
-				'message_count' => count( $messages ),
-				'last_turn'     => $metadata,
-			]
-		);
+			$session_metadata = isset( $session['metadata'] ) && is_array( $session['metadata'] ) ? $session['metadata'] : [];
+			$session_metadata = array_merge(
+				$session_metadata,
+				[
+					'source'        => 'clawpress_agents_chat',
+					'status'        => $completed ? 'complete' : 'pending',
+					'message_count' => count( $messages ),
+					'last_turn'     => $metadata,
+				]
+			);
 
-		$provider = isset( $metadata['provider'] ) && is_string( $metadata['provider'] ) ? $metadata['provider'] : '';
-		$model    = isset( $metadata['model'] ) && is_string( $metadata['model'] ) ? $metadata['model'] : '';
+			$provider = isset( $metadata['provider'] ) && is_string( $metadata['provider'] ) ? $metadata['provider'] : '';
+			$model    = isset( $metadata['model'] ) && is_string( $metadata['model'] ) ? $metadata['model'] : '';
 
-		return $store->update_session( $session_id, $messages, $session_metadata, $provider, $model, null )
-			? $session_id
-			: '';
+			return $store->update_session( $session_id, $messages, $session_metadata, $provider, $model, null )
+				? $session_id
+				: '';
+		} finally {
+			if ( '' !== $lock_token ) {
+				$this->release_store_session_lock( $store, $session_id, $lock_token );
+			}
+		}
+	}
+
+	/**
+	 * Acquire a conversation-store lock when the active store supports it.
+	 *
+	 * @param object $store Conversation store.
+	 */
+	private function acquire_store_session_lock( object $store, string $session_id ): ?string {
+		if ( ! interface_exists( WP_Agent_Conversation_Lock::class ) || ! $store instanceof WP_Agent_Conversation_Lock ) {
+			return '';
+		}
+
+		$lock_token = $store->acquire_session_lock( $session_id, 300 );
+		if ( ! is_string( $lock_token ) || '' === trim( $lock_token ) ) {
+			return null;
+		}
+
+		return trim( $lock_token );
+	}
+
+	/**
+	 * Release a conversation-store lock when the active store supports it.
+	 *
+	 * @param object $store Conversation store.
+	 */
+	private function release_store_session_lock( object $store, string $session_id, string $lock_token ): void {
+		if ( ! interface_exists( WP_Agent_Conversation_Lock::class ) || ! $store instanceof WP_Agent_Conversation_Lock ) {
+			return;
+		}
+
+		$store->release_session_lock( $session_id, $lock_token );
 	}
 
 	/**
