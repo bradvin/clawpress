@@ -199,6 +199,13 @@ final class Chat_Controller implements Route_Controller {
 			return $command_payload;
 		}
 
+		if ( ! $streaming && $this->is_default_reply_generator() ) {
+			$agents_chat_payload = $this->resolve_agents_chat_reply_payload( $message );
+			if ( null !== $agents_chat_payload ) {
+				return $agents_chat_payload;
+			}
+		}
+
 		if ( $streaming && $this->is_default_reply_generator() ) {
 			return $this->chat_helper->generate_ai_reply(
 				$message,
@@ -210,6 +217,76 @@ final class Chat_Controller implements Route_Controller {
 		}
 
 		return call_user_func( $this->reply_generator, $message );
+	}
+
+	/**
+	 * Resolve a polling chat reply through the canonical Agents API chat ability.
+	 *
+	 * @param string $message User message.
+	 * @return array<string,mixed>|null Reply payload, or null when unavailable.
+	 */
+	private function resolve_agents_chat_reply_payload( string $message ): ?array {
+		$input = [
+			'agent'          => 'clawpress',
+			'message'        => $message,
+			'client_context' => [
+				'source'      => 'rest',
+				'client_name' => 'clawpress-rest',
+			],
+		];
+
+		$result = null;
+		if ( function_exists( 'wp_get_ability' ) ) {
+			$ability = wp_get_ability( 'agents/chat' );
+			if ( is_object( $ability ) && method_exists( $ability, 'execute' ) ) {
+				$result = $ability->execute( $input );
+			}
+		}
+
+		if ( null === $result && function_exists( '\AgentsAPI\AI\Channels\agents_chat_dispatch' ) ) {
+			$result = \AgentsAPI\AI\Channels\agents_chat_dispatch( $input );
+		}
+
+		if ( is_wp_error( $result ) || ! is_array( $result ) ) {
+			return null;
+		}
+
+		return $this->normalize_agents_chat_result( $result );
+	}
+
+	/**
+	 * Map a canonical agents/chat result to the existing ClawPress chat payload.
+	 *
+	 * @param array<string,mixed> $result Canonical agents/chat result.
+	 * @return array<string,mixed>
+	 */
+	private function normalize_agents_chat_result( array $result ): array {
+		$metadata = isset( $result['metadata'] ) && is_array( $result['metadata'] ) ? $result['metadata'] : [];
+		$context  = isset( $metadata['context'] ) && is_array( $metadata['context'] ) ? $metadata['context'] : [];
+
+		if ( isset( $result['session_id'] ) && is_string( $result['session_id'] ) && '' !== trim( $result['session_id'] ) ) {
+			$context['agents_api_session_id'] = trim( sanitize_text_field( $result['session_id'] ) );
+		}
+
+		$completed = ! array_key_exists( 'completed', $result ) || true === (bool) $result['completed'];
+		$status    = isset( $metadata['status'] ) ? (string) $metadata['status'] : ( $completed ? 'complete' : 'in_progress' );
+
+		return [
+			'reply'         => isset( $result['reply'] ) ? (string) $result['reply'] : '',
+			'mode'          => isset( $metadata['mode'] ) ? (string) $metadata['mode'] : ( $completed ? 'online' : 'in_progress' ),
+			'provider'      => isset( $metadata['provider'] ) && null !== $metadata['provider'] ? (string) $metadata['provider'] : null,
+			'model'         => isset( $metadata['model'] ) && null !== $metadata['model'] ? (string) $metadata['model'] : null,
+			'suggestions'   => isset( $metadata['suggestions'] ) && is_array( $metadata['suggestions'] ) ? $metadata['suggestions'] : [],
+			'card'          => isset( $metadata['card'] ) && is_array( $metadata['card'] ) ? $metadata['card'] : null,
+			'command'       => isset( $metadata['command'] ) && is_array( $metadata['command'] ) ? $metadata['command'] : null,
+			'error'         => isset( $metadata['error'] ) && is_array( $metadata['error'] ) ? $metadata['error'] : null,
+			'context'       => $context,
+			'tool_calls'    => isset( $metadata['tool_calls'] ) && is_array( $metadata['tool_calls'] ) ? $metadata['tool_calls'] : null,
+			'run_id'        => isset( $metadata['clawpress_run_id'] ) ? (int) $metadata['clawpress_run_id'] : ( isset( $metadata['run_id'] ) ? (int) $metadata['run_id'] : null ),
+			'session_id'    => isset( $metadata['clawpress_session_id'] ) ? (int) $metadata['clawpress_session_id'] : ( isset( $metadata['session_id'] ) ? (int) $metadata['session_id'] : null ),
+			'events_cursor' => isset( $metadata['events_cursor'] ) ? (int) $metadata['events_cursor'] : null,
+			'status'        => $status,
+		];
 	}
 
 	/**

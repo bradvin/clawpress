@@ -440,6 +440,53 @@ final class RestApiTest extends TestCase {
 		);
 	}
 
+	public function test_chat_send_message_uses_agents_chat_ability_when_available(): void {
+		$seen_input = null;
+		wp_register_ability(
+			'agents/chat',
+			[
+				'input_schema'        => [ 'type' => 'object' ],
+				'permission_callback' => static fn( array $input ): bool => isset( $input['agent'] ) && 'clawpress' === $input['agent'],
+				'execute_callback'    => static function ( array $input ) use ( &$seen_input ): array {
+					$seen_input = $input;
+
+					return [
+						'session_id' => 'agents-session-1',
+						'reply'      => 'Canonical reply: ' . $input['message'],
+						'completed'  => true,
+						'metadata'   => [
+							'mode'             => 'online',
+							'provider'         => 'openai',
+							'model'            => 'gpt-4.1-mini',
+							'clawpress_run_id' => 101,
+						],
+					];
+				},
+			]
+		);
+
+		$chat_controller = new Chat_Controller();
+		$response        = $chat_controller->send_message(
+			new \WP_REST_Request(
+				[
+					'message' => 'Use the canonical route',
+				]
+			)
+		);
+		$data            = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'clawpress', $seen_input['agent'] );
+		$this->assertSame( 'Use the canonical route', $seen_input['message'] );
+		$this->assertSame( 'rest', $seen_input['client_context']['source'] );
+		$this->assertSame( 'Canonical reply: Use the canonical route', $data['reply'] );
+		$this->assertSame( 'online', $data['meta']['mode'] );
+		$this->assertSame( 'openai', $data['meta']['provider'] );
+		$this->assertSame( 'gpt-4.1-mini', $data['meta']['model'] );
+		$this->assertSame( 101, $data['meta']['run_id'] );
+		$this->assertSame( 'agents-session-1', $data['meta']['context']['agents_api_session_id'] );
+	}
+
 	public function test_chat_send_message_exposes_in_progress_run_metadata(): void {
 		$chat_controller = new Chat_Controller(
 			static function ( string $message ): array {
