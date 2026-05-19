@@ -33,6 +33,21 @@ final class PanelTest extends TestCase {
 		$this->assertCount( 0, WordPress_Stubs::$enqueued_scripts );
 	}
 
+	public function test_enqueue_assets_bails_for_thickbox_iframe_requests(): void {
+		$_GET['TB_iframe'] = 'true';
+
+		try {
+			$panel = new Panel();
+
+			$panel->enqueue_assets( 'plugin-install.php' );
+
+			$this->assertCount( 0, WordPress_Stubs::$enqueued_styles );
+			$this->assertCount( 0, WordPress_Stubs::$enqueued_scripts );
+		} finally {
+			unset( $_GET['TB_iframe'] );
+		}
+	}
+
 	public function test_enqueue_assets_enqueues_panel_assets_and_config(): void {
 		WordPress_Stubs::$can_manage_options = true;
 		WordPress_Stubs::$is_rtl             = true;
@@ -57,6 +72,21 @@ final class PanelTest extends TestCase {
 
 		$this->assertCount( 1, $admin_bar->nodes );
 		$this->assertSame( 'clawpress-toggle', $admin_bar->nodes[0]['id'] );
+	}
+
+	public function test_register_admin_bar_toggle_bails_for_thickbox_iframe_requests(): void {
+		$_GET['TB_iframe'] = 'true';
+
+		try {
+			$panel     = new Panel();
+			$admin_bar = new \WP_Admin_Bar();
+
+			$panel->register_admin_bar_toggle( $admin_bar );
+
+			$this->assertCount( 0, $admin_bar->nodes );
+		} finally {
+			unset( $_GET['TB_iframe'] );
+		}
 	}
 
 	public function test_register_admin_bar_toggle_bails_for_unauthorized_users(): void {

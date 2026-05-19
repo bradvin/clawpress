@@ -31,6 +31,10 @@ final class Panel {
 	public function enqueue_assets( string $hook_suffix ): void {
 		unset( $hook_suffix );
 
+		if ( $this->is_thickbox_iframe_request() ) {
+			return;
+		}
+
 		if ( ! clawpress_check_permissions() ) {
 			return;
 		}
@@ -99,6 +103,10 @@ final class Panel {
 	 * @param \WP_Admin_Bar $wp_admin_bar Admin bar object.
 	 */
 	public function register_admin_bar_toggle( \WP_Admin_Bar $wp_admin_bar ): void {
+		if ( $this->is_thickbox_iframe_request() ) {
+			return;
+		}
+
 		if ( ! clawpress_check_permissions() ) {
 			return;
 		}
@@ -115,5 +123,19 @@ final class Panel {
 				],
 			]
 		);
+	}
+
+	/**
+	 * Determine whether the current admin request is rendering inside ThickBox.
+	 */
+	private function is_thickbox_iframe_request(): bool {
+		if ( ! isset( $_GET['TB_iframe'] ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display context check.
+		$iframe_flag = sanitize_text_field( wp_unslash( $_GET['TB_iframe'] ) );
+
+		return clawpress_sanitize_boolean( $iframe_flag );
 	}
 }

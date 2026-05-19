@@ -271,6 +271,16 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'wp_unslash' ) ) {
+		function wp_unslash( $value ) {
+			if ( is_array( $value ) ) {
+				return array_map( 'wp_unslash', $value );
+			}
+
+			return is_string( $value ) ? stripslashes( $value ) : $value;
+		}
+	}
+
 	if ( ! function_exists( 'wp_date' ) ) {
 		function wp_date( string $format, ?int $timestamp = null, ?\DateTimeZone $timezone = null ): string {
 			unset( $timezone );
