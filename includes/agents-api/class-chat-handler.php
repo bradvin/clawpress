@@ -9,10 +9,14 @@ declare( strict_types=1 );
 
 namespace ClawPress\AgentsAPI;
 
+use AgentsAPI\AI\WP_Agent_Execution_Principal;
 use AgentsAPI\AI\WP_Agent_Message;
 use AgentsAPI\Core\Database\Chat\WP_Agent_Conversation_Sessions;
+use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Session_Reader;
+use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Store;
 use AgentsAPI\Core\Workspace\WP_Agent_Workspace_Scope;
 use ClawPress\Helpers\Chat_Helper;
+use Throwable;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -175,15 +179,21 @@ final class Chat_Handler {
 			return '';
 		}
 
+		$principal = $this->resolve_execution_principal( $input );
+		$owner     = $this->resolve_conversation_owner( $principal );
+		$user_id   = $this->resolve_conversation_user_id( $principal, $owner );
+
 		$session_id = isset( $input['session_id'] ) && is_string( $input['session_id'] )
 			? trim( sanitize_text_field( $input['session_id'] ) )
 			: '';
-		$session    = '' !== $session_id ? $store->get_session( $session_id ) : null;
+		$session    = '' !== $session_id ? $this->get_store_session( $store, $workspace, $owner, $session_id ) : null;
 
 		if ( '' === $session_id || ! is_array( $session ) ) {
-			$session_id = $store->create_session(
+			$session_id = $this->create_store_session(
+				$store,
 				$workspace,
-				get_current_user_id(),
+				$owner,
+				$user_id,
 				Agents_API::AGENT_SLUG,
 				[
 					'source' => 'clawpress_agents_chat',
@@ -191,7 +201,7 @@ final class Chat_Handler {
 				],
 				'chat'
 			);
-			$session    = '' !== $session_id ? $store->get_session( $session_id ) : null;
+			$session    = '' !== $session_id ? $this->get_store_session( $store, $workspace, $owner, $session_id ) : null;
 		}
 
 		if ( '' === $session_id || ! is_array( $session ) ) {
@@ -234,6 +244,141 @@ final class Chat_Handler {
 		return $store->update_session( $session_id, $messages, $session_metadata, $provider, $model, null )
 			? $session_id
 			: '';
+	}
+
+	/**
+	 * Resolve the Agents API execution principal for this chat turn.
+	 *
+	 * @param array<string,mixed> $input Canonical agents/chat input.
+	 * @return object|null
+	 */
+	private function resolve_execution_principal( array $input ): ?object {
+		if ( ! class_exists( WP_Agent_Execution_Principal::class ) ) {
+			return null;
+		}
+
+		if ( isset( $input['principal'] ) && $input['principal'] instanceof WP_Agent_Execution_Principal ) {
+			return $input['principal'];
+		}
+
+		if ( isset( $input['principal'] ) && is_array( $input['principal'] ) ) {
+			try {
+				return WP_Agent_Execution_Principal::from_array( $input['principal'] );
+			} catch ( Throwable $throwable ) {
+				unset( $throwable );
+				return null;
+			}
+		}
+
+		try {
+			return WP_Agent_Execution_Principal::resolve(
+				[
+					'agent'           => Agents_API::AGENT_SLUG,
+					'request_context' => WP_Agent_Execution_Principal::REQUEST_CONTEXT_CHAT,
+					'source'          => 'clawpress_agents_chat',
+					'client_context'  => isset( $input['client_context'] ) && is_array( $input['client_context'] ) ? $input['client_context'] : [],
+				]
+			);
+		} catch ( Throwable $throwable ) {
+			unset( $throwable );
+			return null;
+		}
+	}
+
+	/**
+	 * Resolve a canonical conversation owner from an execution principal.
+	 *
+	 * @param object|null $principal Execution principal.
+	 * @return array{type:string,key:string}|null
+	 */
+	private function resolve_conversation_owner( ?object $principal ): ?array {
+		if ( ! $principal instanceof WP_Agent_Execution_Principal ) {
+			return null;
+		}
+
+		$owner = $principal->conversation_owner();
+		if ( ! is_array( $owner ) ) {
+			return null;
+		}
+
+		$type = isset( $owner['type'] ) ? sanitize_key( (string) $owner['type'] ) : '';
+		$key  = isset( $owner['key'] ) ? trim( sanitize_text_field( (string) $owner['key'] ) ) : '';
+		if ( '' === $type || '' === $key ) {
+			return null;
+		}
+
+		return [
+			'type' => $type,
+			'key'  => $key,
+		];
+	}
+
+	/**
+	 * Resolve the legacy user ID used when a store is not principal-owner-aware.
+	 *
+	 * @param object|null                      $principal Execution principal.
+	 * @param array{type:string,key:string}|null $owner Canonical owner.
+	 */
+	private function resolve_conversation_user_id( ?object $principal, ?array $owner ): int {
+		if ( $principal instanceof WP_Agent_Execution_Principal ) {
+			return max( 0, (int) $principal->acting_user_id );
+		}
+
+		if ( null !== $owner && 'user' === $owner['type'] && is_numeric( $owner['key'] ) ) {
+			return max( 0, (int) $owner['key'] );
+		}
+
+		return function_exists( 'get_current_user_id' ) ? max( 0, (int) get_current_user_id() ) : 0;
+	}
+
+	/**
+	 * Read a session through the most specific store contract available.
+	 *
+	 * @param object                           $store Conversation store.
+	 * @param WP_Agent_Workspace_Scope         $workspace Workspace scope.
+	 * @param array{type:string,key:string}|null $owner Canonical owner.
+	 * @param string                           $session_id Session ID.
+	 * @return array<string,mixed>|null
+	 */
+	private function get_store_session( object $store, WP_Agent_Workspace_Scope $workspace, ?array $owner, string $session_id ): ?array {
+		if ( null !== $owner && $store instanceof WP_Agent_Principal_Conversation_Session_Reader ) {
+			$session = $store->get_session_for_owner( $workspace, $owner, $session_id );
+			return is_array( $session ) ? $session : null;
+		}
+
+		if ( ! method_exists( $store, 'get_session' ) ) {
+			return null;
+		}
+
+		$session = $store->get_session( $session_id );
+		return is_array( $session ) ? $session : null;
+	}
+
+	/**
+	 * Create a session through the most specific store contract available.
+	 *
+	 * @param object                           $store Conversation store.
+	 * @param WP_Agent_Workspace_Scope         $workspace Workspace scope.
+	 * @param array{type:string,key:string}|null $owner Canonical owner.
+	 * @param int                              $user_id Legacy user ID fallback.
+	 * @param string                           $agent_slug Agent slug.
+	 * @param array<string,mixed>              $metadata Session metadata.
+	 * @param string                           $context Session context.
+	 */
+	private function create_store_session( object $store, WP_Agent_Workspace_Scope $workspace, ?array $owner, int $user_id, string $agent_slug, array $metadata, string $context ): string {
+		if ( null !== $owner && $store instanceof WP_Agent_Principal_Conversation_Store ) {
+			return $store->create_session_for_owner( $workspace, $owner, $agent_slug, $metadata, $context );
+		}
+
+		if ( null !== $owner && 'user' !== $owner['type'] ) {
+			return '';
+		}
+
+		if ( ! method_exists( $store, 'create_session' ) ) {
+			return '';
+		}
+
+		return (string) $store->create_session( $workspace, $user_id, $agent_slug, $metadata, $context );
 	}
 
 	/**
