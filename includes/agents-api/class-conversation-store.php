@@ -9,7 +9,7 @@ declare( strict_types=1 );
 
 namespace ClawPress\AgentsAPI;
 
-use AgentsAPI\Core\Database\Chat\WP_Agent_Conversation_Store;
+use AgentsAPI\Core\Database\Chat\WP_Agent_Principal_Conversation_Session_Reader;
 use AgentsAPI\Core\Workspace\WP_Agent_Workspace_Scope;
 
 defined( 'ABSPATH' ) || exit;
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Option-backed transcript store for Agents API generic conversation sessions.
  */
-final class Conversation_Store implements WP_Agent_Conversation_Store {
+final class Conversation_Store implements WP_Agent_Principal_Conversation_Session_Reader {
 	/**
 	 * Option key used for generic Agents API transcripts.
 	 */
@@ -27,15 +27,39 @@ final class Conversation_Store implements WP_Agent_Conversation_Store {
 	 * Create a new transcript session.
 	 */
 	public function create_session( WP_Agent_Workspace_Scope $workspace, int $user_id, string $agent_slug = '', array $metadata = [], string $context = 'chat' ): string {
+		return $this->create_session_for_owner(
+			$workspace,
+			[
+				'type' => 'user',
+				'key'  => (string) max( 0, $user_id ),
+			],
+			$agent_slug,
+			$metadata,
+			$context
+		);
+	}
+
+	/**
+	 * Create a new transcript session for a canonical principal owner.
+	 *
+	 * @param array{type:string,key:string} $owner Canonical principal owner.
+	 */
+	public function create_session_for_owner( WP_Agent_Workspace_Scope $workspace, array $owner, string $agent_slug = '', array $metadata = [], string $context = 'chat' ): string {
 		$session_id = $this->generate_session_id();
 		$now        = $this->now();
 		$sessions   = $this->read_sessions();
+		$owner      = $this->normalize_owner( $owner );
+		$user_id    = 'user' === $owner['type'] && is_numeric( $owner['key'] ) ? max( 0, (int) $owner['key'] ) : 0;
 
 		$sessions[ $session_id ] = [
 			'session_id'           => $session_id,
 			'workspace_type'       => $workspace->workspace_type,
 			'workspace_id'         => $workspace->workspace_id,
-			'user_id'              => max( 0, $user_id ),
+			'user_id'              => $user_id,
+			'owner_type'           => $owner['type'],
+			'owner_key'            => $owner['key'],
+			'principal_owner_type' => $owner['type'],
+			'principal_owner_key'  => $owner['key'],
 			'agent_slug'           => sanitize_key( $agent_slug ),
 			'title'                => '',
 			'messages'             => [],
@@ -62,25 +86,39 @@ final class Conversation_Store implements WP_Agent_Conversation_Store {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function list_sessions( WP_Agent_Workspace_Scope $workspace, int $user_id, array $args = [] ): array {
+		return $this->list_sessions_for_owner(
+			$workspace,
+			[
+				'type' => 'user',
+				'key'  => (string) max( 0, $user_id ),
+			],
+			$args
+		);
+	}
+
+	/**
+	 * List transcript sessions for one workspace/principal-owner pair.
+	 *
+	 * @param array{type:string,key:string} $owner Canonical principal owner.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function list_sessions_for_owner( WP_Agent_Workspace_Scope $workspace, array $owner, array $args = [] ): array {
 		$include_messages = ! empty( $args['include_messages'] );
 		$agent_slug       = isset( $args['agent_slug'] ) ? sanitize_key( (string) $args['agent_slug'] ) : '';
 		$context          = isset( $args['context'] ) ? sanitize_key( (string) $args['context'] ) : '';
 		$limit            = isset( $args['limit'] ) ? max( 0, (int) $args['limit'] ) : 20;
 		$offset           = isset( $args['offset'] ) ? max( 0, (int) $args['offset'] ) : 0;
+		$owner            = $this->normalize_owner( $owner );
 
 		$rows = array_values(
 			array_filter(
 				$this->read_sessions(),
-				static function ( array $row ) use ( $workspace, $user_id, $agent_slug, $context ): bool {
-					if ( (string) ( $row['workspace_type'] ?? '' ) !== $workspace->workspace_type ) {
+				function ( array $row ) use ( $workspace, $owner, $agent_slug, $context ): bool {
+					if ( ! $this->session_matches_workspace( $row, $workspace ) ) {
 						return false;
 					}
 
-					if ( (string) ( $row['workspace_id'] ?? '' ) !== $workspace->workspace_id ) {
-						return false;
-					}
-
-					if ( (int) ( $row['user_id'] ?? 0 ) !== max( 0, $user_id ) ) {
+					if ( ! $this->session_matches_owner( $row, $owner ) ) {
 						return false;
 					}
 
@@ -129,6 +167,22 @@ final class Conversation_Store implements WP_Agent_Conversation_Store {
 	}
 
 	/**
+	 * Read one transcript session for a canonical principal owner.
+	 *
+	 * @param array{type:string,key:string} $owner Canonical principal owner.
+	 */
+	public function get_session_for_owner( WP_Agent_Workspace_Scope $workspace, array $owner, string $session_id ): ?array {
+		$session = $this->get_session( $session_id );
+		if ( ! is_array( $session ) ) {
+			return null;
+		}
+
+		return $this->session_matches_workspace( $session, $workspace ) && $this->session_matches_owner( $session, $this->normalize_owner( $owner ) )
+			? $session
+			: null;
+	}
+
+	/**
 	 * Replace transcript messages and metadata.
 	 */
 	public function update_session( string $session_id, array $messages, array $metadata = [], string $provider = '', string $model = '', ?string $provider_response_id = null ): bool {
@@ -164,10 +218,28 @@ final class Conversation_Store implements WP_Agent_Conversation_Store {
 	 * Find a recent pending session.
 	 */
 	public function get_recent_pending_session( WP_Agent_Workspace_Scope $workspace, int $user_id, int $seconds = 600, string $context = 'chat', ?int $token_id = null ): ?array {
-		$cutoff = time() - max( 1, $seconds );
-		$rows   = $this->list_sessions(
+		return $this->get_recent_pending_session_for_owner(
 			$workspace,
-			$user_id,
+			[
+				'type' => 'user',
+				'key'  => (string) max( 0, $user_id ),
+			],
+			$seconds,
+			$context,
+			$token_id
+		);
+	}
+
+	/**
+	 * Find a recent pending session for a canonical principal owner.
+	 *
+	 * @param array{type:string,key:string} $owner Canonical principal owner.
+	 */
+	public function get_recent_pending_session_for_owner( WP_Agent_Workspace_Scope $workspace, array $owner, int $seconds = 600, string $context = 'chat', ?int $token_id = null ): ?array {
+		$cutoff = time() - max( 1, $seconds );
+		$rows   = $this->list_sessions_for_owner(
+			$workspace,
+			$owner,
 			[
 				'include_messages' => true,
 				'context'          => $context,
@@ -229,6 +301,49 @@ final class Conversation_Store implements WP_Agent_Conversation_Store {
 	 */
 	private function write_sessions( array $sessions ): void {
 		update_option( self::OPTION_KEY, $sessions, false );
+	}
+
+	/**
+	 * Normalize a canonical principal owner.
+	 *
+	 * @param array<string,mixed> $owner Raw owner payload.
+	 * @return array{type:string,key:string}
+	 */
+	private function normalize_owner( array $owner ): array {
+		$type = isset( $owner['type'] ) ? sanitize_key( (string) $owner['type'] ) : '';
+		$key  = isset( $owner['key'] ) ? trim( sanitize_text_field( (string) $owner['key'] ) ) : '';
+
+		return [
+			'type' => '' !== $type ? $type : 'user',
+			'key'  => $key,
+		];
+	}
+
+	/**
+	 * Check whether a row belongs to a workspace.
+	 *
+	 * @param array<string,mixed> $row Session row.
+	 */
+	private function session_matches_workspace( array $row, WP_Agent_Workspace_Scope $workspace ): bool {
+		return (string) ( $row['workspace_type'] ?? '' ) === $workspace->workspace_type
+			&& (string) ( $row['workspace_id'] ?? '' ) === $workspace->workspace_id;
+	}
+
+	/**
+	 * Check whether a row belongs to a principal owner.
+	 *
+	 * @param array<string,mixed>        $row Session row.
+	 * @param array{type:string,key:string} $owner Canonical principal owner.
+	 */
+	private function session_matches_owner( array $row, array $owner ): bool {
+		$row_owner_type = isset( $row['owner_type'] ) ? (string) $row['owner_type'] : ( isset( $row['principal_owner_type'] ) ? (string) $row['principal_owner_type'] : '' );
+		$row_owner_key  = isset( $row['owner_key'] ) ? (string) $row['owner_key'] : ( isset( $row['principal_owner_key'] ) ? (string) $row['principal_owner_key'] : '' );
+
+		if ( '' !== $row_owner_type || '' !== $row_owner_key ) {
+			return $row_owner_type === $owner['type'] && $row_owner_key === $owner['key'];
+		}
+
+		return 'user' === $owner['type'] && (int) ( $row['user_id'] ?? 0 ) === (int) $owner['key'];
 	}
 
 	/**
