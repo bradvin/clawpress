@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace ClawPress\Helpers;
 
 use AgentsAPI\AI\Tools\WP_Agent_Tool_Execution_Core;
+use AgentsAPI\AI\Tools\WP_Agent_Tool_Source_Registry;
 use ClawPress\AgentsAPI\Ability_Tool_Executor;
 use ClawPress\AgentsAPI\Ability_Tool_Source;
 use ClawPress\Security\Security;
@@ -113,6 +114,63 @@ final class Abilities_Helper {
 	 * @return array<int,FunctionDeclaration>
 	 */
 	public function get_tool_declarations(): array {
+		if ( class_exists( WP_Agent_Tool_Source_Registry::class ) ) {
+			$agents_api_declarations = $this->get_agents_api_tool_declarations();
+			if ( [] !== $agents_api_declarations ) {
+				return $agents_api_declarations;
+			}
+		}
+
+		return $this->get_legacy_tool_declarations();
+	}
+
+	/**
+	 * Build model function declarations through the Agents API tool registry.
+	 *
+	 * @return array<int,FunctionDeclaration>
+	 */
+	private function get_agents_api_tool_declarations(): array {
+		$tools = ( new WP_Agent_Tool_Source_Registry() )->gather(
+			[
+				'source' => 'clawpress',
+				'mode'   => 'chat',
+			]
+		);
+
+		if ( [] === $tools ) {
+			return [];
+		}
+
+		$declarations = [];
+		foreach ( $tools as $tool_name => $tool_definition ) {
+			if ( ! is_string( $tool_name ) || '' === trim( $tool_name ) || false !== strpos( $tool_name, '/' ) ) {
+				continue;
+			}
+
+			if ( ! is_array( $tool_definition ) ) {
+				continue;
+			}
+
+			$declarations[] = $this->normalize_function_declaration(
+				new FunctionDeclaration(
+					strtolower( trim( $tool_name ) ),
+					isset( $tool_definition['description'] ) ? (string) $tool_definition['description'] : '',
+					isset( $tool_definition['parameters'] ) && is_array( $tool_definition['parameters'] )
+						? $this->normalize_tool_input_schema( $tool_definition['parameters'] )
+						: null
+				)
+			);
+		}
+
+		return $declarations;
+	}
+
+	/**
+	 * Build model function declarations from ClawPress ability state.
+	 *
+	 * @return array<int,FunctionDeclaration>
+	 */
+	private function get_legacy_tool_declarations(): array {
 		$registered_abilities = $this->get_registered_abilities();
 		if ( [] === $registered_abilities ) {
 			return [];
