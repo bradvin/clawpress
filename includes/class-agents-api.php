@@ -56,6 +56,13 @@ final class Agents_API {
 	private ?Chat_Handler $chat_handler = null;
 
 	/**
+	 * Access store adapter.
+	 *
+	 * @var ?Access_Store
+	 */
+	private ?Access_Store $access_store = null;
+
+	/**
 	 * Register integration hooks.
 	 */
 	public function __construct() {
@@ -71,6 +78,7 @@ final class Agents_API {
 		add_filter( 'wp_agent_conversation_store', [ $this, 'resolve_conversation_store' ], 10, 2 );
 		add_filter( 'wp_agent_memory_store', [ $this, 'resolve_memory_store' ], 10, 2 );
 		add_filter( 'wp_agent_chat_handler', [ $this, 'resolve_chat_handler' ], 10, 2 );
+		add_filter( 'wp_agent_access_store', [ $this, 'resolve_access_store' ], 10, 2 );
 	}
 
 	/**
@@ -299,6 +307,26 @@ final class Agents_API {
 	}
 
 	/**
+	 * Resolve an access store for Agents API permission/listing helpers.
+	 *
+	 * @param mixed               $store Existing store.
+	 * @param array<string,mixed> $context Request context.
+	 */
+	public function resolve_access_store( $store, array $context ) {
+		if ( interface_exists( '\WP_Agent_Access_Store' ) && $store instanceof \WP_Agent_Access_Store ) {
+			return $store;
+		}
+
+		unset( $context );
+
+		if ( ! interface_exists( '\WP_Agent_Access_Store' ) || ! class_exists( '\WP_Agent_Access_Grant' ) ) {
+			return $store;
+		}
+
+		return $this->get_access_store();
+	}
+
+	/**
 	 * Get the ability tool source adapter.
 	 */
 	private function get_tool_source(): Ability_Tool_Source {
@@ -340,5 +368,16 @@ final class Agents_API {
 		}
 
 		return $this->chat_handler;
+	}
+
+	/**
+	 * Get the access store adapter.
+	 */
+	private function get_access_store(): Access_Store {
+		if ( null === $this->access_store ) {
+			$this->access_store = new Access_Store();
+		}
+
+		return $this->access_store;
 	}
 }
